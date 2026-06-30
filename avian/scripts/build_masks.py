@@ -79,6 +79,8 @@ def main() -> int:
                     help="Cutout directory (default: avian/assets/illustrations/)")
     ap.add_argument("--apt", type=Path, default=here / "frontend" / "apt.js",
                     help="Frontend file to patch (default: avian/frontend/apt.js)")
+    ap.add_argument("--json", type=Path, default=None,
+                    help="Write a standalone masks.json (for the Rails collage) and exit")
     ap.add_argument("--check", action="store_true",
                     help="Report counts and don't write apt.js")
     args = ap.parse_args()
@@ -91,6 +93,13 @@ def main() -> int:
     if not dims:
         print("error: no cutouts found", file=sys.stderr)
         return 1
+
+    # Our Rails collage packs by silhouette and reads this directly; the apt.js
+    # path below is the parent frontend, which we don't use.
+    if args.json:
+        args.json.write_text(json.dumps(masks, separators=(",", ":")))
+        print(f"wrote {len(masks)} masks -> {args.json}")
+        return 0
 
     dims_json = json.dumps(dims, separators=(",", ":"))
     masks_json = json.dumps(masks, separators=(",", ":"))

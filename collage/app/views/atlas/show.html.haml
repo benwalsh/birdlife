@@ -1,0 +1,19 @@
+- content_for :title, "Connemara Birds — Atlas"
+- content_for :heading, "Atlas"
+%section.view#v2{ "aria-label": "Atlas" }
+  .atlas-controls
+    %nav.atlas-sort{ role: "tablist", "aria-label": "sort atlas" }
+      - { 'count' => 'most heard', 'recent' => 'most recent', 'alpha' => 'a → z' }.each do |key, tip|
+        %a{ href: atlas_path(h: current_window, sort: key), "aria-current": (@sort == key ? "true" : nil) }= tip
+  .atlas-grid
+    - @species.each do |entry|
+      - name = entry.name
+      %a.bird-card{ href: species_path(entry.sci_name), "data-sci": entry.sci_name, "data-turbo-frame": "detail" }
+        .stat
+          %span.n= number_with_delimiter(entry.count)
+          %span.lbl heard
+        .img-wrap
+          - if (img = bird_illustration(entry.sci_name))
+            %img{ src: img, alt: name.en, loading: "lazy" }
+        %h3= name.ga || name.en
+        %p.sci= name.en

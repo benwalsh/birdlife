@@ -1,0 +1,41 @@
+- content_for :title, "Connemara Birds — Stats"
+- content_for :heading, "Stats"
+%section.view#v1{ "aria-label": "Stats" }
+  .stats2
+    .stats2-chart
+      %h3 Most Heard
+      %small= "by call count · #{window_label.downcase} window"
+      - max = [@top_species.first&.count.to_i, 1].max
+      %ol.barlist
+        - @top_species.each do |tally|
+          - name = tally.name
+          %li
+            %a.barlist-row{ href: species_path(tally.sci_name), "data-turbo-frame": "detail" }
+              .barlist-name
+                %span.com= name.ga || name.en
+                - if name.ga
+                  %span.sci= name.en
+              .barlist-track
+                %span.barlist-fill{ style: "width:#{((tally.count.to_f / max) * 100).round(1)}%;" }
+              %span.barlist-ct= number_with_delimiter(tally.count)
+    %aside.stats2-side
+      .grp
+        %h3 By Period
+        %small detections, grouped by recency
+        %ul.rows
+          - @by_period.each do |label, n|
+            %li.row
+              %span= label
+              %span.ct= number_with_delimiter(n)
+      .grp
+        %h3 First Detections
+        %small newest additions to the life list
+        %ul.rows
+          - @first_seen.each do |entry|
+            %li
+              %a.row{ href: species_path(entry.sci_name), "data-turbo-frame": "detail" }
+                %span
+                  = entry.name.ga || entry.name.en
+                  - if entry.name.ga
+                    %span.gloss= entry.name.en
+                %span.yr= entry.first_seen.to_s[0, 10]

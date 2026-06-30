@@ -1,0 +1,20 @@
+[Unit]
+# The BirdNET listener: reads the USB mic, writes detections into the shared DB.
+# Needs the user in the `audio` group for mic access. BIRD_* config (the
+# brother's Connemara coords, mic name, confidence, BIRD_DB) comes from .env.
+# Ordered after the web app so its db:prepare has created the DB + tables first.
+Description=Connemara BirdNET microphone listener
+After=sound.target birdlife-web.service
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/birdlife
+EnvironmentFile=/home/pi/birdlife/.env
+Environment=LANG=C.UTF-8 LC_ALL=C.UTF-8
+ExecStart=/usr/bin/env bash -lc 'cd /home/pi/birdlife && exec uv run python listener/listen.py listen'
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

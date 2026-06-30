@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+#
+# Provision the Connemara bird device on a fresh Raspberry Pi OS Lite (Bookworm,
+# arm64). Idempotent — safe to re-run. Goal: flash → SSH in → run this → done.
+#
+# The ARM Debian validation container runs this with BIRDLIFE_CONTAINER=1, which
+# skips the Pi-only bits (SPI, hardware groups, systemd, the inky driver,
+# Tailscale, Wi-Fi) and exercises only the software path — packages, toolchains,
+# Rails native-gem builds, the database, and the doctor seam check. See
+# deploy/Dockerfile.armcheck.
+#
+set -euo pipefail
+
+REPO="${BIRDLIFE_REPO:-$HOME/birdlife}"
+IN_CONTAINER="${BIRDLIFE_CONTAINER:-0}"
+SUDO="$([ "$(id -u)" -eq 0 ] && echo '' || echo sudo)"
+
+say() { printf '\n\033[1m=== %s ===\033[0m\n' "$*"; }
+
+# ----------------------------------------------------------------- packages --
+say "system packages (apt)"
+$SUDO apt-get update -qq
+$SUDO apt-get install -y --no-install-recommends \
+  git build-essential ca-certificates curl xz-utils unzip \
+  libsndfile1 portaudio19-dev \
+  fonts-ebgaramond chromium \
+  libssl-dev libyaml-dev zlib1g-dev libffi-dev libreadline-dev libsqlite3-dev
+
+# -------------------------------------------------- Pi hardware interfaces ---
+if [ "$IN_CONTAINER" != "1" ]; then
+  say "Pi interfaces: SPI/I2C + groups (Inky HAT, mic)"
+  $SUDO raspi-config nonint do_spi 0 || echo "  (raspi-config SPI: skipped)"
+  $SUDO raspi-config nonint do_i2c 0 || echo "  (raspi-config I2C: skipped)"
+  $SUDO usermod -aG audio,spi,i2c,gpio "$USER" || true
+  echo "  NB: re-login or reboot for the new groups to take effect."
+fi
+
+# --------------------------------------------------------------- toolchains --
+say "toolchains (uv, bun, mise + Ruby)"
+export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$HOME/.bun/bin:$PATH"
+command -v uv  >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh
+command -v bun >/dev/null || curl -fsSL https://bun.sh/install | bash
+command -v mise >/dev/null || curl -fsSL https://mise.run | sh
+# Ruby from .ruby-version (mise compiles it via ruby-build — slow the first time
+# on ARM; subsequent runs are cached).
+( cd "$REPO/collage" && mise use "ruby@$(cat .ruby-version)" )
+
+# ---------------------------------------------------------- app: deps + db --
+if [ ! -f "$REPO/.env" ]; then
+  echo "error: $REPO/.env not found — copy .env.example and fill BIRD_DB," \
+       "SECRET_KEY_BASE, coords + mic before provisioning." >&2
+  exit 1
+fi
+set -a; . "$REPO/.env"; set +a
+export RAILS_ENV=production LANG=C.UTF-8 LC_ALL=C.UTF-8
+
+say "python deps (uv sync)"
+( cd "$REPO" && uv sync )
+
+say "ruby/js deps + production assets"
+cd "$REPO/collage"
+bundle install
+bun install
+bun run build
+# Asset precompile copies the bird PNGs under /birds; the validation container
+# doesn't ship those, and they're not the ARM risk, so skip it there.
+[ "$IN_CONTAINER" = "1" ] || bin/rails assets:precompile
+
+say "database (creates the shared SQLite + tables, sets WAL)"
+bin/rails db:prepare
+
+say "seam check (birdlife:doctor)"
+bin/rails birdlife:doctor
+
+if [ "$IN_CONTAINER" = "1" ]; then
+  say "container validation OK — software path is good"
+  exit 0
+fi
+
+# ----------------------------------------------------- Pi-only: panel + svc --
+say "Inky panel driver (SPI/GPIO) + headless Chromium"
+( cd "$REPO" && uv pip install inky )
+( cd "$REPO" && uv run playwright install --with-deps chromium ) ||
+  echo "  (playwright install failed — point the shooter at apt 'chromium' if needed)"
+
+say "systemd services"
+cd "$REPO"
+sed -i "s/\bpi\b/$USER/g; s#/home/pi#$HOME#g" deploy/birdlife-*.service
+$SUDO cp deploy/birdlife-*.service deploy/birdlife-*.timer /etc/systemd/system/
+$SUDO systemctl daemon-reload
+$SUDO systemctl enable --now birdlife-listener birdlife-web birdlife-frame.timer
+
+# Offsite backup (Litestream -> S3/B2) — only if the LITESTREAM_* keys are set.
+if [ -n "${LITESTREAM_BUCKET:-}" ]; then
+  say "Litestream (offsite DB backup to S3/B2)"
+  if ! command -v litestream >/dev/null; then
+    LS_VER=0.3.13
+    curl -fsSL "https://github.com/benbjohnson/litestream/releases/download/v${LS_VER}/litestream-v${LS_VER}-linux-arm64.deb" -o /tmp/litestream.deb
+    $SUDO dpkg -i /tmp/litestream.deb
+  fi
+  $SUDO systemctl enable --now birdlife-litestream
+else
+  echo "  (LITESTREAM_BUCKET unset — skipping offsite backup; set the LITESTREAM_* keys in .env to enable)"
+fi
+
+# ----------------------------------------------- remote access + Wi-Fi -------
+say "Tailscale (outbound-only remote SSH)"
+command -v tailscale >/dev/null || curl -fsSL https://tailscale.com/install.sh | $SUDO sh
+if [ -n "${TS_AUTHKEY:-}" ]; then
+  $SUDO tailscale up --ssh --authkey "$TS_AUTHKEY"
+else
+  echo "  set TS_AUTHKEY in .env then: sudo tailscale up --ssh"
+fi
+
+# Pre-load both Wi-Fi networks so it associates wherever it boots (creds from
+# .env: HOME_WIFI_SSID/_PSK, COTTAGE_WIFI_SSID/_PSK — gitignored, optional).
+say "Wi-Fi networks (NetworkManager)"
+add_wifi() { # name ssid psk
+  [ -n "$2" ] || return 0
+  $SUDO nmcli connection show "$1" >/dev/null 2>&1 && return 0
+  $SUDO nmcli connection add type wifi con-name "$1" ssid "$2" \
+    wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$3" connection.autoconnect yes
+}
+add_wifi home    "${HOME_WIFI_SSID:-}"    "${HOME_WIFI_PSK:-}"
+add_wifi cottage "${COTTAGE_WIFI_SSID:-}" "${COTTAGE_WIFI_PSK:-}"
+
+say "provisioning complete — http://$(hostname).local:4030/"

@@ -1,0 +1,51 @@
+= turbo_frame_tag "detail" do
+  %article.modal-card
+    %button.modal-close{ type: "button", "aria-label": "close", "data-action": "modal#close" } ×
+    .modal-grid
+      .modal-img
+        - bird_illustrations(@sci).each do |label, img|
+          %img{ src: img, alt: "#{@name.en} (#{label})", loading: "eager" }
+      .modal-info
+        %h2= @name.ga || @name.en
+        - if @name.ga
+          %p.common= @name.en
+        %p.sci= @sci
+        .modal-stats
+          %div
+            %span.n= number_with_delimiter(@all_time)
+            %span.lbl all time
+          %div
+            %span.n= number_with_delimiter(@today)
+            %span.lbl today
+          %div
+            %span.n= heard_ago(@first_seen)
+            %span.lbl first heard
+        - if @description.present? && @description_ga.present?
+          .desc-langs{ "data-controller": "bilingual" }
+            .lang-toggle
+              %button{ type: "button", "data-lang": "en", "aria-current": "true", "data-bilingual-target": "button", "data-action": "bilingual#show" } English
+              %button{ type: "button", "data-lang": "ga", "aria-current": "false", "data-bilingual-target": "button", "data-action": "bilingual#show" } Gaeilge
+            %p.desc{ "data-bilingual-target": "body", "data-lang": "en" }= @description
+            %p.desc{ "data-bilingual-target": "body", "data-lang": "ga", hidden: true }= @description_ga
+        - else
+          %p.desc= @description.presence || @description_ga.presence || "No description available yet."
+        .modal-meta
+          %span.meta-item
+            %span.k genus
+            %span.v= @sci.split.first
+    .modal-recordings
+      .rec-head
+        %h3 Detections
+        %span.rec-count= "most recent #{@recent.size}"
+      %ol
+        - @recent.each do |detection|
+          - moment = detection.heard_at
+          %li
+            %span.rec-when
+              = heard_ago(moment)
+              - if moment
+                %small= moment.strftime("%-d %b · %H:%M")
+            %span.rec-conf= "#{(detection.confidence.to_f * 100).round}%"
+    .modal-actions
+      %a.chip.ext{ href: "https://en.wikipedia.org/wiki/#{@sci.tr(' ', '_')}", target: "_blank", rel: "noopener" } wiki
+      %a.chip.ext{ href: "https://ebird.org/search?q=#{CGI.escape(@name.en)}", target: "_blank", rel: "noopener" } ebird

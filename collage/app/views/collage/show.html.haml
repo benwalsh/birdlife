@@ -1,0 +1,10 @@
+- content_for :title, "Connemara Birds — Heard Recently"
+- content_for :heading, "Heard Recently"
+-# Live wall display: the refresh controller reloads as the mic hears new birds
+-# (pausing while a species modal is open). Only the collage auto-refreshes;
+-# stats/atlas stay put for browsing.
+%section.view#v0{ "aria-label": "Bird collage" }
+  .gcollage{ "data-controller": "collage refresh", "data-collage-window-value": window_phrase }
+    = render "panel"
+    -# Caption pill: blank until a bird is hovered/tapped, then names that one bird.
+    %p.collage-tip{ "data-collage-target": "caption", "aria-hidden": "true" }

@@ -1,0 +1,14 @@
+{
+  "name": "collage",
+  "private": true,
+  "scripts": {
+    "build": "bun bun.config.js"
+  },
+  "dependencies": {
+    "@hotwired/stimulus": "^3.2.2",
+    "@hotwired/turbo-rails": "^8.0.23"
+  },
+  "volta": {
+    "node": "24.13.1"
+  }
+}

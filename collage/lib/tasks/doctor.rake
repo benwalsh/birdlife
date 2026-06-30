@@ -1,0 +1,38 @@
+namespace :birdlife do
+  desc 'Verify the Python<->Rails<->datastore seams and Irish/UTF-8 locale (bring-up check)'
+  task doctor: :environment do
+    ok = true
+    check = lambda do |label, cond, detail = nil|
+      ok &&= cond
+      puts "  [#{cond ? 'ok' : 'FAIL'}] #{label}#{" — #{detail}" if detail}"
+    end
+
+    conn = ActiveRecord::Base.connection
+    puts "DATASTORE (#{ActiveRecord::Base.connection_db_config.database})"
+    check.call('connects', conn.select_value('SELECT 1').to_i == 1)
+    check.call('detections table (listener writes it)', conn.table_exists?('detections'))
+    check.call('species_infos table (web app owns it)', conn.table_exists?('species_infos'))
+
+    # The exact columns listener/listen.py INSERTs — the Python<->datastore seam.
+    if conn.table_exists?('detections')
+      cols = conn.columns('detections').map(&:name)
+      needed = %w[Date Time Sci_Name Com_Name Confidence Lat Lon Week File_Name]
+      missing = needed - cols
+      check.call('listener write-columns present', missing.empty?, missing.any? ? "missing #{missing.join(', ')}" : nil)
+    end
+
+    mode = conn.execute('PRAGMA journal_mode').first&.values&.first.to_s
+    check.call('WAL mode (concurrent listener + web)', mode.downcase == 'wal', "journal_mode=#{mode}")
+
+    puts "\nIRISH / UTF-8 (the locale seam)"
+    robin = BirdName.lookup('Erithacus rubecula')
+    chough = BirdName.lookup('Pyrrhocorax pyrrhocorax')
+    check.call('labels load + Irish lookup', robin.ga == 'Spideog', "robin -> #{robin.ga.inspect}")
+    check.call('UTF-8 string encoding', robin.ga.to_s.encoding.name == 'UTF-8', robin.ga.to_s.encoding.name)
+    check.call('accented chars intact', chough.ga.to_s.include?('á'), "chough -> #{chough.ga.inspect}")
+
+    puts "\nlocale: external=#{Encoding.default_external}  LANG=#{ENV['LANG'].inspect}  RAILS_ENV=#{Rails.env}"
+    abort("\nbirdlife:doctor — FAILURES above") unless ok
+    puts "\nall seams good ✓"
+  end
+end

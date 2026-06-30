@@ -1,43 +1,55 @@
 # Generating illustrations
 
-The collage art is generated, not hand-drawn. The repo ships 498 kachō-e
-illustrations (249 species, a perched and a flight pose each). To restyle
-them or build a set for your own region, the pipeline is four scripts in
-this directory.
+The collage art is generated, not hand-drawn — kachō-e–style birds, a perched
+and a flight pose each. To restyle them or build a set for your own region, the
+pipeline is three scripts in this directory, wired into the repo `Makefile`.
 
 ## Pipeline
 
 1. `pregen.py` renders each bird with Gemini 2.5 Flash Image, on a flat cream ground.
-2. `cutout.py` removes the ground with BiRefNet and crops to the bird.
-3. `build_masks.py` rebuilds the collage silhouette masks inlined in `apt.js`.
-4. `verify.py` (optional) runs an adversarial species-ID + anatomy check.
+2. `cutout_flood.py` lifts the ground to transparency with a Pillow flood-fill,
+   sweeps stray flecks, and crops to the bird.
+3. `build_masks.py --json` writes the 1-bit collage silhouettes to
+   `../assets/illustrations/masks.json`, which the Rails `MaskPacker` reads.
+
+Driven through the `Makefile` (which sources `.env` for `GEMINI_API_KEY`):
 
 ```bash
-pip install -r requirements.txt
-export GEMINI_API_KEY='your-key'
-
-# 1. generate (cream ground) for your region's species
-python3 pregen.py --labels ~/BirdNET-Pi/model/labels.txt --ebird-region US-CA
-
-# 2. cut the ground off and crop
-python3 cutout.py
-
-# 3. rebuild the collage masks, then bump SKETCH_VERSION + IMG_VERSION in apt.js
-python3 build_masks.py
+make regen SPECIES="Pyrrhocorax pyrrhocorax|Red-billed Chough"  # one bird: pregen + cut
+make cutout      # flood-cut any new cream-ground illustrations to transparent
+make declutter   # sweep stray flecks from existing cutouts, then rebuild masks
+make masks       # rebuild masks.json after changing the illustration set
 ```
 
-`--labels` takes any `Sci|Com` per-line file (BirdNET-Pi's `labels.txt` works
-directly). `--ebird-region` filters to species actually seen in your region
-(needs `EBIRD_API_KEY`). Re-render one bird with
-`--species "Calypte anna|Anna's Hummingbird" --force`.
+Or call the scripts directly under `uv run python`. `pregen.py --labels` takes
+any `Sci|Com` per-line file (BirdNET-Pi's `labels.txt` works); `--ebird-region`
+filters to species seen in your region (needs `EBIRD_API_KEY`); re-render one
+bird with `--species "..." --force`.
 
-## Why a cream ground
+We cut with a Pillow flood-fill rather than BiRefNet matting — onnxruntime
+conflicts with the BirdNET stack in the shared `uv` environment, and at
+collage/atlas size the flood-fill reads clean.
 
-The image model can't cut a clean transparent background on its own: it
-leaves holes and fringes, worst on pale birds. Rendering on a flat,
-consistent cream ground gives a known color that BiRefNet removes cleanly,
-and the steady ground also holds the painting style together across the
-whole set. `cutout.py` is the step that makes the backgrounds transparent.
+## Why a cream ground (and its limits)
+
+The image model can't cut a clean transparent background itself — it leaves holes
+and fringes. Rendering on a flat, consistent cream ground gives a known colour
+the flood-fill removes cleanly, and the steady ground holds the painting style
+together across the set.
+
+The flood seeds from the borders, so two things need care, both handled in
+`cutout_flood.py`:
+
+- **Stray flecks.** The model speckles the "aged paper" with faint beige stipple
+  the flood can't reach. `despeckle()` drops blobs that are *both* ground-coloured
+  *and* clear of the body — but keeps dark/coloured details (a pale bird's eye
+  floats free in its transparent white head, and must survive). `make declutter`
+  applies this to existing cutouts non-destructively.
+- **White birds.** A pure-white bird's plumage *is* the ground colour, so the
+  flood can't tell body from background. The prompt now asks for white plumage to
+  be painted as clean bright white, distinct from the warm cream, so it reads as
+  white and the cut separates it. Regenerate affected white birds after a prompt
+  change.
 
 ## The prompt
 

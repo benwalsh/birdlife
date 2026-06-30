@@ -57,3 +57,13 @@ whitelist_species_list.txt
 avian/assets/references/
 # Superseded assets retained locally
 avian/assets/_legacy/
+
+# Local desktop dev virtualenv (CLAUDE.md: develop on desktop, deploy to Pi)
+.venv/
+
+# Local secrets for the illustration pipeline (Gemini / eBird API keys).
+# Used by avian/scripts on the desktop only — never committed, never on the Pi.
+.env
+.env.*
+!.env.example
+/.venv-birdnet

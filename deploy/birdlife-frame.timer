@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh the Inky panel every minute (pushes only on change)
+
+[Timer]
+OnBootSec=45
+OnUnitActiveSec=60s
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target
