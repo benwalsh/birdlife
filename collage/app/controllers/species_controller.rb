@@ -6,10 +6,11 @@ class SpeciesController < ApplicationController
 
     @all_time = scope.count
     @today = scope.merge(Detection.today).count
-    @first_seen = parse_time(scope.minimum(Arel.sql(Detection::WHEN_SQL)))
-    @recent = scope.order(Arel.sql("#{Detection::WHEN_SQL} DESC")).limit(24)
+    @first_seen = parse_time(scope.minimum(Arel.sql(Detection.when_sql)))
+    @recent = scope.order(Arel.sql("#{Detection.when_sql} DESC")).limit(24)
     @description = SpeciesInfo.english_for(@sci, @name.en)
     @description_ga = SpeciesInfo.irish_for(@sci, @name.ga)
+    @song = SongSample.url_for(@sci)
 
     render layout: false
   end

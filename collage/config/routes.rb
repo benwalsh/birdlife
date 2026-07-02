@@ -12,6 +12,14 @@ Rails.application.routes.draw do
   # Defines the root path route ("/")
   root 'collage#show'
   get 'panel' => 'collage#panel'
+  # The Éist "Listening Station" view — the Inky-first base tier (480x800 portrait
+  # on the wall). Standalone for now while the design settles; will become the
+  # base the desktop chrome grows around, and the shooter/emulator target.
+  get 'station' => 'collage#station'
+  get 'station/next' => 'collage#station_next'
+  # A browser mock-up of the physical Inky Impression 7.3" panel: fetches /panel
+  # and applies the same Spectra-6 dither the real glass gets.
+  get 'emulator' => 'collage#emulator'
   get 'stats' => 'stats#show'
   get 'atlas' => 'atlas#show'
   # Scientific names carry spaces/dots, so allow anything but a slash.

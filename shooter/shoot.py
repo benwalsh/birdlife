@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Screenshot the collage /panel page and push it to the Inky 7.3".
+"""Screenshot the /station wall programme and push it to the Inky 7.3".
 
-The bridge from the Rails app to the e-ink panel. The app renders a bare
-800x480 SVG at /panel (no web chrome); this screenshots it with a headless
-browser and pushes the pixels to the Inky Impression (Spectra 6).
+The bridge from the Rails app to the e-ink panel. The app renders the portrait
+480x800 /station view; this screenshots the current station screen with a
+headless browser and pushes the pixels to the Inky Impression (Spectra 6).
 
     # On the Mac (no panel): write the Spectra-6 dither to inspect the look
     uv run python shooter/shoot.py --preview frame.png
@@ -27,19 +27,20 @@ from pathlib import Path
 
 from PIL import Image
 
-PANEL_W, PANEL_H = 800, 480
+PANEL_W, PANEL_H = 480, 800
 
 # Approximate Spectra-6 inks, for the desktop --preview dither only. On the Pi
 # the Inky library maps to the panel's real palette.
 SPECTRA6 = [(236, 234, 223), (26, 26, 28), (165, 60, 56),
             (198, 176, 74), (49, 71, 130), (58, 110, 72)]
 
-DEFAULT_URL = "http://localhost:4030/panel"
+DEFAULT_URL = "http://localhost:4030/station"
+DEFAULT_SELECTOR = ".station"
 DEFAULT_STATE = "~/.birdframe/state"
 
 
-def screenshot(url: str, timeout_ms: int = 30_000) -> bytes:
-    """Render the panel page and return PNG bytes of the SVG, exactly 800x480."""
+def screenshot(url: str, selector: str, timeout_ms: int = 30_000) -> bytes:
+    """Render the station page and return PNG bytes of the selected panel area."""
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as p:
@@ -47,7 +48,7 @@ def screenshot(url: str, timeout_ms: int = 30_000) -> bytes:
         page = browser.new_page(viewport={"width": PANEL_W, "height": PANEL_H})
         try:
             page.goto(url, wait_until="networkidle", timeout=timeout_ms)
-            element = page.wait_for_selector("svg.collage", timeout=timeout_ms)
+            element = page.wait_for_selector(selector, timeout=timeout_ms)
             png = element.screenshot()
         finally:
             browser.close()
@@ -91,8 +92,9 @@ def write_state(path: Path, digest: str) -> None:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Screenshot the collage panel and push it to the Inky.")
-    ap.add_argument("--url", default=DEFAULT_URL, help=f"panel page (default {DEFAULT_URL})")
+    ap = argparse.ArgumentParser(description="Screenshot the station view and push it to the Inky.")
+    ap.add_argument("--url", default=DEFAULT_URL, help=f"station page (default {DEFAULT_URL})")
+    ap.add_argument("--selector", default=DEFAULT_SELECTOR, help=f"element to screenshot (default {DEFAULT_SELECTOR})")
     ap.add_argument("--preview", metavar="PATH", help="write the Spectra-6 dither here instead of pushing")
     ap.add_argument("--rotate", type=int, default=0, choices=[0, 90, 180, 270], help="panel rotation")
     ap.add_argument("--saturation", type=float, default=0.6, help="Inky colour saturation 0-1")
@@ -101,7 +103,7 @@ def main() -> int:
     args = ap.parse_args()
 
     try:
-        png = screenshot(args.url)
+        png = screenshot(args.url, args.selector)
     except Exception as exc:  # noqa: BLE001 — surface any browser/network failure plainly
         print(f"screenshot failed ({args.url}): {exc}", file=sys.stderr)
         return 1

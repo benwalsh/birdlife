@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_30_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_01_090000) do
   create_table "detections", force: :cascade do |t|
     t.string "Com_Name", null: false
     t.float "Confidence"
@@ -24,8 +24,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_30_130000) do
     t.float "Sens"
     t.time "Time"
     t.integer "Week"
+    t.string "dedupe_key"
     t.index ["Date", "Time"], name: "index_detections_on_Date_and_Time"
     t.index ["Sci_Name"], name: "index_detections_on_Sci_Name"
+    t.index ["dedupe_key"], name: "index_detections_on_dedupe_key", unique: true
   end
 
   create_table "species_infos", force: :cascade do |t|
@@ -34,7 +36,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_30_130000) do
     t.text "description_ga"
     t.datetime "fetched_at"
     t.datetime "fetched_ga_at"
+    t.datetime "fetched_song_at"
     t.string "sci_name", null: false
+    t.string "song_url"
     t.datetime "updated_at", null: false
     t.index ["sci_name"], name: "index_species_infos_on_sci_name", unique: true
   end

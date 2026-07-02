@@ -21,8 +21,21 @@ namespace :birdlife do
       check.call('listener write-columns present', missing.empty?, missing.any? ? "missing #{missing.join(', ')}" : nil)
     end
 
-    mode = conn.execute('PRAGMA journal_mode').first&.values&.first.to_s
-    check.call('WAL mode (concurrent listener + web)', mode.downcase == 'wal', "journal_mode=#{mode}")
+    if conn.adapter_name.match?(/sqlite/i)
+      mode = conn.execute('PRAGMA journal_mode').first&.values&.first.to_s
+      check.call('WAL mode (concurrent listener + web)', mode.downcase == 'wal', "journal_mode=#{mode}")
+    else
+      check.call('adapter (cloud mirror)', true, conn.adapter_name)
+    end
+
+    # The one cross-database seam (Detection.when_sql) actually executes.
+    when_ok = begin
+      Detection.tally_within(1_000_000)
+      true
+    rescue StandardError
+      false
+    end
+    check.call('chronological query (when_sql) runs', when_ok, Detection.when_sql)
 
     puts "\nIRISH / UTF-8 (the locale seam)"
     robin = BirdName.lookup('Erithacus rubecula')

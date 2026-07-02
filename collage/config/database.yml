@@ -28,3 +28,17 @@ test:
 production:
   <<: *default
   database: <%= ENV.fetch("BIRD_DB", "storage/production.sqlite3") %>
+
+# The public cloud mirror (App Runner) runs on RDS MySQL — a separate block, NOT
+# inheriting *default, because it must not carry SQLite's pragmas/timeout. All
+# connection values come from the environment (SSM in AWS). utf8mb4 keeps the
+# Irish fadas intact. See config/environments/cloud.rb.
+cloud:
+  adapter: trilogy
+  encoding: utf8mb4
+  database: <%= ENV.fetch("DB_NAME", "birdlife") %>
+  username: <%= ENV["DB_USER"] %>
+  password: <%= ENV["DB_PASSWORD"] %>
+  host: <%= ENV["DB_HOST"] %>
+  port: <%= ENV.fetch("DB_PORT", 3306) %>
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>

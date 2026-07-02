@@ -6,8 +6,8 @@ The wall device: a Pi 4 driving a Pimoroni Inky Impression 7.3" (Spectra 6,
 | Service | What it does |
 |---|---|
 | `birdlife-listener` | reads the USB mic → BirdNET → writes `birds.db` |
-| `birdlife-web` | the Rails collage app on `:4030` (serves `/panel`) |
-| `birdlife-frame` (timer) | screenshots `/panel`, pushes to the Inky on change |
+| `birdlife-web` | the Rails app on `:4030` (serves `/station` for the wall, plus the web UI) |
+| `birdlife-frame` (timer) | screenshots `/station`, advances the slow gallery on the Inky |
 
 The whole stack runs **bare-metal** (no Docker — the mic and the SPI/GPIO panel
 make container hardware passthrough more trouble than it's worth). Reproducibility
@@ -92,7 +92,7 @@ journalctl -u birdlife-frame -f      # watch panel pushes
 
 ## 5. First light
 
-- `uv run python shooter/shoot.py --preview /tmp/f.png` then `eog /tmp/f.png` — check the look before pushing to glass.
+- `uv run python shooter/shoot.py --preview /tmp/f.png` then `eog /tmp/f.png` — check the `/station` look before pushing to glass.
 - Drop the preview and run `shooter/shoot.py` for real; tune `--rotate` (how the frame hangs) and `--saturation` on the actual panel — colours and dithering differ from the preview, so do a final pass on the glass.
 
 ## Offsite backup (Litestream → S3/B2)

@@ -18,3 +18,6 @@ application.register("modal", ModalController)
 
 import RefreshController from "./refresh_controller"
 application.register("refresh", RefreshController)
+
+import SongController from "./song_controller"
+application.register("song", SongController)

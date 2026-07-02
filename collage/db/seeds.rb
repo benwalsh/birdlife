@@ -2,10 +2,11 @@
 # A mix of garden, coastal, bog and moorland species. Idempotent: clears and
 # reseeds today's detections each run.
 
-# Never on the Pi: production detections come from the live mic via the listener,
-# so db:prepare on first boot must not inject fake birds into the real datastore.
-if Rails.env.production?
-  puts 'seeds: skipped in production (detections come from the listener)' # rubocop:disable Rails/Output
+# Local dev/test only. On the Pi (production) detections come from the live mic
+# via the listener; in the cloud mirror they arrive via ingest from the Pi —
+# neither must have fake birds injected by db:prepare.
+unless Rails.env.local?
+  puts "seeds: skipped in #{Rails.env} (real detections come from the listener/ingest)" # rubocop:disable Rails/Output
   return
 end
 

@@ -59,6 +59,9 @@ say "python deps (uv sync)"
 
 say "ruby/js deps + production assets"
 cd "$REPO/collage"
+# The `cloud` group (trilogy/MySQL) is for the public cloud mirror only — the Pi
+# runs on SQLite and never needs it, so don't compile it here.
+bundle config set --local without cloud
 bundle install
 bun install
 bun run build

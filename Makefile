@@ -52,11 +52,11 @@ restyle:  ## redraw the whole Irish library in the current prompt style, then cu
 	uv run python avian/scripts/cutout_flood.py && \
 	uv run python avian/scripts/build_masks.py --json avian/assets/illustrations/masks.json
 
-frame-preview:  ## dither /panel to a PNG to inspect the Inky look (no hardware)
-	uv run python shooter/shoot.py --url http://localhost:$(PORT)/panel --preview $(or $(OUT),frame.png)
+frame-preview:  ## dither /station to a PNG to inspect the Inky look (no hardware)
+	uv run python shooter/shoot.py --url http://localhost:$(PORT)/station --preview $(or $(OUT),frame.png)
 
 frame:  ## push the panel to the Inky  (Pi only)
-	uv run python shooter/shoot.py --url http://localhost:$(PORT)/panel
+	uv run python shooter/shoot.py --url http://localhost:$(PORT)/station
 
 purge:  ## clear all detections (reset the collage to empty)
 	cd collage && bin/rails runner 'puts "cleared #{Detection.delete_all} detections"'

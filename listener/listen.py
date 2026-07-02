@@ -28,6 +28,7 @@ import os
 import sqlite3
 import sys
 import tempfile
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -145,11 +146,26 @@ def cmd_listen(args, analyzer, lat, lon, min_conf):
 
     device, mic_name = resolve_mic()
     print(f"listening on '{mic_name}' in {args.seconds}s chunks (Ctrl-C to stop)...")
+    backoff = 1.0
     try:
         while True:
-            audio = sd.rec(int(args.seconds * SAMPLE_RATE), samplerate=SAMPLE_RATE,
-                           channels=1, device=device)
-            sd.wait()
+            try:
+                audio = sd.rec(int(args.seconds * SAMPLE_RATE), samplerate=SAMPLE_RATE,
+                               channels=1, device=device)
+                sd.wait()
+            except sd.PortAudioError as err:
+                # Transient capture glitch (a CoreAudio/ALSA hiccup, a USB mic
+                # re-enumerating, device contention). Don't take the whole
+                # listener down — warn, drop the half-open stream, back off, and
+                # keep going. Backoff caps so an unplugged mic doesn't spin.
+                stamp = datetime.now().strftime("%H:%M:%S")
+                print(f"[{stamp}] audio capture error ({err}); retrying in {backoff:.0f}s",
+                      file=sys.stderr)
+                sd.stop(ignore_errors=True)
+                time.sleep(backoff)
+                backoff = min(backoff * 2, 30.0)
+                continue
+            backoff = 1.0  # a clean capture resets the backoff
             with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
                 sf.write(tmp.name, audio, SAMPLE_RATE)
                 detections = analyze_file(analyzer, Path(tmp.name), lat, lon, min_conf)

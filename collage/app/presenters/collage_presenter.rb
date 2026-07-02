@@ -10,7 +10,7 @@ class CollagePresenter
   # birds render as a plain coloured disc rather than a labelled chip).
   FILLS = ['#a53c38', '#31477e', '#3a6e48', '#c6b04a'].freeze
 
-  Node = Data.define(:cx, :cy, :r, :w, :h, :image, :fill, :sci, :ga, :en, :count)
+  Node = Data.define(:cx, :cy, :r, :w, :h, :image, :fill, :sci, :ga, :en, :count, :flip)
 
   ILLUSTRATIONS_DIR = Rails.root.join('../avian/assets/illustrations')
   # Loudest bird's size vs the quietest. Kept low and applied on a log curve
@@ -72,9 +72,10 @@ class CollagePresenter
 
   def prepare_birds
     radii = scaled_radii
+    flying = flying_set(@tally.map(&:sci_name))
     @tally.each_with_index.map do |tally, i|
       name = tally.name
-      file = illustration_file(name.sci)
+      file = illustration_file(name.sci, flying.include?(name.sci))
       { tally: tally, name: name, file: file,
         mask: file && BirdMask.for(file.basename('.png').to_s),
         weight: radii[i]**2, aspect: aspect_for(file) }
@@ -145,24 +146,41 @@ class CollagePresenter
       r: (Math.sqrt(width * height) / 2).round(2),
       w: width.round(2), h: height.round(2),
       image: illustration_url(bird[:file]), fill: FILLS[index % FILLS.size],
-      sci: name.sci, ga: name.ga, en: name.en, count: bird[:tally].count
+      sci: name.sci, ga: name.ga, en: name.en, count: bird[:tally].count,
+      flip: facing_flip?(name.sci)
     )
   end
 
-  def illustration_file(sci)
+  def illustration_file(sci, fly)
     base = sci.downcase.tr(' ', '-')
-    flight = ILLUSTRATIONS_DIR.join("#{base}-2.png")
-    return flight if flies?(base) && flight.exist?
+    if fly
+      flight = ILLUSTRATIONS_DIR.join("#{base}-2.png")
+      return flight if flight.exist?
+    end
 
     perched = ILLUSTRATIONS_DIR.join("#{base}.png")
     perched.exist? ? perched : nil
   end
 
-  # Does this species show in flight? A stable ~FLY_PROB slice, hashed from the
-  # slug so the same birds always fly (no per-refresh flicker on the panel) — the
-  # deterministic analogue of upstream's memoised Math.random() < FLY_PROB.
-  def flies?(base)
-    (Zlib.crc32(base) % 10_000) < (FLY_PROB * 10_000)
+  # The ~FLY_PROB of the *shown* species that take flight. We rank the birds on
+  # screen by a date-seeded hash and fly the top slice — ranking the shown set
+  # (not the whole 206-bird catalogue) guarantees the collage always has a few
+  # aloft, instead of zero on a day when none of the heard species happened to
+  # hash into a global 15%. The date folds in so the flock reshuffles each day,
+  # but it's fixed within a day, so the e-ink panel doesn't churn (one shuffle at
+  # midnight). At least one flier once a small flock is present.
+  def flying_set(sci_names)
+    return [] if sci_names.size < 3
+
+    count = [(sci_names.size * FLY_PROB).round, 1].max
+    sci_names.sort_by { |sci| Zlib.crc32("#{sci.downcase.tr(' ', '-')}@#{Date.current}") }.first(count)
+  end
+
+  # Should this bird be mirrored to face the other way? A per-species daily
+  # coin-flip (~50/50), so the flock faces both directions and rearranges each
+  # day. Seeded separately from the flight choice so the two don't correlate.
+  def facing_flip?(sci)
+    Zlib.crc32("flip:#{sci.downcase.tr(' ', '-')}@#{Date.current}").odd?
   end
 
   def illustration_url(file)

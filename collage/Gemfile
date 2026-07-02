@@ -14,6 +14,13 @@ gem 'tzinfo-data', platforms: %i[windows jruby]
 gem 'bootsnap', require: false
 gem 'thruster', require: false
 
+# The cloud mirror runs this same app on RDS MySQL. trilogy is a pure-Ruby MySQL
+# adapter — no libmysqlclient to compile into the container image. The Pi never
+# needs it: `bundle config set --without cloud` (see deploy/provision.sh).
+group :cloud do
+  gem 'trilogy'
+end
+
 group :development, :test do
   gem 'awesome_print'
   gem 'debug', platforms: %i[mri windows], require: 'debug/prelude'

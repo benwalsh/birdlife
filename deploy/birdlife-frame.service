@@ -1,8 +1,8 @@
 [Unit]
-# Screenshot the collage /panel and push it to the Inky. Oneshot, driven by
+# Screenshot the /station wall programme and push it to the Inky. Oneshot, driven by
 # birdlife-frame.timer. The shooter skips the push when nothing changed, so the
-# e-ink panel only refreshes when the birds do.
-Description=Push the collage to the Inky panel
+# e-ink panel only refreshes when the station screen changes.
+Description=Push the station view to the Inky panel
 After=birdlife-web.service
 Requires=birdlife-web.service
 
@@ -13,5 +13,5 @@ WorkingDirectory=/home/pi/birdlife
 EnvironmentFile=/home/pi/birdlife/.env
 # Wait until the web app is actually serving before screenshotting (Puma can
 # still be booting when this fires), so the first push of the day isn't a miss.
-ExecStartPre=/usr/bin/env bash -lc 'for i in $(seq 1 30); do curl -sf http://localhost:4030/up >/dev/null && exit 0; sleep 2; done; echo "panel not ready" >&2; exit 1'
-ExecStart=/usr/bin/env bash -lc 'cd /home/pi/birdlife && exec uv run python shooter/shoot.py --url http://localhost:4030/panel'
+ExecStartPre=/usr/bin/env bash -lc 'for i in $(seq 1 30); do curl -sf http://localhost:4030/up >/dev/null && exit 0; sleep 2; done; echo "station not ready" >&2; exit 1'
+ExecStart=/usr/bin/env bash -lc 'cd /home/pi/birdlife && exec uv run python shooter/shoot.py --url http://localhost:4030/station'

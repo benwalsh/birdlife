@@ -10,11 +10,6 @@ class Detection < ApplicationRecord
     def name = BirdName.lookup(sci_name)
   end
 
-  # Portable chronological key: SQLite date()/time() normalise both our dev
-  # format (Rails stores :time as "2000-01-01 HH:MM:SS") and the real birds.db
-  # format ("HH:MM:SS"), so the concatenation sorts correctly either way.
-  WHEN_SQL = %{date("Date") || ' ' || time("Time")}.freeze
-
   # A species earns a place on the wall once we trust it: either one confident
   # hit, or enough repeats to rule out a one-off. Rare + low-confidence (a lone
   # 27% "Gadwall") is exactly BirdNET's false-positive zone, so it stays hidden.
@@ -33,7 +28,7 @@ class Detection < ApplicationRecord
   scope :today, -> { on_date(Date.current) }
   # Detections within the last `hours` (a huge value means "all time").
   scope :within, ->(hours) { hours >= 1_000_000 ? all : since(hours.to_f.hours.ago) }
-  scope :since, ->(time) { where("#{WHEN_SQL} >= ?", time.strftime('%Y-%m-%d %H:%M:%S')) }
+  scope :since, ->(time) { where("#{when_sql} >= ?", time.strftime('%Y-%m-%d %H:%M:%S')) }
 
   # The detection's actual moment, combining the separate Date and Time columns.
   def heard_at
@@ -45,6 +40,20 @@ class Detection < ApplicationRecord
   end
 
   class << self
+    # Adapter-aware chronological key: the separate Date + Time columns normalised
+    # into one sortable "YYYY-MM-DD HH:MM:SS" string. On the Pi (SQLite) date()/
+    # time() cope with both our dev format ("2000-01-01 HH:MM:SS") and the real
+    # birds.db format ("HH:MM:SS"). In the cloud mirror (MySQL) we need CONCAT +
+    # backticks — there `||` is boolean OR, and Date/Time in double quotes are
+    # string literals, not identifiers. This is the ONE cross-database seam.
+    def when_sql
+      if connection.adapter_name.match?(/sqlite/i)
+        %{date("Date") || ' ' || time("Time")}
+      else
+        "CONCAT(DATE(`Date`), ' ', TIME(`Time`))"
+      end
+    end
+
     def tally_for(date = Date.current)
       tally(on_date(date))
     end
@@ -66,7 +75,7 @@ class Detection < ApplicationRecord
       credible = credible_species
       relation.
         group(:Sci_Name).
-        pluck(Arel.sql("Sci_Name, COUNT(*), MAX(#{WHEN_SQL}), MAX(Confidence)")).
+        pluck(Arel.sql("Sci_Name, COUNT(*), MAX(#{when_sql}), MAX(Confidence)")).
         map { |sci, count, last, confidence| SpeciesTally.new(sci, count.to_i, last, confidence.to_f) }.
         select { |species| credible.include?(species.sci_name) }.
         sort_by { |species| -species.count }
@@ -76,7 +85,7 @@ class Detection < ApplicationRecord
     def life_list
       credible = credible_species
       group(:Sci_Name).
-        pluck(Arel.sql("Sci_Name, COUNT(*), MIN(#{WHEN_SQL}), MAX(#{WHEN_SQL})")).
+        pluck(Arel.sql("Sci_Name, COUNT(*), MIN(#{when_sql}), MAX(#{when_sql})")).
         map { |sci, count, first, last| LifeEntry.new(sci, count.to_i, first, last) }.
         select { |entry| credible.include?(entry.sci_name) }
     end
