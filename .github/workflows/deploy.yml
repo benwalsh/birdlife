@@ -9,6 +9,12 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# One deploy at a time — a second push to main waits rather than racing two
+# rollouts of the same service.
+concurrency:
+  group: deploy-ecs-express
+  cancel-in-progress: false
+
 permissions:
   id-token: write # mint the OIDC token
   contents: read
@@ -17,8 +23,8 @@ env:
   AWS_REGION: eu-west-1
   DEPLOY_ROLE: arn:aws:iam::563332535280:role/culfinbirds-github-deploy
   ECR_REPO: 563332535280.dkr.ecr.eu-west-1.amazonaws.com/culfinbirds
-  ECS_SERVICE: culfinbirds
   ECS_CLUSTER: culfinbirds
+  ECS_SERVICE: culfinbirds # verified: arn .../service/culfinbirds/culfinbirds, controller ECS
 
 jobs:
   deploy:
@@ -45,20 +51,32 @@ jobs:
             ${{ env.ECR_REPO }}:latest
             ${{ env.ECR_REPO }}:${{ github.sha }}
 
-      # Roll the ECS Express service onto the new image.
+      # Roll the ECS Express service onto the freshly-pushed :latest.
       #
-      # NB (deliberately NOT using aws-actions/amazon-ecs-deploy-express-service here):
+      # We force a new deployment rather than re-declaring the service. Terraform
+      # (infra/ecs.tf) stays the single owner of the service SHAPE — image tag (:latest),
+      # env, SSM secrets, roles, SG, autoscaling; CI only triggers a re-pull of that
+      # same tag. This is why we do NOT use aws-actions/amazon-ecs-deploy-express-service:
       # that action is create-OR-update and RE-DECLARES the whole service from its
-      # inputs (execution/infra/task roles, cpu, memory, env vars, secrets, subnets,
-      # security-groups, scaling, health-check). Since our service is owned by
-      # Terraform (infra/ecs.tf), calling it with a partial spec would WIPE the BEDROCK
-      # /ALERTS env, the SSM secrets, the ecs_tasks SG and the autoscaling. To use it
-      # we'd have to duplicate every one of those inputs here — config in two places.
+      # inputs, which would wipe the Bedrock/ALERTS env, the secrets, the SG and the
+      # scaling that live in Terraform. --force-new-deployment can't clobber config —
+      # it only re-pulls and rolls, or errors.
       #
-      # So this workflow only builds + pushes (which already kills the manual-tagging
-      # gremlin). The rollout onto the new :latest is a `terraform apply` (it forces a
-      # new deployment). If you later want true push-to-deploy, the clean move is to
-      # take the express service OUT of Terraform and let the action own it end-to-end,
-      # sourcing the role ARNs from Terraform outputs — a deliberate ownership swap.
-      - name: Image pushed
-        run: echo "Pushed ${{ env.ECR_REPO }}:${{ github.sha }} — run 'terraform apply' to roll it out."
+      # NB the old "just terraform apply" path did NOT actually roll a rebuilt image:
+      # with the tag pinned to :latest, an apply with no other diff is a no-op and the
+      # running tasks keep the old layers. Forcing the deployment here is what makes
+      # push-to-main genuinely ship.
+      #
+      # The service name is stable — it's the Terraform module name (infra/ecs.tf),
+      # verified live as service/culfinbirds/culfinbirds with the standard ECS
+      # deployment controller. If it's ever renamed in Terraform, update ECS_SERVICE
+      # here to match.
+      - name: Roll ECS Express onto the new image
+        run: |
+          set -euo pipefail
+          echo "Rolling $ECS_SERVICE onto ${ECR_REPO}:${GITHUB_SHA} (via :latest)"
+          aws ecs update-service --cluster "$ECS_CLUSTER" --service "$ECS_SERVICE" \
+            --force-new-deployment >/dev/null
+          echo "Waiting for the deployment to reach steady state…"
+          aws ecs wait services-stable --cluster "$ECS_CLUSTER" --services "$ECS_SERVICE"
+          echo "Deployed: ${ECR_REPO}:${GITHUB_SHA}"
