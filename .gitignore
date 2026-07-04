@@ -68,3 +68,6 @@ avian/assets/_legacy/
 !.env.example
 /.venv-birdnet
 .sync_cursor
+
+**/.terraform/*
+

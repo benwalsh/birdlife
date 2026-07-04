@@ -39,3 +39,9 @@ variable "container_port" {
   type        = number
   default     = 3000
 }
+
+variable "github_repository" {
+  description = "owner/name of the GitHub repo allowed to deploy via OIDC."
+  type        = string
+  default     = "benwalsh/birdlife"
+}

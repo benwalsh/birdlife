@@ -379,7 +379,14 @@ button.bird-card { width: 100%; background: transparent; cursor: pointer; font: 
 @media (max-width: 560px) {
   .ed-main, .ed-top, .ed-foot { padding-inline: 20px; }
   .ed-band { grid-template-columns: 1fr; gap: 18px; }
-  .ed-nav { gap: 16px; }
   .ed-lede { font-size: 28px; }
   .ed-tag { display: none; }
+
+  /* Header: the one flex row overflows a phone, so let the brand keep the top line
+     and the nav (tabs + window + language + account) wrap onto a full-width row
+     beneath it. */
+  .ed-top { flex-wrap: wrap; row-gap: 14px; padding-top: 16px; padding-bottom: 14px; }
+  .ed-mark { height: 36px; }
+  .ed-word { font-size: 24px; }
+  .ed-nav { width: 100%; flex-wrap: wrap; gap: 12px 18px; }
 }

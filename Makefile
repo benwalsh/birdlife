@@ -25,6 +25,10 @@ listen:  ## listen on the window mic and write detections (Ctrl-C to stop)
 	set -a; source .env; set +a; \
 	uv run python listener/listen.py listen
 
+push:  ## push new local detections up to the cloud mirror (reads CLOUD_INGEST_* from .env)
+	set -a; source .env; set +a; \
+	uv run python listener/push.py
+
 analyze:  ## analyse a recording:  make analyze FILE=path/to/song.wav
 	set -a; source .env; set +a; \
 	uv run python listener/listen.py recording "$(FILE)"

@@ -29,6 +29,9 @@ class DailyFacts
   BASELINE_DAYS = 14
   # The loudest few tallies carry the "most_common" texture flag.
   MOST_COMMON_TOP = 3
+  # Wikipedia blurbs fed to the LLM are capped to the most important arrivals — a bound
+  # on network hops and on how much the summary tries to characterise in one note.
+  MAX_BLURBS = 2
   # Importance is the single integer the summary orders by; flags are metadata.
   NOTABLE_IMPORTANCE = 60
   IMPORTANCE = {
@@ -92,15 +95,16 @@ class DailyFacts
   end
 
   def to_h(spotlight_blurb: false)
+    list = spotlight_blurb ? items_with_arrival_blurbs : items
     {
       date:               @date.to_s,
       species_today:      today_tally.size,
       detections_today:   detections_today,
-      items:              items,
+      items:              list,
       spotlight:          spotlight(include_blurb: spotlight_blurb),
       activity_note:      activity_note,
       activity_curve_24h: activity_curve_24h,
-      notable_today:      items.select { |i| i[:importance] >= NOTABLE_IMPORTANCE },
+      notable_today:      list.select { |i| i[:importance] >= NOTABLE_IMPORTANCE },
       station_age_days:   station_age_days
     }
   end
@@ -135,6 +139,19 @@ class DailyFacts
   def items
     @items ||= today_tally.each_with_index.map { |tally, i| scored_item(tally, most_common: i < MOST_COMMON_TOP) }.
                sort_by { |item| [-item[:importance], -item[:call_count]] }
+  end
+
+  # Feed the LLM Wikipedia source text for each flagged arrival, so it narrates the
+  # species from fact, not memory. Cached per species by SpeciesInfo — only the day's
+  # few arrivals ever hit the network.
+  def items_with_arrival_blurbs
+    fed = 0
+    items.map do |item|
+      next item if !item[:flags].intersect?(%w[all_time_first year_first]) || (fed += 1) > MAX_BLURBS
+
+      blurb = SpeciesInfo.english_for(item[:sci_name], item[:common_name])
+      blurb.present? ? item.merge(blurb: blurb) : item
+    end
   end
 
   def scored_item(tally, most_common:)

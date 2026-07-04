@@ -22,7 +22,9 @@ class TodaySummary
     Write 2 to 4 bullet points summarising today, based ONLY on the facts you are
     given. Lead with the most important items (highest importance score). New
     arrivals are the news — an all-time first or a year-first is what a reader
-    most wants to know.
+    most wants to know. Never return more than four bullets. If more than two
+    species are flagged as firsts today, feature the two most important and fold the
+    remaining firsts into one line (e.g. "with first records also of X, Y and Z").
 
     TONE: warm but understated. This is a quiet rural station, not a nature
     documentary. A little character is welcome in how you connect facts. Restraint
@@ -39,14 +41,15 @@ class TodaySummary
     - Counts, species totals, and "first" claims come verbatim from the facts.
       Never estimate, round differently, or embellish a number.
     - If unsure whether something is supported, leave it out.
-    - You may be given a block of background text about the spotlight species
-      (e.g. an encyclopedia extract). Treat it as SOURCE MATERIAL, not as text to
-      trust wholesale or reproduce. Select at most one or two relevant, interesting,
-      uncontested facts (what kind of bird it is, where it lives, how it behaves in
-      general) and state them in your own plain words. Do NOT summarise the whole
-      text, do NOT copy sentences from it, and do NOT include a fact that contradicts
-      the detection data (e.g. don't call a bird "rare in Ireland" if it's routine
-      here). One vivid, accurate clause is the goal — not a species profile.
+    - Each flagged arrival (a first / year-first) is followed by a Background line
+      about THAT species (an encyclopedia extract). For an arrival, WEAVE IN one
+      vivid, accurate detail drawn from its OWN Background — what kind of bird it is,
+      what it looks like, where it lives, a habit — in your own plain words, a single
+      clause. This is what makes the note worth reading. But: use ONLY the Background;
+      NEVER add a species fact from your own memory (it may be wrong), never copy its
+      sentences, never summarise the whole thing, and never state a detail that
+      contradicts the detection data. A species with NO Background gets no
+      characterising detail — name it plainly.
 
     STYLE:
     - Sentence case. No exclamation marks. No headings.
@@ -144,7 +147,9 @@ class TodaySummary
     def item_line(item)
       irish = item[:irish_name].present? ? " (#{item[:irish_name]})" : ''
       flags = item[:flags].join(', ')
-      "- #{item[:common_name]}#{irish}, #{item[:call_count]}, importance #{item[:importance]}, [#{flags}]"
+      line = "- #{item[:common_name]}#{irish}, #{item[:call_count]}, importance #{item[:importance]}, [#{flags}]"
+      line += "\n  Background (#{item[:common_name]}): #{item[:blurb]}" if item[:blurb].present?
+      line
     end
 
     def spotlight_line(spotlight)

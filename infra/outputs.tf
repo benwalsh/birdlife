@@ -43,3 +43,8 @@ output "alerts_from_address" {
   description = "Alert emails send from here. Needs SES domain verification + production access."
   value       = "alerts@${var.domain_name}"
 }
+
+output "github_deploy_role_arn" {
+  description = "Role the GitHub Actions deploy workflow assumes via OIDC."
+  value       = aws_iam_role.github_deploy.arn
+}

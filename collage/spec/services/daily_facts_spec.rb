@@ -97,8 +97,10 @@ RSpec.describe DailyFacts do
       age_the_station!
       create(:detection, Sci_Name: 'Tringa nebularia', Com_Name: 'Common Greenshank',
                          Date: today, Time: now, Confidence: 0.9)
+      # The top arrival is fetched both as an arrival (fed to the LLM) and as the
+      # spotlight; SpeciesInfo caches, so the second call is a no-op.
       expect(SpeciesInfo).to receive(:english_for).
-        with('Tringa nebularia', 'Common Greenshank').and_return('A wading bird of estuaries.')
+        with('Tringa nebularia', 'Common Greenshank').at_least(:once).and_return('A wading bird of estuaries.')
 
       spotlight = described_class.for(now: now, spotlight_blurb: true)[:spotlight]
       expect(spotlight[:blurb]).to eq('A wading bird of estuaries.')
