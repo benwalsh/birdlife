@@ -192,7 +192,7 @@ body.ed {
    own top margin providing the gap below. */
 .today-spark { margin: 46px auto 0; }
 /* Minimal, true-sparkline chrome: just the total, right-aligned over the line end. */
-.today-spark-head { display: flex; justify-content: flex-end; margin-bottom: 6px; }
+.today-spark-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
 .today-spark-total { font: 13px var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; }
 .today-spark-svg { display: block; width: 100%; height: 104px; }
 /* A thin green stroke — the only green on the page. */
@@ -273,6 +273,10 @@ button.bird-card { width: 100%; background: transparent; cursor: pointer; font: 
   margin: 0 0 14px; font: 500 10px var(--mono); letter-spacing: 0.18em;
   text-transform: uppercase; color: var(--ink-2);
 }
+/* Title + window picker on one line above the ranking. */
+.st-head-row { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.st-head-row .st-head { margin-bottom: 14px; }
+.st-empty { color: var(--ink-soft); font-style: italic; margin: 4px 0 0; }
 .st-block { padding: 28px 0; border-bottom: 1px solid var(--rule); }
 
 /* 2. Most heard — a ranked table; proportion shown by a thin ink measure. */

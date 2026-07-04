@@ -13,11 +13,9 @@ interface MastheadProps {
   bootstrap: Bootstrap
   tab: Tab
   onTab: (t: Tab) => void
-  win: number
-  onWin: (h: number) => void
 }
 
-export function Masthead({ bootstrap, tab, onTab, win, onWin }: MastheadProps) {
+export function Masthead({ bootstrap, tab, onTab }: MastheadProps) {
   const { lang, setLang } = useLang()
   // The masthead is sticky and condenses once the page scrolls, so the logo + nav
   // stay to hand without the full-height header eating the viewport.
@@ -47,20 +45,6 @@ export function Masthead({ bootstrap, tab, onTab, win, onWin }: MastheadProps) {
               {lang === 'ga' ? t.ga : t.en}
             </button>
           ))}
-          {/* Time window — filters Birds + Stats; the Directory is all-time, so hide it there. */}
-          {tab !== 'directory' && (
-            <div className="ed-window" role="group" aria-label="Time window">
-              {bootstrap.windows.map(([label, hours]) => (
-                <button
-                  key={hours}
-                  className={`ed-win-opt${win === hours ? ' is-on' : ''}`}
-                  onClick={() => onWin(hours)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
           <div className="ed-lang" role="group" aria-label="Language">
             <button className={`ed-lang-opt${lang === 'en' ? ' is-on' : ''}`} onClick={() => setLang('en')}>EN</button>
             <button className={`ed-lang-opt${lang === 'ga' ? ' is-on' : ''}`} onClick={() => setLang('ga')}>GA</button>

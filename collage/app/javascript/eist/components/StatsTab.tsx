@@ -1,6 +1,7 @@
 import { useStats } from '../api'
 import { useLang } from '../lang'
 import { shortDate } from '../time'
+import { WindowPicker } from './WindowPicker'
 
 // The stats page: the lifetime record, in the same broadsheet idiom as the home
 // page. No cards, no tiles, no rounded corners — ruled hairlines and right angles.
@@ -13,7 +14,17 @@ const PERIOD_GA: Record<string, string> = {
   'All time': 'Gach am',
 }
 
-export function StatsTab({ onSelect, windowHours }: { onSelect: (sci: string) => void; windowHours: number }) {
+export function StatsTab({
+  onSelect,
+  windowHours,
+  onWindow,
+  windows,
+}: {
+  onSelect: (sci: string) => void
+  windowHours: number
+  onWindow: (hours: number) => void
+  windows: [string, number][]
+}) {
   const { data, isLoading } = useStats(windowHours)
   const { lang, t } = useLang()
 
@@ -52,10 +63,14 @@ export function StatsTab({ onSelect, windowHours }: { onSelect: (sci: string) =>
         </div>
       </div>
 
-      {/* 2. Most heard — ranked, with a thin inline measure (never a heavy bar). */}
-      {data.top_species.length > 0 && (
-        <div className="st-block">
+      {/* 2. Most heard — ranked, with a thin inline measure (never a heavy bar). The
+          window picker rides in the header and rescopes the ranking. */}
+      <div className="st-block">
+        <div className="st-head-row">
           <h2 className="st-head">{t('Most heard', 'Is mó a cloiseadh')}</h2>
+          <WindowPicker windows={windows} value={windowHours} onChange={onWindow} />
+        </div>
+        {data.top_species.length > 0 ? (
           <ol className="st-ranked">
             {data.top_species.map((s) => (
               <li key={s.sci}>
@@ -67,8 +82,10 @@ export function StatsTab({ onSelect, windowHours }: { onSelect: (sci: string) =>
               </li>
             ))}
           </ol>
-        </div>
-      )}
+        ) : (
+          <p className="st-empty">{t('Nothing heard in this window.', 'Faic cloiste sa tréimhse seo.')}</p>
+        )}
+      </div>
 
       {/* 3. By period + Life list — two ruled columns (stack when narrow). */}
       <div className="st-cols">

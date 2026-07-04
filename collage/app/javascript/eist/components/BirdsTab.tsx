@@ -9,7 +9,17 @@ import { TodayCard } from './TodayCard'
 // The home page: the collage, then the TODAY block. Scroll past the collage and it
 // locks into a horizontal "greatest hits" strip pinned below the masthead. Rankings
 // and lifetime numbers live on the stats page.
-export function BirdsTab({ onSelect, windowHours }: { onSelect: (sci: string) => void; windowHours: number }) {
+export function BirdsTab({
+  onSelect,
+  windowHours,
+  onWindow,
+  windows,
+}: {
+  onSelect: (sci: string) => void
+  windowHours: number
+  onWindow: (hours: number) => void
+  windows: [string, number][]
+}) {
   const { data, isLoading, isError } = useOverview(windowHours)
   const { t } = useLang()
   const stageRef = useRef<HTMLElement>(null)
@@ -41,7 +51,7 @@ export function BirdsTab({ onSelect, windowHours }: { onSelect: (sci: string) =>
 
       {data.today?.summary?.length ? (
         <>
-          <TodaySpark today={data.today} />
+          <TodaySpark today={data.today} windows={windows} value={windowHours} onChange={onWindow} />
           <TodayCard today={data.today} />
         </>
       ) : (

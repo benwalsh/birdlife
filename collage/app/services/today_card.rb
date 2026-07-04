@@ -19,11 +19,21 @@ class TodayCard
   # Null-delimited placeholder used while wrapping names — cannot occur in the text.
   MARK = "\u0000".freeze
 
+  # The sparkline is always this many buckets wide, whatever the span — a fixed
+  # resolution keeps the line's texture consistent as the window changes.
+  BUCKETS = 24
+  # Windows at/above this are the "all time" sentinel (ApplicationController::WINDOWS
+  # uses 1_000_000); the line then spans from the first-ever detection.
+  ALL_THRESHOLD = 100_000
+
   class << self
-    def build(now: Time.current)
+    # window_hours sets the sparkline's span — the trailing window the graph covers
+    # (default 24h). The narrative (date, bullets) always stays about today; only the
+    # activity line rescales.
+    def build(now: Time.current, window_hours: 24)
       facts = DailyFacts.for(now: now)
       summary = TodaySummary.current(facts: facts)
-      counts, total = trailing_24h(now)
+      counts, total, start = series(now, window_hours)
       spark = Sparkline.paths(counts)
       {
         date_label: date_label(now),
@@ -31,7 +41,7 @@ class TodayCard
         source:     summary[:source],
         total:      total,
         sparkline:  { path: spark.path, fill: spark.fill, w: spark.w, h: spark.h },
-        anchors:    anchors(now),
+        anchors:    anchors(now, start),
         footer:     footer_items(now)
       }
     end
@@ -71,19 +81,34 @@ class TodayCard
       kind == :ga ? %(<em class="voice">#{esc}</em>) : "<strong>#{esc}</strong>"
     end
 
-    # Detections bucketed into the trailing 24 hours (oldest-first), plus the total.
-    def trailing_24h(now)
-      start = now - 24.hours
-      buckets = Array.new(24, 0)
+    # Detections bucketed across the chosen span (oldest-first), the total in that
+    # span, and the span's start. BUCKETS slots of equal width, so the same line
+    # shape works for an hour or a year.
+    def series(now, window_hours)
+      start = window_start(now, window_hours)
+      width = (now - start) / BUCKETS
+      width = 1.0 if width <= 0 # degenerate span (no data yet) — avoid /0
+      buckets = Array.new(BUCKETS, 0)
       rows = Detection.since(start).pluck(:Date, :Time)
       rows.each do |date, time|
         moment = combine(date, time)
         next unless moment
 
-        idx = ((moment - start) / 3600).floor
-        buckets[idx] += 1 if idx.between?(0, 23)
+        idx = ((moment - start) / width).floor
+        idx = BUCKETS - 1 if idx == BUCKETS # the exact 'now' edge lands in the last slot
+        buckets[idx] += 1 if idx.between?(0, BUCKETS - 1)
       end
-      [buckets, rows.length]
+      [buckets, rows.length, start]
+    end
+
+    # The span's start: a fixed window back from now, or — for the "all time"
+    # sentinel — the first-ever detection so the line covers the whole record.
+    # Falls back to 24h when there's nothing recorded yet.
+    def window_start(now, window_hours)
+      return now - window_hours.hours if window_hours < ALL_THRESHOLD
+
+      earliest = Detection.minimum(:Date)
+      earliest ? Time.zone.local(earliest.year, earliest.month, earliest.day) : now - 24.hours
     end
 
     def combine(date, time)
@@ -94,14 +119,23 @@ class TodayCard
       nil
     end
 
-    # Four evenly-spaced clock-time ticks across the trailing 24h span — plain time
-    # signals, no words (a true sparkline's minimal axis). Same label in both
-    # languages (a clock time is a clock time).
-    def anchors(now)
-      start = now - 24.hours
+    # Four evenly-spaced ticks across the span — a true sparkline's minimal axis.
+    # Short spans read as clock times (same in both languages); multi-day spans read
+    # as dates, with the Irish month for the ga label.
+    def anchors(now, start)
+      span_hours = (now - start) / 3600.0
       (0..3).map do |i|
-        label = (start + (i * 8).hours).strftime('%H:%M')
-        { x: (i / 3.0).round(4), en: label, ga: label }
+        tick = start + ((now - start) * (i / 3.0))
+        { x: (i / 3.0).round(4) }.merge(anchor_label(tick, span_hours))
+      end
+    end
+
+    def anchor_label(tick, span_hours)
+      if span_hours <= 48
+        clock = tick.strftime('%H:%M')
+        { en: clock, ga: clock }
+      else
+        { en: tick.strftime('%-d %b'), ga: "#{tick.day} #{GA_MONTHS[tick.month]}" }
       end
     end
 

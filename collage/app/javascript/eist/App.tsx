@@ -36,10 +36,14 @@ export function App({ bootstrap }: { bootstrap: Bootstrap }) {
     <QueryClientProvider client={queryClient}>
       <LangProvider initial={bootstrap.ui_lang}>
         <FollowProvider enabled={!!bootstrap.current_user} initial={bootstrap.favourites ?? []}>
-          <Masthead bootstrap={bootstrap} tab={tab} onTab={setTab} win={win} onWin={setWin} />
+          <Masthead bootstrap={bootstrap} tab={tab} onTab={setTab} />
           <main className="ed-main">
-            {tab === 'birds' && <BirdsTab onSelect={setSelected} windowHours={win} />}
-            {tab === 'stats' && <StatsTab onSelect={setSelected} windowHours={win} />}
+            {tab === 'birds' && (
+              <BirdsTab onSelect={setSelected} windowHours={win} onWindow={setWin} windows={bootstrap.windows} />
+            )}
+            {tab === 'stats' && (
+              <StatsTab onSelect={setSelected} windowHours={win} onWindow={setWin} windows={bootstrap.windows} />
+            )}
             {tab === 'directory' && <DirectoryTab onSelect={setSelected} />}
           </main>
           <Footer place={bootstrap.place} />

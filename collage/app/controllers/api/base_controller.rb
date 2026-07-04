@@ -37,7 +37,7 @@ module Api
     # The home page's "TODAY" card, shaped entirely in Ruby (bullets, sparkline
     # paths, anchors, footer) so the view only iterates and prints. See TodayCard.
     def today_json
-      TodayCard.build
+      TodayCard.build(window_hours: current_window)
     end
 
     def moon_json

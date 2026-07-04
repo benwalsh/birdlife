@@ -1,11 +1,23 @@
 import { useLang } from '../lang'
 import type { Today } from '../types'
 import { Sparkline } from './Sparkline'
+import { WindowPicker } from './WindowPicker'
 
-// The 24h activity sparkline as its own quiet band between the collage and the
-// TODAY text — the single live gesture, with minimal chrome: just the total and
-// four plain clock-time ticks.
-export function TodaySpark({ today }: { today: Today }) {
+// The activity sparkline as its own quiet band between the collage and the TODAY
+// text — the single live gesture. The time-window control sits in its head: it sets
+// the graph's span (an hour to all-time) and the total beside it, and the ticks
+// below rescale to match.
+export function TodaySpark({
+  today,
+  windows,
+  value,
+  onChange,
+}: {
+  today: Today
+  windows: [string, number][]
+  value: number
+  onChange: (hours: number) => void
+}) {
   const { lang } = useLang()
   if (!today?.sparkline) return null
 
@@ -16,6 +28,7 @@ export function TodaySpark({ today }: { today: Today }) {
   return (
     <section className="today-spark">
       <div className="today-spark-head">
+        <WindowPicker windows={windows} value={value} onChange={onChange} />
         <span className="today-spark-total">{today.total.toLocaleString()}</span>
       </div>
       <Sparkline paths={today.sparkline} />
