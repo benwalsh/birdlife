@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_05_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_05_130000) do
   create_table "detections", force: :cascade do |t|
     t.string "Com_Name", null: false
     t.float "Confidence"
@@ -71,6 +71,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_05_120000) do
     t.string "avatar_url"
     t.datetime "created_at", null: false
     t.string "email"
+    t.date "last_digest_on"
     t.string "name"
     t.string "provider", null: false
     t.string "uid", null: false

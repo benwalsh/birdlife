@@ -40,6 +40,25 @@ class Notifier
       false
     end
 
+    # One digest email — the day's events, built inline (SES *simple* content, not a
+    # template, since the list is variable-length). Same fail-soft contract as deliver.
+    def deliver_digest(user:, date:, events:)
+      return true unless enabled?
+
+      client.send_email(
+        from_email_address: ENV.fetch('ALERTS_FROM'),
+        destination:        { to_addresses: [user.email] },
+        content:            { simple: {
+          subject: { data: "Your cottage birds — #{I18n.l(date, format: :long)}" },
+          body:    { html: { data: digest_html(events, date) }, text: { data: digest_text(events, date) } }
+        } }
+      )
+      true
+    rescue StandardError => e
+      Rails.logger.warn("[digest] send failed for #{user.email}: #{e.class} #{e.message}")
+      false
+    end
+
     def enabled?
       ENV['ALERTS_FROM'].present?
     end
@@ -48,6 +67,43 @@ class Notifier
 
     def client
       @client ||= Aws::SESV2::Client.new
+    end
+
+    def digest_html(events, date)
+      rows = events.map do |event|
+        name = BirdName.lookup(event.sci_name)
+        <<-ROW
+          <tr><td style="padding:12px 0;border-bottom:1px solid #e4e4e7;">
+            <div style="font-size:18px;color:#17171a;">#{h(name.en)}</div>
+            <div style="font-size:14px;color:#8b8b91;font-style:italic;">#{h(name.ga)}</div>
+            <div style="font-size:13px;color:#3d3d42;margin-top:3px;">#{h(REASON.fetch(event.event_type, ''))}</div>
+          </td></tr>
+        ROW
+      end.join
+      <<-HTML
+        <div style="margin:0;padding:24px;background:#f2f2f3;font-family:Georgia,'Times New Roman',serif;color:#17171a;">
+          <div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #e4e4e7;border-radius:10px;padding:24px 28px;">
+            <div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8b8b91;">Éist · #{h(I18n.l(date, format: :long))}</div>
+            <div style="font-size:24px;margin:6px 0 2px;">The day's birds at Culfin</div>
+            <table style="width:100%;border-collapse:collapse;margin-top:12px;">#{rows}</table>
+            <a href="#{site_url}" style="display:inline-block;margin-top:22px;background:#17171a;color:#fff;text-decoration:none;font-family:Helvetica,Arial,sans-serif;font-size:14px;padding:11px 20px;border-radius:6px;">See the collage</a>
+            <div style="margin-top:16px;font-family:Helvetica,Arial,sans-serif;font-size:12px;color:#8b8b91;">Manage how you're told at <a href="#{site_url}/account" style="color:#8b8b91;">your account</a>.</div>
+          </div>
+        </div>
+      HTML
+    end
+
+    def digest_text(events, date)
+      lines = events.map do |event|
+        name = BirdName.lookup(event.sci_name)
+        "- #{name.en} (#{name.ga}) — #{REASON.fetch(event.event_type, '')}"
+      end
+      "The day's birds at Culfin — #{I18n.l(date, format: :long)}\n\n#{lines.join("\n")}\n\n" \
+        "See the collage: #{site_url}\nManage: #{site_url}/account"
+    end
+
+    def h(text)
+      ERB::Util.html_escape(text)
     end
 
     def data_for(event, subscription)
