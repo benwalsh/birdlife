@@ -1,18 +1,35 @@
-# Runs after each ingest batch: turns newly-arrived species into fire-once
+# Runs after each ingest batch: turns the day's *notable* birds into fire-once
 # `events`, then emails the matching subscribers. Best-effort and queue-free — a
 # send failure leaves the event unsent, so the next ingest tick retries it.
 #
-# This is the "after_create :notify!" the ingest can't use directly: `upsert_all`
-# skips ActiveRecord callbacks, so the trigger lives here, at the batch level.
+# It does NOT re-derive what's notable. DailyFacts — the one facts engine behind the
+# Inky panel and the website — already flags all-time-firsts, seasonal returns and
+# local rarities, importance-scored and young-station-damped. The alerts read those
+# same flags, so panel, site and email share one definition of "first" and "rare".
+#
+# `upsert_all` skips ActiveRecord callbacks, so this is the batch-level "after_create
+# :notify!" the ingest can't express directly.
 class AlertEngine
-  class << self
-    def scan(sci_names)
-      new(Array(sci_names).compact.uniq).run
-    end
-  end
+  # DailyFacts item flag → the standing-rule alert it fires. most_common /
+  # unusual_volume / routine are texture, not news, so they never alert.
+  FLAG_ALERTS = {
+    'all_time_first' => 'first_ever',
+    'year_first'     => 'seasonal',
+    'rare_local'     => 'rarity'
+  }.freeze
 
-  def initialize(sci_names)
-    @sci_names = sci_names
+  # First-ever and seasonal-return only mean something once there's a real baseline:
+  # in a station's first year nearly everything is a "first". Local rarity self-gates
+  # on its own baseline (RARE_MIN_AGE_DAYS), and follows are an explicit request, so
+  # both fire from day one; these two wait for the station to mature.
+  BASELINE_GATED = %w[first_ever seasonal].freeze
+
+  class << self
+    # The arg is kept for the ingest call site; the day's facts decide what fires,
+    # not the batch, so a species that turned notable earlier isn't missed.
+    def scan(_sci_names = nil)
+      new.run
+    end
   end
 
   def run
@@ -23,8 +40,17 @@ class AlertEngine
   private
 
   def record_events
-    @sci_names.each do |sci|
-      record('first_ever', sci) if first_ever?(sci)
+    facts = DailyFacts.for
+    mature = facts[:station_age_days] >= DailyFacts::YOUNG_STATION_DAYS
+    facts[:items].each do |item|
+      sci = item[:sci_name]
+      item[:flags].each do |flag|
+        type = FLAG_ALERTS[flag]
+        next unless type
+        next if BASELINE_GATED.include?(type) && !mature
+
+        record(type, sci)
+      end
       record('species', sci) if subscribed?(sci)
     end
   end
@@ -43,11 +69,6 @@ class AlertEngine
     Event.find_or_create_by!(event_type: type, sci_name: sci, occurred_on: Date.current)
   rescue ActiveRecord::RecordNotUnique
     # A concurrent ingest already recorded it — fine, it's fire-once by design.
-  end
-
-  # First time ever: this species has no detections dated before today.
-  def first_ever?(sci)
-    Detection.where(Sci_Name: sci).where(Date: ..Date.yesterday).none?
   end
 
   def subscribed?(sci)

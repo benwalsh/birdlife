@@ -9,6 +9,21 @@
 class Notifier
   TEMPLATE = 'eist-alert'.freeze
 
+  # Why this bird is worth an email — one line per alert kind, in the house voice.
+  # The SES template prints {{reason}}; {{headline}} is the subject line.
+  REASON = {
+    'rarity'     => 'A locally scarce bird — heard on only a handful of days.',
+    'seasonal'   => 'Back for the season, after a spell away.',
+    'first_ever' => 'The first time the station has ever heard this one.',
+    'species'    => 'One of the birds you follow.'
+  }.freeze
+  HEADLINE = {
+    'rarity'     => ->(name) { "A local rarity: #{name}" },
+    'seasonal'   => ->(name) { "#{name} — back for the season" },
+    'first_ever' => ->(name) { "First ever at the cottage: #{name}" },
+    'species'    => ->(name) { "#{name} — a bird you follow" }
+  }.freeze
+
   class << self
     def deliver(event:, subscription:)
       return true unless enabled?
@@ -38,8 +53,11 @@ class Notifier
     def data_for(event, subscription)
       name = BirdName.lookup(event.sci_name)
       slug = event.sci_name.downcase.tr(' ', '-')
+      kind = event.event_type
       {
-        kind:            event.event_type,
+        kind:            kind,
+        reason:          REASON.fetch(kind, 'Heard at the cottage.'),
+        headline:        (HEADLINE[kind] || ->(n) { "#{n} heard at Culfin" }).call(name.en),
         en:              name.en,
         ga:              name.ga,
         sci:             event.sci_name,

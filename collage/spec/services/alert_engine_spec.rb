@@ -3,51 +3,93 @@ require 'rails_helper'
 RSpec.describe AlertEngine do
   before { allow(Notifier).to receive(:deliver).and_return(true) }
 
-  describe '.scan' do
-    it 'records a first_ever event for a species not detected before today' do
-      expect { described_class.scan(['Crex crex']) }.
-        to change { Event.where(event_type: 'first_ever', sci_name: 'Crex crex').count }.by(1)
+  # Old enough for the first-ever / seasonal signals to have a baseline.
+  def mature_age = DailyFacts::YOUNG_STATION_DAYS + 1
+
+  # A DailyFacts item as the engine consumes it — only sci_name + flags matter here.
+  def item(sci, *flags)
+    { sci_name: sci, common_name: sci, irish_name: nil, call_count: 3, importance: 80, flags: flags }
+  end
+
+  # Stub the one facts engine so these specs test the alert mapping/gating, not the
+  # (separately-specced) DailyFacts computation.
+  def stub_facts(*items, age: mature_age)
+    allow(DailyFacts).to receive(:for).and_return(items: items, station_age_days: age)
+  end
+
+  describe 'mapping DailyFacts flags to alert events' do
+    it 'fires a rarity event from a rare_local flag' do
+      stub_facts(item('Crex crex', 'rare_local'))
+      expect { described_class.scan }.
+        to change { Event.where(event_type: 'rarity', sci_name: 'Crex crex').count }.by(1)
     end
 
-    it 'does not record first_ever when the species has older detections' do
-      create(:detection, Sci_Name: 'Crex crex', Date: Date.yesterday)
-      expect { described_class.scan(['Crex crex']) }.
-        not_to(change { Event.where(event_type: 'first_ever').count })
+    it 'fires a first_ever event from all_time_first on a mature station' do
+      stub_facts(item('Crex crex', 'all_time_first'))
+      expect { described_class.scan }.to change { Event.where(event_type: 'first_ever').count }.by(1)
     end
 
-    it 'records a species event when someone is subscribed to it' do
+    it 'fires a seasonal event from year_first on a mature station' do
+      stub_facts(item('Cuculus canorus', 'year_first'))
+      expect { described_class.scan }.
+        to change { Event.where(event_type: 'seasonal', sci_name: 'Cuculus canorus').count }.by(1)
+    end
+
+    it 'ignores texture flags (most_common / unusual_volume / routine)' do
+      stub_facts(item('Passer domesticus', 'most_common', 'unusual_volume', 'routine'))
+      expect { described_class.scan }.not_to(change(Event, :count))
+    end
+  end
+
+  describe 'young-station gating' do
+    it 'holds first_ever and seasonal while the station is young' do
+      stub_facts(item('Crex crex', 'all_time_first', 'year_first'), age: 30)
+      expect { described_class.scan }.
+        not_to(change { Event.where(event_type: %w[first_ever seasonal]).count })
+    end
+
+    it 'still fires rarity on a young station (rarity self-gates on its own baseline)' do
+      stub_facts(item('Crex crex', 'rare_local'), age: 30)
+      expect { described_class.scan }.to change { Event.where(event_type: 'rarity').count }.by(1)
+    end
+  end
+
+  describe 'follows' do
+    it 'fires a species event when someone follows a bird heard today — even young' do
       create(:subscription, alert_type: 'species', sci_name: 'Crex crex')
-      create(:detection, Sci_Name: 'Crex crex', Date: Date.yesterday) # isolate from first_ever
-      expect { described_class.scan(['Crex crex']) }.
+      stub_facts(item('Crex crex', 'routine'), age: 5)
+      expect { described_class.scan }.
         to change { Event.where(event_type: 'species', sci_name: 'Crex crex').count }.by(1)
     end
 
-    it 'does not record a species event with no subscribers' do
-      create(:detection, Sci_Name: 'Crex crex', Date: Date.yesterday)
-      expect { described_class.scan(['Crex crex']) }.
-        not_to(change { Event.where(event_type: 'species').count })
+    it 'does not fire a species event with no subscribers' do
+      stub_facts(item('Crex crex', 'routine'))
+      expect { described_class.scan }.not_to(change { Event.where(event_type: 'species').count })
     end
+  end
 
-    it 'is fire-once — scanning the same species twice keeps one event' do
+  describe 'delivery' do
+    it 'is fire-once — a second scan records nothing new' do
       create(:subscription, sci_name: 'Crex crex')
-      described_class.scan(['Crex crex'])
-      expect { described_class.scan(['Crex crex']) }.not_to(change(Event, :count))
+      stub_facts(item('Crex crex', 'routine'))
+      described_class.scan
+      expect { described_class.scan }.not_to(change(Event, :count))
     end
 
-    it 'delivers a pending species event to the matching subscriber and marks it notified' do
+    it 'delivers a pending event to the matching subscriber and marks it notified' do
       sub = create(:subscription, alert_type: 'species', sci_name: 'Crex crex')
-      create(:detection, Sci_Name: 'Crex crex', Date: Date.yesterday) # isolate the species event
+      stub_facts(item('Crex crex', 'routine'))
       expect(Notifier).to receive(:deliver).
         with(event: an_instance_of(Event), subscription: sub).and_return(true)
-      described_class.scan(['Crex crex'])
+      described_class.scan
       expect(Event.find_by(event_type: 'species').notified_at).to be_present
     end
 
     it 'leaves an event unsent when delivery fails, so the next tick retries' do
       create(:subscription, sci_name: 'Crex crex')
-      create(:detection, Sci_Name: 'Crex crex', Date: Date.yesterday)
+      stub_facts(item('Crex crex', 'routine'))
       allow(Notifier).to receive(:deliver).and_return(false)
-      described_class.scan(['Crex crex'])
+      described_class.scan
       expect(Event.find_by(event_type: 'species').notified_at).to be_nil
     end
   end

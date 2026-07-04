@@ -19,7 +19,7 @@
     %h2.acct-h2 Alerts
     %p.acct-lead Get an email when the cottage listening station hears something.
     %ul.acct-rules
-      - { "rarity" => "Rarities & vagrants", "first_ever" => "First-ever species" }.each do |type, label|
+      - { "rarity" => "Rarities & vagrants", "seasonal" => "Seasonal returns", "first_ever" => "First-ever species" }.each do |type, label|
         - sub = @subscriptions.find { |s| s.alert_type == type }
         %li.acct-rule
           %span.acct-rule-label= label

@@ -51,11 +51,13 @@ resource "aws_route53_record" "dmarc" {
 }
 
 # The alert template the Notifier renders by name. Placeholders match Notifier's
-# data blob: kind, en, ga, sci, date, image_url, site_url, unsubscribe_url. Email
-# HTML must inline its colours (no CSS vars in mail) — kept on-palette with the site.
+# data blob: kind, reason, headline, en, ga, sci, date, image_url, site_url,
+# unsubscribe_url. The subject + reason line vary by alert kind (rarity, seasonal,
+# first-ever, follow) so the email says WHY it's worth reading. Email HTML must
+# inline its colours (no CSS vars in mail) — kept on-palette with the site.
 resource "aws_ses_template" "alert" {
   name    = "eist-alert"
-  subject = "{{en}} heard at Culfin — {{date}}"
+  subject = "{{headline}}"
 
   html = <<-HTML
     <div style="margin:0;padding:24px;background:#f2f2f3;font-family:Georgia,'Times New Roman',serif;color:#17171a;">
@@ -67,7 +69,7 @@ resource "aws_ses_template" "alert" {
           <div style="font-size:18px;color:#3d3d42;margin-top:2px;">{{ga}}</div>
           <div style="font-size:14px;font-style:italic;color:#8b8b91;margin-top:6px;">{{sci}}</div>
           <p style="font-size:15px;color:#3d3d42;line-height:1.55;margin:18px 0 22px;">
-            A <strong>{{kind}}</strong> detection on {{date}}. The listening station at the cottage picked it up.
+            <strong>{{reason}}</strong> The listening station at the cottage picked it up on {{date}}.
           </p>
           <a href="{{site_url}}" style="display:inline-block;background:#17171a;color:#ffffff;text-decoration:none;font-family:Helvetica,Arial,sans-serif;font-size:14px;padding:11px 20px;border-radius:6px;">See the collage</a>
         </div>
@@ -80,7 +82,7 @@ resource "aws_ses_template" "alert" {
 
   text = <<-TEXT
     {{en}} ({{ga}}) — {{sci}}
-    A {{kind}} detection at Culfin on {{date}}.
+    {{reason}} Heard at Culfin on {{date}}.
 
     See the collage: {{site_url}}
     Unsubscribe: {{unsubscribe_url}}
