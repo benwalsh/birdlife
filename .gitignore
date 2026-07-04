@@ -72,6 +72,13 @@ avian/assets/_legacy/
 **/.terraform/*
 model/*.tflite
 
+# Terraform state stores every secret (DB password, secret_key_base, tokens, OAuth
+# creds) in PLAINTEXT — must never be committed. State lives locally / in a remote
+# backend, not in git.
+*.tfstate
+*.tfstate.*
+.terraform.tfstate.lock.info
+
 # Terraform var files may hold secrets (e.g. Google OAuth creds) — keep only the example.
 *.tfvars
 !*.tfvars.example
