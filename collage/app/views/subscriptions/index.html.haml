@@ -1,13 +1,23 @@
-- content_for(:title) { "Alerts · Éin Chulfin" }
+- content_for(:title) { "Account · Éin Chulfin" }
 
 .acct
   %header.acct-top
     %a.acct-home{ href: "/" } ← Éin Chulfin
-    %h1.acct-h1 Alerts
-    %p.acct-lead Get an email when the cottage listening station hears something.
+    %h1.acct-h1 Account
+
+  %section.acct-me
+    - if current_user.avatar_url.present?
+      %img.acct-avatar{ src: current_user.avatar_url, alt: current_user.display_name, referrerpolicy: "no-referrer" }
+    - else
+      %span.acct-avatar.acct-avatar-initial= current_user.display_name.to_s.strip.first&.upcase
+    .acct-me-id
+      %span.acct-me-name= current_user.display_name
+      - if current_user.email.present? && current_user.email != current_user.display_name
+        %span.acct-me-email= current_user.email
 
   %section.acct-sec
-    %h2.acct-h2 Standing rules
+    %h2.acct-h2 Alerts
+    %p.acct-lead Get an email when the cottage listening station hears something.
     %ul.acct-rules
       - { "rarity" => "Rarities & vagrants", "first_ever" => "First-ever species" }.each do |type, label|
         - sub = @subscriptions.find { |s| s.alert_type == type }
@@ -19,7 +29,8 @@
             = button_to "Turn on", subscriptions_path, method: :post, params: { subscription: { alert_type: type } }, class: "acct-btn"
 
   %section.acct-sec
-    %h2.acct-h2 Species you're watching
+    %h2.acct-h2 Species you're following
+    %p.acct-lead Follow a bird here or by ticking it on the site; you'll get an email when it's next heard.
     - watched = @subscriptions.select { |s| s.alert_type == "species" }
     - if watched.any?
       %ul.acct-list
@@ -29,13 +40,13 @@
             %span.acct-name= name.en
             - if name.ga
               %span.acct-ga= name.ga
-            = button_to "Remove", subscription_path(sub), method: :delete, class: "acct-btn acct-remove"
+            = button_to "Unfollow", subscription_path(sub), method: :delete, class: "acct-btn acct-remove"
     - else
-      %p.acct-empty You're not watching any species yet.
+      %p.acct-empty You're not following any species yet.
 
     = form_with url: subscriptions_path, method: :post, class: "acct-add" do
       = hidden_field_tag "subscription[alert_type]", "species"
       = select_tag "subscription[sci_name]",
         options_for_select(@species.map { |sci, n| [n.ga ? "#{n.en} · #{n.ga}" : n.en, sci] }),
         prompt: "Choose a species…", class: "acct-select"
-      = submit_tag "Add", class: "acct-btn acct-add-btn"
+      = submit_tag "Follow", class: "acct-btn acct-add-btn"

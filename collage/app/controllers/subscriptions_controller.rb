@@ -28,10 +28,6 @@ class SubscriptionsController < ApplicationController
 
   private
 
-  def require_login
-    redirect_to root_path unless logged_in?
-  end
-
   def subscription_params
     params.expect(subscription: %i[alert_type sci_name])
   end

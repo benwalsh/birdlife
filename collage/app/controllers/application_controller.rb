@@ -18,6 +18,26 @@ class ApplicationController < ActionController::Base
   end
   helper_method :logged_in?
 
+  # Gate an authenticated action. JSON callers (the SPA's follow toggle) get a 401
+  # to handle client-side; HTML callers are bounced to the front page.
+  def require_login
+    return if logged_in?
+
+    respond_to do |format|
+      format.json { head :unauthorized }
+      format.any  { redirect_to root_path }
+    end
+  end
+
+  # sci_names the current user follows (their active 'species' subscriptions). Seeds
+  # the React bootstrap so the Directory/modal show the follow state on first paint.
+  def followed_sci_names
+    return [] unless current_user
+
+    current_user.subscriptions.active.where(alert_type: 'species').pluck(:sci_name)
+  end
+  helper_method :followed_sci_names
+
   # The chosen UI-chrome language ("en"/"ga"), from the toggle's cookie. Default
   # English. Seeds <html data-lang> and the React bootstrap.
   def ui_lang

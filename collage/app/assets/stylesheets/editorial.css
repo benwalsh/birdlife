@@ -358,6 +358,32 @@ button.bird-card { width: 100%; background: transparent; cursor: pointer; font: 
 .dir-item.unseen:hover .dir-plate img { filter: none; }
 .dir-item.unseen .dir-name, .dir-item.unseen .dir-gloss { color: var(--ink-soft); }
 
+/* Follow — a species subscription worn as a quiet checkbox. Shown only to
+   signed-in users; the card is a <button>, so the control is a sibling in a
+   positioned cell (never nested). Off = muted engraved outline, on = inked accent.
+   A line icon in a muted weight, in keeping with the ink-on-paper voice. */
+.dir-cell { position: relative; }
+.dir-cell > .dir-item { width: 100%; }
+.follow {
+  background: transparent; border: 0; padding: 0; cursor: pointer;
+  color: var(--ink-soft); line-height: 1;
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: color 160ms ease;
+}
+.follow .ti { font-size: 18px; opacity: 0.55; transition: opacity 160ms ease; }
+.follow:hover { color: var(--ink-2); }
+.follow:hover .ti { opacity: 1; }
+.follow.is-on { color: var(--accent); }
+.follow.is-on .ti { opacity: 1; }
+/* Corner mark on a directory plate — top-right, clear of the bottom-aligned bird. */
+.follow-card { position: absolute; top: 0; right: 0; padding: 4px; }
+.follow-card .ti { font-size: 19px; }
+/* Modal — icon + word under the binomial, in the mono label voice. */
+.follow-full {
+  margin: 12px 0 2px;
+  font: 11px var(--mono); letter-spacing: 0.06em; text-transform: uppercase;
+}
+
 /* ---- Footer ---- */
 .ed-foot {
   display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;

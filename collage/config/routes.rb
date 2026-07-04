@@ -25,6 +25,12 @@ Rails.application.routes.draw do
   delete 'subscriptions/:id' => 'subscriptions#destroy', as: :subscription
   get    'subscriptions/:token/unsubscribe' => 'subscriptions#unsubscribe', as: :unsubscribe
 
+  # Follow / unfollow a species from the SPA (authenticated JSON; sci_name in the
+  # body so binomials needn't be URL-encoded). Backed by the same Subscription rows
+  # as /account. Must stay out of the cacheable /api namespace (per-user).
+  post   'favourites' => 'favourites#create'
+  delete 'favourites' => 'favourites#destroy'
+
   # The Pi's lazy push lands here (cloud mirror only; 404 on the Pi). Token-authed.
   post 'ingest/detections' => 'ingest#detections'
 

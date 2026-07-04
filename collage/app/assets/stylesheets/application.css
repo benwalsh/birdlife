@@ -265,6 +265,19 @@ a.bird-card { text-decoration: none; color: inherit; }
 .acct-h1 { font-size: 30px; margin: 14px 0 4px; }
 .acct-lead { color: var(--ink-2); margin: 0 0 8px; }
 .acct-sec { margin-top: 36px; }
+/* Profile header — the signed-in identity, quiet and unchromed. */
+.acct-me { display: flex; align-items: center; gap: 14px; margin-top: 20px; }
+.acct-avatar {
+  width: 48px; height: 48px; border-radius: 50%; flex: none;
+  object-fit: cover; background: var(--paper-2);
+}
+.acct-avatar-initial {
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--ink-soft); font-size: 20px;
+}
+.acct-me-id { display: flex; flex-direction: column; }
+.acct-me-name { font-size: 18px; color: var(--ink); }
+.acct-me-email { font-size: 13px; color: var(--ink-soft); }
 .acct-h2 {
   font-size: 13px;
   letter-spacing: 0.08em;

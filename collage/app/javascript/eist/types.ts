@@ -13,6 +13,8 @@ export interface Bootstrap {
   ui_lang: Lang
   windows: [string, number][]
   place: { en: string; ga: string } | null
+  // sci_names the signed-in user already follows (seeds the follow checkboxes).
+  favourites: string[]
   assets: { cruach: string }
 }
 

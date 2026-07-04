@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useSpecies } from '../api'
 import { useLang } from '../lang'
+import { FollowButton } from './FollowButton'
 import { ago, stamp } from '../time'
 
 // The species-detail overlay. Reuses the .modal-* design-system classes (loaded
@@ -42,6 +43,7 @@ export function SpeciesModal({ sci, onClose }: { sci: string; onClose: () => voi
                 <h2>{name}</h2>
                 {subtitle && subtitle !== name && <p className="common">{subtitle}</p>}
                 <p className="sci">{data.sci}</p>
+                <FollowButton sci={data.sci} variant="full" />
                 {cons?.status && (
                   <div className={`cons-line ${cons.status}`}>
                     <span className={`cons-dot ${cons.status}`} />

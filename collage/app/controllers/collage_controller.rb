@@ -16,6 +16,7 @@ class CollageController < ApplicationController
       ui_lang:      ui_lang,
       windows:      WINDOWS,
       place:        Station.place,
+      favourites:   followed_sci_names,
       assets:       { cruach: helpers.asset_path('cruach.png') }
     }
   end

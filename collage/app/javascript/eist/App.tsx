@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { Bootstrap, Tab } from './types'
 import { LangProvider } from './lang'
+import { FollowProvider } from './favourites'
 import { Masthead } from './components/Masthead'
 import { Footer } from './components/Footer'
 import { BirdsTab } from './components/BirdsTab'
@@ -34,14 +35,16 @@ export function App({ bootstrap }: { bootstrap: Bootstrap }) {
   return (
     <QueryClientProvider client={queryClient}>
       <LangProvider initial={bootstrap.ui_lang}>
-        <Masthead bootstrap={bootstrap} tab={tab} onTab={setTab} win={win} onWin={setWin} />
-        <main className="ed-main">
-          {tab === 'birds' && <BirdsTab onSelect={setSelected} windowHours={win} />}
-          {tab === 'stats' && <StatsTab onSelect={setSelected} windowHours={win} />}
-          {tab === 'directory' && <DirectoryTab onSelect={setSelected} />}
-        </main>
-        <Footer place={bootstrap.place} />
-        {selected && <SpeciesModal sci={selected} onClose={() => setSelected(null)} />}
+        <FollowProvider enabled={!!bootstrap.current_user} initial={bootstrap.favourites ?? []}>
+          <Masthead bootstrap={bootstrap} tab={tab} onTab={setTab} win={win} onWin={setWin} />
+          <main className="ed-main">
+            {tab === 'birds' && <BirdsTab onSelect={setSelected} windowHours={win} />}
+            {tab === 'stats' && <StatsTab onSelect={setSelected} windowHours={win} />}
+            {tab === 'directory' && <DirectoryTab onSelect={setSelected} />}
+          </main>
+          <Footer place={bootstrap.place} />
+          {selected && <SpeciesModal sci={selected} onClose={() => setSelected(null)} />}
+        </FollowProvider>
       </LangProvider>
     </QueryClientProvider>
   )

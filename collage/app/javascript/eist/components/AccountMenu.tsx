@@ -56,7 +56,7 @@ export function AccountMenu({ user }: { user: CurrentUser | null }) {
           <span className="ed-menu-name">{user.name}</span>
           {user.email && user.email !== user.name && <span className="ed-menu-sub">{user.email}</span>}
         </div>
-        <a className="ed-menu-item" href="/account" role="menuitem">Alerts</a>
+        <a className="ed-menu-item" href="/account" role="menuitem">Account</a>
         <form method="post" action="/logout">
           <input type="hidden" name="_method" value="delete" />
           <input type="hidden" name="authenticity_token" value={csrf()} />

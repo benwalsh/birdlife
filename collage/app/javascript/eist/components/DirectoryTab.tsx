@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useDirectory } from '../api'
 import { useLang } from '../lang'
+import { FollowButton } from './FollowButton'
 import type { Sort, Scope } from '../types'
 
 // The species directory (Eolaí) — the illustrated guide, in the same editorial
@@ -53,19 +54,22 @@ export function DirectoryTab({ onSelect }: { onSelect: (sci: string) => void }) 
           {data.species.map((e) => {
             const seen = e.count > 0
             return (
-              <button key={e.sci} className={`dir-item${seen ? '' : ' unseen'}`} onClick={() => onSelect(e.sci)}>
-                <span className="dir-plate">{e.image && <img src={e.image} alt={e.en} loading="lazy" />}</span>
-                <span className="dir-name">
-                  {primary(e.en, e.ga)}
-                  {gloss(e.en, e.ga) && <em className="dir-gloss">{gloss(e.en, e.ga)}</em>}
-                </span>
-                <span className="dir-stat">
-                  {seen
-                    ? <><span className="dir-count">{e.count.toLocaleString()}</span> {t('heard', 'cloiste')}</>
-                    : t('not yet heard', 'gan chloisteáil fós')}
-                  {e.conservation && <span className={`dir-dot ${e.conservation}`} />}
-                </span>
-              </button>
+              <div key={e.sci} className="dir-cell">
+                <button className={`dir-item${seen ? '' : ' unseen'}`} onClick={() => onSelect(e.sci)}>
+                  <span className="dir-plate">{e.image && <img src={e.image} alt={e.en} loading="lazy" />}</span>
+                  <span className="dir-name">
+                    {primary(e.en, e.ga)}
+                    {gloss(e.en, e.ga) && <em className="dir-gloss">{gloss(e.en, e.ga)}</em>}
+                  </span>
+                  <span className="dir-stat">
+                    {seen
+                      ? <><span className="dir-count">{e.count.toLocaleString()}</span> {t('heard', 'cloiste')}</>
+                      : t('not yet heard', 'gan chloisteáil fós')}
+                    {e.conservation && <span className={`dir-dot ${e.conservation}`} />}
+                  </span>
+                </button>
+                <FollowButton sci={e.sci} variant="card" />
+              </div>
             )
           })}
         </div>
