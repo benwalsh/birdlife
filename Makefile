@@ -16,6 +16,7 @@ setup:  ## install all deps (Python, Ruby, JS) and prepare the database
 	cd collage && bundle install && bun install && bin/rails stimulus:manifest:update && bin/vite build && bin/rails db:prepare
 
 serve:  ## run the collage web app  (override with: make serve PORT=4030)
+	set -a; source .env; set +a; \
 	cd collage && bin/rails server -p $(PORT)
 
 # NB: lines are joined with `\` so `source .env` and the command share one shell.
