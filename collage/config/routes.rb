@@ -31,6 +31,9 @@ Rails.application.routes.draw do
   post   'favourites' => 'favourites#create'
   delete 'favourites' => 'favourites#destroy'
 
+  # Admin-only health panel (User#admin?, fail-closed). Not linked publicly.
+  get 'admin' => 'admin#index', as: :admin
+
   # The Pi's lazy push lands here (cloud mirror only; 404 on the Pi). Token-authed.
   post 'ingest/detections' => 'ingest#detections'
 

@@ -1,0 +1,66 @@
+- content_for(:title) { "Admin · Éin Chulfin" }
+
+.acct.adm
+  %header.acct-top
+    %a.acct-home{ href: "/" } ← Éin Chulfin
+    %h1.acct-h1 Admin
+
+  - l = @health[:listening]
+  %section.acct-sec
+    %h2.acct-h2 Listening
+    %p.adm-lead
+      %span.adm-dot{ class: l[:freshness] }
+      - if l[:last_heard_at]
+        %span
+          Last heard #{time_ago_in_words(l[:last_heard_at])} ago
+          - if l[:last_species]
+            — #{l[:last_species].en}
+        %span.adm-abs= l[:last_heard_at].strftime("%-d %b, %H:%M")
+      - else
+        %span Nothing heard yet.
+    %p.adm-note Liveness is inferred from the last detection — a quiet night reads the same as a stalled feed. A push heartbeat would tell them apart.
+    .adm-stats
+      .adm-stat
+        %span.adm-fig= number_with_delimiter(l[:detections_today])
+        %span.adm-lbl Detections today
+      .adm-stat
+        %span.adm-fig= number_with_delimiter(l[:detections_all_time])
+        %span.adm-lbl All-time
+      .adm-stat
+        %span.adm-fig= l[:species_today]
+        %span.adm-lbl Species today
+      .adm-stat
+        %span.adm-fig= l[:species_all_time]
+        %span.adm-lbl Species all-time
+
+  - a = @health[:alerts]
+  %section.acct-sec
+    %h2.acct-h2 Alerts
+    %ul.acct-rules
+      %li.acct-rule
+        %span.acct-rule-label Delivery
+        %span= a[:configured] ? "email · #{a[:from]}" : "not configured"
+      %li.acct-rule
+        %span.acct-rule-label Following / standing rules
+        %span= "#{a[:following]} / #{a[:standing_rules]}"
+      %li.acct-rule
+        %span.acct-rule-label Events (pending)
+        %span{ class: (a[:events_pending].positive? ? "adm-warn" : nil) }= "#{a[:events_total]} (#{a[:events_pending]})"
+      - if a[:last_event]
+        %li.acct-rule
+          %span.acct-rule-label Last event
+          %span= "#{a[:last_event][:type]} · #{a[:last_event][:name]} · #{time_ago_in_words(a[:last_event][:at])} ago"
+
+  - s = @health[:system]
+  %section.acct-sec
+    %h2.acct-h2 System
+    %ul.acct-rules
+      %li.acct-rule
+        %span.acct-rule-label Environment
+        %span= "#{s[:env]} · #{s[:adapter]}"
+      %li.acct-rule
+        %span.acct-rule-label Site
+        %span= s[:site_url] || "—"
+      %li.acct-rule
+        %span.acct-rule-label LLM region
+        %span= s[:llm_region] || "—"

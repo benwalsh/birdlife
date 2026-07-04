@@ -318,3 +318,17 @@ a.bird-card { text-decoration: none; color: inherit; }
 .acct-btn.is-on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .acct-add-btn { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .acct-remove { color: var(--ink-soft); }
+
+/* Admin health panel — a plain instrument read-out in the same restrained voice. */
+.adm-lead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; color: var(--ink-2); margin: 0; }
+.adm-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--ink-soft); }
+.adm-dot.fresh { background: var(--green); }
+.adm-dot.quiet { background: var(--amber); }
+.adm-dot.stale, .adm-dot.none { background: var(--ink-soft); }
+.adm-abs { font: 12px var(--mono); color: var(--ink-soft); }
+.adm-note { color: var(--ink-soft); font-size: 12px; font-style: italic; margin: 8px 0 0; }
+.adm-stats { display: flex; flex-wrap: wrap; gap: 32px; margin-top: 18px; }
+.adm-stat { display: flex; flex-direction: column; gap: 3px; }
+.adm-fig { font: 20px var(--mono); font-variant-numeric: tabular-nums; color: var(--ink); }
+.adm-lbl { font: 10px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+.adm-warn { color: var(--amber); }

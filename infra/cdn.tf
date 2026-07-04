@@ -111,7 +111,7 @@ resource "aws_cloudfront_distribution" "main" {
   # cookies/query/headers but NOT Host, so the shared ALB still routes on the origin host)
   # — only the cache policy differs: CachingDisabled instead of our app cache.
   dynamic "ordered_cache_behavior" {
-    for_each = toset(["/auth/*", "/logout", "/account", "/subscriptions/*", "/favourites"])
+    for_each = toset(["/auth/*", "/logout", "/account", "/admin", "/subscriptions/*", "/favourites"])
     content {
       path_pattern             = ordered_cache_behavior.value
       target_origin_id         = "ecs"
