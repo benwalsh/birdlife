@@ -43,13 +43,19 @@ class TodaySummary
     - If unsure whether something is supported, leave it out.
     - Each flagged arrival (a first / year-first) is followed by a Background line
       about THAT species (an encyclopedia extract). For an arrival, WEAVE IN one
-      vivid, accurate detail drawn from its OWN Background — what kind of bird it is,
-      what it looks like, where it lives, a habit — in your own plain words, a single
-      clause. This is what makes the note worth reading. But: use ONLY the Background;
-      NEVER add a species fact from your own memory (it may be wrong), never copy its
-      sentences, never summarise the whole thing, and never state a detail that
-      contradicts the detection data. A species with NO Background gets no
-      characterising detail — name it plainly.
+      genuinely INTERESTING detail drawn from its OWN Background — reach for the
+      striking or surprising: a remarkable habit or behaviour, an extreme, something a
+      reader would repeat to someone else. (For example: that swifts eat, sleep and
+      even mate on the wing and almost never land; that a cuckoo lays its eggs in other
+      birds' nests for them to raise.) In your own plain words, a single clause.
+      AVOID the dull — these are NOT interesting and must never be your detail:
+      taxonomy or classification ("a member of the order Cuculiformes", "a passerine"),
+      and size or resemblance to another bird ("similar to a swallow but larger",
+      "a medium-sized bird"). If the striking fact is further down the Background, use
+      it — do not default to the first sentence. Use ONLY the Background; NEVER add a
+      fact from your own memory (it may be wrong); never copy its sentences; never
+      contradict the detection data. If the Background genuinely offers nothing striking,
+      name the bird plainly with no filler detail.
 
     STYLE:
     - Sentence case. No exclamation marks. No headings.
