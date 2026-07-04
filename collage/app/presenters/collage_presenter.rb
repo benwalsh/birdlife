@@ -10,7 +10,10 @@ class CollagePresenter
   # birds render as a plain coloured disc rather than a labelled chip).
   FILLS = ['#a53c38', '#31477e', '#3a6e48', '#c6b04a'].freeze
 
-  Node = Data.define(:cx, :cy, :r, :w, :h, :image, :fill, :sci, :ga, :en, :count, :flip)
+  # `image`/`flip` carry the collage's dressing (a flight pose for the fliers, a
+  # daily left/right flip). `perch_image` is always the plain perched illustration —
+  # the hits strip uses it so that distilled row stays calm and uniform.
+  Node = Data.define(:cx, :cy, :r, :w, :h, :image, :perch_image, :fill, :sci, :ga, :en, :count, :flip)
 
   ILLUSTRATIONS_DIR = Rails.root.join('../avian/assets/illustrations')
   # Loudest bird's size vs the quietest. Kept low and applied on a log curve
@@ -150,7 +153,10 @@ class CollagePresenter
       # disc-equivalent radius (geometric-mean half-extent) for the no-art fallback
       r: (Math.sqrt(width * height) / 2).round(2),
       w: width.round(2), h: height.round(2),
-      image: illustration_url(bird[:file]), fill: FILLS[index % FILLS.size],
+      image: illustration_url(bird[:file]),
+      # Always the perched pose (a flier's node.image is its -2 flight art; this isn't).
+      perch_image: illustration_url(illustration_file(name.sci, false)) || illustration_url(bird[:file]),
+      fill: FILLS[index % FILLS.size],
       sci: name.sci, ga: name.ga, en: name.en, count: bird[:tally].count,
       flip: facing_flip?(name.sci)
     )

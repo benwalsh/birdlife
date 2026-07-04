@@ -25,7 +25,7 @@ export function HitsStrip({ nodes, onSelect, pinned }: {
           tabIndex={pinned ? 0 : -1}
           onClick={() => onSelect(n.sci)}
         >
-          <img src={n.image!} alt={n.en} />
+          <img src={(n.perch_image ?? n.image)!} alt={n.en} />
         </button>
       ))}
     </div>

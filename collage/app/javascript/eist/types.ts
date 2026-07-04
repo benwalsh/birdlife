@@ -20,7 +20,10 @@ export interface Bootstrap {
 
 export interface CollageNode {
   cx: number; cy: number; r: number; w: number; h: number
-  image: string | null; fill: string
+  image: string | null
+  // The plain perched pose, whatever image/flip the collage chose — used by the hits strip.
+  perch_image: string | null
+  fill: string
   sci: string; ga: string | null; en: string
   count: number; flip: boolean
 }

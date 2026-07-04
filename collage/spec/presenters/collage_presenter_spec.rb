@@ -28,6 +28,16 @@ RSpec.describe CollagePresenter do
       expect(node.count).to eq(5)
     end
 
+    it 'exposes a perched image (never a -2 flight pose) for the hits strip' do
+      # Enough species that some get flight poses; every perch_image must still be perched.
+      tallies = ['Erithacus rubecula', 'Turdus merula', 'Hirundo rustica', 'Pica pica', 'Passer domesticus'].
+                each_with_index.map { |sci, i| tally(sci, 10 - i) }
+      described_class.new(tallies).nodes.each do |node|
+        expect(node.perch_image).to be_present
+        expect(node.perch_image).not_to include('-2.png')
+      end
+    end
+
     it 'compresses the size range so the loudest bird cannot dwarf the quietest' do
       tallies = [tally('Erithacus rubecula', 100), tally('Numenius arquata', 1)]
       radii = described_class.new(tallies).nodes.map(&:r)
