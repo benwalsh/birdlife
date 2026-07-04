@@ -19,37 +19,38 @@ RSpec.describe 'Panel' do
     expect(response.body).to include('Inky Impression 7.3')
   end
 
+  # /station is the single Inky screen: one calm collage in the house style, run
+  # through the e-ink preview filter. No rotation, no stats grid (that's /kiosk).
   describe 'GET /station' do
     before do
       travel_to Time.zone.local(2026, 6, 29, 9, 0)
       create_list(:detection, 2, Sci_Name: 'Erithacus rubecula', Com_Name: 'European Robin')
     end
 
-    it 'renders each wall-station screen by name' do
-      %w[collage stats focus general].each do |screen|
-        get '/station', params: { screen: screen }
-        expect(response).to have_http_status(:success)
-        expect(response.body).to include(%(content="#{screen}"))
-        expect(response.body).to include('Inky Impression 7.3')
-      end
-    end
-
-    it 'falls back to the slow rotation when the screen name is unknown' do
-      get '/station', params: { screen: 'dashboard' }
+    it 'renders one collage screen, e-ink-framed, with no rotation scaffolding' do
+      get '/station'
       expect(response).to have_http_status(:success)
-      expect(response.body).to include('name="station-screen"')
-      expect(response.body).not_to include('content="dashboard"')
+      expect(response.body).to include('<svg').and include('Spectra 6')
+      expect(response.body).to include('id=\'eink\'').or include('id="eink"')
+      expect(response.body).not_to include('name="station-screen"')
+      expect(response.body).not_to include('stat-grid')
     end
   end
 
-  describe 'GET /station/next' do
-    it 'returns the next screen in the station programme' do
+  # /kiosk is the passive-display surface: the four cards in the DOM at once,
+  # cycled client-side by the kiosk Stimulus controller. No chrome.
+  describe 'GET /kiosk' do
+    before do
       travel_to Time.zone.local(2026, 6, 29, 9, 0)
-      get '/station/next'
+      create_list(:detection, 2, Sci_Name: 'Erithacus rubecula', Com_Name: 'European Robin')
+    end
 
+    it 'renders the four cards for the cycling display' do
+      get '/kiosk'
       expect(response).to have_http_status(:success)
-      payload = JSON.parse(response.body)
-      expect(payload).to include('screen' => 'stats', 'dwell_seconds' => 300, 'url' => '/station?screen=stats')
+      expect(response.body.scan('data-kiosk-target').size).to eq(4)
+      expect(response.body).to include('kiosk')       # the controller drives the cycle
+      expect(response.body).to include('stat-grid')   # the numbers card lives here now
     end
   end
 end

@@ -8,6 +8,8 @@ The wall device: a Pi 4 driving a Pimoroni Inky Impression 7.3" (Spectra 6,
 | `birdlife-listener` | reads the USB mic → BirdNET → writes `birds.db` |
 | `birdlife-web` | the Rails app on `:4030` (serves `/station` for the wall, plus the web UI) |
 | `birdlife-frame` (timer) | screenshots `/station`, advances the slow gallery on the Inky |
+| `birdlife-almanac` (timer) | every 30 min, refreshes `storage/almanac.json` (weather + tide + coords) from Open-Meteo — no API key |
+| `birdlife-push` (timer) | every 15 min, pushes new detections to the cloud mirror (culfinbirds.net) — only if `CLOUD_INGEST_URL`/`TOKEN` are set |
 
 The whole stack runs **bare-metal** (no Docker — the mic and the SPI/GPIO panel
 make container hardware passthrough more trouble than it's worth). Reproducibility
@@ -44,10 +46,12 @@ curl -fsSL https://bun.sh/install | bash          # bun (JS)
 ```bash
 git clone <this-repo> ~/birdlife && cd ~/birdlife
 cp .env.example .env    # then edit (see below)
-make setup              # uv sync, bundle, bun install + build
+make setup              # uv sync, bundle, bun install, bin/vite build, db:prepare
 
-# Production assets (digested JS/CSS into public/assets) — needs SECRET_KEY_BASE
-# set in .env first, since it boots the production env:
+# Production assets — needs SECRET_KEY_BASE set in .env first (boots prod env).
+# assets:precompile runs the Vite build (the `/` React SPA + the /kiosk,/station
+# Stimulus bundle → public/vite) AND digests the Propshaft CSS + bird PNGs into
+# public/assets & public/birds:
 cd collage && RAILS_ENV=production bin/rails assets:precompile && cd ..
 
 # Pi-only extras (kept out of the cross-platform lock):
@@ -86,7 +90,7 @@ cd collage && RAILS_ENV=production bin/rails db:prepare && RAILS_ENV=production 
 sed -i "s/\bpi\b/$USER/g; s#/home/pi#$HOME#g" deploy/birdlife-*.service   # fix user/paths
 sudo cp deploy/birdlife-*.service deploy/birdlife-*.timer /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now birdlife-listener birdlife-web birdlife-frame.timer
+sudo systemctl enable --now birdlife-listener birdlife-web birdlife-frame.timer birdlife-almanac.timer
 journalctl -u birdlife-frame -f      # watch panel pushes
 ```
 

@@ -1,31 +1,17 @@
 !!!
+-# Minimal fallback layout. The real surfaces bring their own HTML: `/` uses the
+-# `editorial` layout (React SPA); /kiosk, /station, /emulator, /panel render
+-# standalone (layout: false). This exists only as a sane default for any future
+-# server-rendered HTML action.
 %html{ lang: "en" }
   %head
-    %title= content_for(:title) || "Connemara Birds"
+    %title= content_for(:title) || "Éist"
     %meta{ name: "viewport", content: "width=device-width,initial-scale=1,viewport-fit=cover" }
-    %meta{ name: "application-name", content: "Connemara Birds" }
     = csrf_meta_tags
     = csp_meta_tag
     = yield :head
     = stylesheet_link_tag "colors", "avian", "application", "data-turbo-track": "reload"
-    = javascript_include_tag "application", "data-turbo-track": "reload", type: "module"
-  %body.av-local
-    %header.top
-      %nav.window-pick{ role: "tablist", "aria-label": "time window" }
-        - ApplicationController::WINDOWS.each do |label, hours|
-          %a{ href: url_for(h: hours), "aria-current": (hours == current_window ? "true" : nil) }= label
-    %main.stage
-      %header.static-head
-        %p.pre Connemara
-        %h1= content_for(:heading) || "Heard Recently"
-      .views
-        = yield
-    %nav.slider{ "aria-label": "View" }
-      %a{ href: root_path(h: current_window), "aria-current": (controller_name == "collage" ? "true" : nil) } collage
-      %a{ href: stats_path(h: current_window), "aria-current": (controller_name == "stats" ? "true" : nil) } stats
-      %a{ href: atlas_path(h: current_window), "aria-current": (controller_name == "atlas" ? "true" : nil) } atlas
-    / Species detail panel: links with data-turbo-frame="detail" load into the
-    / frame, and the modal controller reveals the overlay once it has content.
-    #detail-modal{ "data-controller": "modal" }
-      .modal-backdrop{ "data-action": "click->modal#close" }
-      = turbo_frame_tag "detail", "data-modal-target": "frame", "data-action": "turbo:frame-load->modal#open keydown.esc@document->modal#close"
+    = vite_client_tag
+    = vite_javascript_tag "application"
+  %body
+    = yield

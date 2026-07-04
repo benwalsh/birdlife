@@ -13,7 +13,7 @@ help:  ## list the available tasks
 
 setup:  ## install all deps (Python, Ruby, JS) and prepare the database
 	uv sync
-	cd collage && bundle install && bun install && bin/rails stimulus:manifest:update && bun run build && bin/rails db:prepare
+	cd collage && bundle install && bun install && bin/rails stimulus:manifest:update && bin/vite build && bin/rails db:prepare
 
 serve:  ## run the collage web app  (override with: make serve PORT=4030)
 	cd collage && bin/rails server -p $(PORT)
@@ -61,8 +61,8 @@ frame:  ## push the panel to the Inky  (Pi only)
 purge:  ## clear all detections (reset the collage to empty)
 	cd collage && bin/rails runner 'puts "cleared #{Detection.delete_all} detections"'
 
-build:  ## register Stimulus controllers + rebuild the JS bundle
-	cd collage && bin/rails stimulus:manifest:update && bun run build
+build:  ## register Stimulus controllers + build the Vite bundle (JS + React SPA)
+	cd collage && bin/rails stimulus:manifest:update && bin/vite build
 
 doctor:  ## verify the Python<->Rails<->datastore seams + Irish locale (bring-up check)
 	cd collage && bin/rails birdlife:doctor

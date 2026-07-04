@@ -11,6 +11,7 @@ collage/storage/*.sqlite3
 collage/storage/*.sqlite3-*
 collage/public/assets
 collage/public/birds
+collage/public/vite
 avian/assets/illustrations
 avian/assets/references
 frame/.pytest_cache

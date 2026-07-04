@@ -12,6 +12,13 @@ module ApplicationHelper
     end
   end
 
+  # Station coordinates in a compact "53.6°N 9.9°W" form.
+  def format_coords(lat, lon)
+    ns = lat.negative? ? 'S' : 'N'
+    ew = lon.negative? ? 'W' : 'E'
+    format('%<lat>.1f°%<ns>s %<lon>.1f°%<ew>s', lat: lat.abs, ns: ns, lon: lon.abs, ew: ew)
+  end
+
   # URL for a species' illustration, or nil if we don't ship one yet.
   def bird_illustration(sci)
     slug = sci.downcase.tr(' ', '-')

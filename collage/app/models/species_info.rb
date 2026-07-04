@@ -93,7 +93,7 @@ class SpeciesInfo < ApplicationRecord
     def get_json(url)
       uri = URI(url)
       res = Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: 5, read_timeout: 8) do |http|
-        http.get(uri.request_uri, 'User-Agent' => 'birdlife/1.0 (Connemara bird detector)')
+        http.get(uri.request_uri, 'User-Agent' => 'birdlife/1.0 (Eist bird detector)')
       end
       res.is_a?(Net::HTTPSuccess) ? JSON.parse(res.body) : nil
     end
@@ -101,7 +101,7 @@ class SpeciesInfo < ApplicationRecord
     def fetch(title, lang)
       uri = URI("https://#{lang}.wikipedia.org/api/rest_v1/page/summary/#{ERB::Util.url_encode(title.tr(' ', '_'))}")
       res = Net::HTTP.start(uri.host, uri.port, use_ssl: true, open_timeout: 5, read_timeout: 8) do |http|
-        http.get(uri.request_uri, 'User-Agent' => 'birdlife/1.0 (Connemara bird detector)')
+        http.get(uri.request_uri, 'User-Agent' => 'birdlife/1.0 (Eist bird detector)')
       end
       return nil unless res.is_a?(Net::HTTPSuccess)
 

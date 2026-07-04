@@ -207,6 +207,46 @@ wanted ("birds.thecottage.ie"); Tailscale is simpler/more private for "just us +
 and is the default. **None of this is cloud deployment** — the Pi keeps running
 everything; this is only a private, outbound-only remote-access layer.
 
+## Web layer design precepts (the keel for the dashboard)
+
+Two precepts govern the whole web layer (the Rails/React collage app + the Inky
+panel). They are easy to erode one reasonable-seeming feature at a time, so they are
+written down here. Everything in the dashboard supports one of the two. (Full
+rationale lives in the design docs; this is the load-bearing summary.)
+
+**1. The e-ink voice, everywhere.** The device is a six-colour Spectra e-ink panel
+showing dithered bird illustrations on a calm, paper-like surface. The website is
+that same object's voice — it inherits the e-ink aesthetic even on screens that
+aren't e-ink.
+- Restrained palette, generous quiet, ink-on-paper stillness. No glow, no gradients,
+  no gratuitous motion, no glossy chrome. Whitespace is a feature.
+- **Line icons, never emoji.** They read as engraved/printed marks; set them in a
+  muted weight so they sit *behind* the content like a printer's mark.
+- Irish names in the serif voice-italic — a quiet typographic texture that carries
+  the bilingual character without shouting.
+- **The one deliberate exception:** the 24-hour sparkline is a smooth, continuous,
+  living line — precisely what e-ink cannot render. That tension (mostly paper, one
+  live gesture) *is* the aesthetic. It is the only moving/continuous element; adding
+  more breaks the spell.
+
+**2. Rigorous factuality about birds.** Anything the system says about a bird must be
+true and supported — a confidently wrong bird fact is the thing that would embarrass
+the gift.
+- **Ruby computes, the LLM narrates.** The facts engine (`DailyFacts`) computes every
+  count, ranking, "first", rarity and importance score; the model only turns an
+  already-correct facts object into prose; the stats page renders the same object and
+  never re-derives. One source of truth. That seam is what keeps warmth from ever
+  costing accuracy.
+- State only what the data supports; every clause traces to a fact. **No invented
+  behaviour, migration, motivation, origin, or destination.** **Never link a bird to
+  weather, wind, temperature, or sky** ("a swift drifted in on the westerly" is the
+  canonical banned sentence). Weather/tide are ambient context, never causally
+  attached. Tide only ever as co-occurrence, only for a species carrying a phase tag.
+- Counts and "first" claims come verbatim from the facts — never estimate, re-round,
+  or embellish a number. Warmth lives in how true facts are joined ("the usual
+  sparrows and magpies"), never in embellishing the facts. Restraint over enthusiasm;
+  sentence case, no exclamation marks. When unsure, leave it out.
+
 ## Customisation goals
 
 1. **Connemara-weighted species** — location/coordinates set so BirdNET weights

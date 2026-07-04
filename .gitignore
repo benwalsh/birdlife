@@ -67,3 +67,4 @@ avian/assets/_legacy/
 .env.*
 !.env.example
 /.venv-birdnet
+.sync_cursor

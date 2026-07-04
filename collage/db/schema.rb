@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_01_090000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_04_090200) do
   create_table "detections", force: :cascade do |t|
     t.string "Com_Name", null: false
     t.float "Confidence"
@@ -30,6 +30,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_01_090000) do
     t.index ["dedupe_key"], name: "index_detections_on_dedupe_key", unique: true
   end
 
+  create_table "events", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "event_type", null: false
+    t.datetime "notified_at"
+    t.date "occurred_on", null: false
+    t.string "sci_name", null: false
+    t.datetime "updated_at", null: false
+    t.index ["event_type", "sci_name", "occurred_on"], name: "index_events_on_event_type_and_sci_name_and_occurred_on", unique: true
+  end
+
   create_table "species_infos", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "description"
@@ -42,4 +52,31 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_01_090000) do
     t.datetime "updated_at", null: false
     t.index ["sci_name"], name: "index_species_infos_on_sci_name", unique: true
   end
+
+  create_table "subscriptions", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.string "alert_type", default: "species", null: false
+    t.datetime "created_at", null: false
+    t.string "sci_name"
+    t.string "token"
+    t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
+    t.index ["alert_type", "sci_name"], name: "index_subscriptions_on_alert_type_and_sci_name"
+    t.index ["token"], name: "index_subscriptions_on_token", unique: true
+    t.index ["user_id"], name: "index_subscriptions_on_user_id"
+  end
+
+  create_table "users", force: :cascade do |t|
+    t.string "avatar_url"
+    t.datetime "created_at", null: false
+    t.string "email"
+    t.string "name"
+    t.string "provider", null: false
+    t.string "uid", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email"], name: "index_users_on_email"
+    t.index ["provider", "uid"], name: "index_users_on_provider_and_uid", unique: true
+  end
+
+  add_foreign_key "subscriptions", "users"
 end

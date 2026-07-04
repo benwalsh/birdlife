@@ -32,6 +32,12 @@ class Conservation
       NOTES[status(sci)]
     end
 
+    # BirdNET scientific names of the regularly-occurring Irish species — a sane
+    # ~200-species set for the alert-subscription picker (vs all ~6000 BirdNET keys).
+    def species
+      table.keys
+    end
+
     private
 
     def table

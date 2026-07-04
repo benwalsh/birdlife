@@ -10,8 +10,17 @@ application.register("bilingual", BilingualController)
 import CollageController from "./collage_controller"
 application.register("collage", CollageController)
 
+import DropdownController from "./dropdown_controller"
+application.register("dropdown", DropdownController)
+
 import HelloController from "./hello_controller"
 application.register("hello", HelloController)
+
+import LangController from "./lang_controller"
+application.register("lang", LangController)
+
+import KioskController from "./kiosk_controller"
+application.register("kiosk", KioskController)
 
 import ModalController from "./modal_controller"
 application.register("modal", ModalController)

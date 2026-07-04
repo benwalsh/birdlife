@@ -5,7 +5,7 @@ if gem list --no-installed --exact --silent foreman; then
   gem install foreman
 fi
 
-# Default to port 3000 if not specified
-export PORT="${PORT:-3000}"
+# Default the Rails server to 4030 (override with PORT=... bin/dev).
+export PORT="${PORT:-4030}"
 
 exec foreman start -f Procfile.dev --env /dev/null "$@"

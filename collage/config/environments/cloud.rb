@@ -11,9 +11,11 @@ Rails.application.configure do
   config.assume_ssl = true
   config.force_ssl = true
 
-  # Assets (digested JS/CSS + the bird PNGs under /birds) are served by S3 +
-  # CloudFront, not by Rails — so don't serve static files from the container,
-  # and point asset URLs at the CDN. ASSET_HOST is the CloudFront asset domain.
-  config.public_file_server.enabled = false
+  # First cut: the container serves its own static assets (digested JS/CSS under
+  # /assets, the Vite bundle under /vite, the bird PNGs under /birds) and
+  # CloudFront caches them in front. Later optimisation to slim the image —
+  # offload the ~225 MB of illustrations to S3: set RAILS_SERVE_STATIC_FILES=false
+  # and point ASSET_HOST at the CDN.
+  config.public_file_server.enabled = ENV.fetch('RAILS_SERVE_STATIC_FILES', 'true') == 'true'
   config.asset_host = ENV['ASSET_HOST'] if ENV['ASSET_HOST'].present?
 end

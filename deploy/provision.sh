@@ -40,7 +40,11 @@ say "toolchains (uv, bun, mise + Ruby)"
 export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$HOME/.bun/bin:$PATH"
 command -v uv  >/dev/null || curl -LsSf https://astral.sh/uv/install.sh | sh
 command -v bun >/dev/null || curl -fsSL https://bun.sh/install | bash
-command -v mise >/dev/null || curl -fsSL https://mise.run | sh
+# MISE_INSTALL_MUSL=1 forces mise's static musl build — recent mise gnu builds
+# require glibc 2.39, but Raspberry Pi OS / Debian Bookworm ship glibc 2.36. The
+# musl binary has no glibc dependency, so it runs anywhere (and still compiles
+# Ruby against the system toolchain fine).
+command -v mise >/dev/null || curl -fsSL https://mise.run | MISE_INSTALL_MUSL=1 sh
 # Ruby from .ruby-version (mise compiles it via ruby-build — slow the first time
 # on ARM; subsequent runs are cached).
 ( cd "$REPO/collage" && mise use "ruby@$(cat .ruby-version)" )
@@ -64,9 +68,13 @@ cd "$REPO/collage"
 bundle config set --local without cloud
 bundle install
 bun install
-bun run build
-# Asset precompile copies the bird PNGs under /birds; the validation container
-# doesn't ship those, and they're not the ARM risk, so skip it there.
+# Vite builds both bundles (the Stimulus/Turbo `application` entry + the React
+# `app` SPA) into public/vite. Run it explicitly so the ARM container validates
+# the build too (assets:precompile below, which also triggers it, is Pi-only).
+bin/vite build
+# Asset precompile copies the bird PNGs under /birds + digests the Propshaft CSS;
+# the validation container doesn't ship the PNGs, and they're not the ARM risk,
+# so skip it there.
 [ "$IN_CONTAINER" = "1" ] || bin/rails assets:precompile
 
 say "database (creates the shared SQLite + tables, sets WAL)"
@@ -92,6 +100,14 @@ sed -i "s/\bpi\b/$USER/g; s#/home/pi#$HOME#g" deploy/birdlife-*.service
 $SUDO cp deploy/birdlife-*.service deploy/birdlife-*.timer /etc/systemd/system/
 $SUDO systemctl daemon-reload
 $SUDO systemctl enable --now birdlife-listener birdlife-web birdlife-frame.timer
+
+# Cloud mirror push (Pi -> culfinbirds.net) — only if the ingest keys are set.
+if [ -n "${CLOUD_INGEST_URL:-}" ]; then
+  say "cloud mirror push (every 15 min)"
+  $SUDO systemctl enable --now birdlife-push.timer
+else
+  echo "  (CLOUD_INGEST_URL unset — skipping cloud push; set CLOUD_INGEST_URL/TOKEN in .env to enable)"
+fi
 
 # Offsite backup (Litestream -> S3/B2) — only if the LITESTREAM_* keys are set.
 if [ -n "${LITESTREAM_BUCKET:-}" ]; then

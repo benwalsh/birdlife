@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 #
 # ARM Debian validation of the macOS->Pi gap — run BEFORE touching the Pi to
 # catch what macOS can't: dependency installs on ARM Debian, Rails native-gem

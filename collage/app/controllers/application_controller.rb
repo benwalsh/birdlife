@@ -8,6 +8,31 @@ class ApplicationController < ActionController::Base
 
   private
 
+  def current_user
+    @current_user ||= User.find_by(id: session[:user_id]) if session[:user_id]
+  end
+  helper_method :current_user
+
+  def logged_in?
+    current_user.present?
+  end
+  helper_method :logged_in?
+
+  # The chosen UI-chrome language ("en"/"ga"), from the toggle's cookie. Default
+  # English. Seeds <html data-lang> and the React bootstrap.
+  def ui_lang
+    %w[en ga].include?(cookies[:ui_lang]) ? cookies[:ui_lang] : 'en'
+  end
+  helper_method :ui_lang
+
+  # The signed-in user as a JSON-able hash for the React bootstrap, or nil.
+  def user_payload
+    return nil unless current_user
+
+    { name: current_user.display_name, email: current_user.email,
+      avatar_url: current_user.avatar_url, admin: current_user.admin? }
+  end
+
   def current_window
     valid = WINDOWS.map { |_label, hours| hours }
     valid.include?(params[:h]&.to_i) ? params[:h].to_i : 24

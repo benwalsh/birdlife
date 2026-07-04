@@ -30,8 +30,10 @@ class CollagePresenter
   # Rough silhouette packing density, used only to size the (generous) work
   # canvas so nothing spills off it before the fit-to-region scale.
   PACK_FILL = 0.5
-  # Elliptical cluster — wider than tall, to match the landscape panel so the
-  # fit-to-region scale fills both axes.
+  # Default elliptical cluster — wider than tall, to match the landscape panel so
+  # the fit-to-region scale fills both axes. Overridable per-instance (see
+  # initialize) so a portrait surface (e.g. /station) can request a taller cluster
+  # and still fill its frame with big birds.
   X_BIAS = 1.0
   Y_BIAS = 0.55
   # No-art birds pack as a filled square (a coarse all-on mask).
@@ -40,13 +42,16 @@ class CollagePresenter
 
   attr_reader :width, :height
 
-  def initialize(tally, width: 800, height: 480, top_inset: 28, bottom_inset: 48, margin: 16)
+  def initialize(tally, width: 800, height: 480, top_inset: 28, bottom_inset: 48, margin: 16,
+                 x_bias: X_BIAS, y_bias: Y_BIAS)
     @tally = tally
     @width = width
     @height = height
     @top_inset = top_inset
     @bottom_inset = bottom_inset
     @margin = margin
+    @x_bias = x_bias
+    @y_bias = y_bias
   end
 
   def nodes
@@ -94,7 +99,7 @@ class CollagePresenter
     span = Math.sqrt(sizes.sum { |w, h| w * h } / PACK_FILL)
     canvas = span * 2.0
     tiles = birds.each_with_index.map { |bird, i| tile_for(bird, sizes[i]) }
-    MaskPacker.pack(tiles, width: canvas, height: canvas, x_bias: X_BIAS, y_bias: Y_BIAS)
+    MaskPacker.pack(tiles, width: canvas, height: canvas, x_bias: @x_bias, y_bias: @y_bias)
   end
 
   # Scale the packed cluster to fill the panel region and centre it.

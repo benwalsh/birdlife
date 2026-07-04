@@ -7,6 +7,12 @@
    ============================================================================ */
 :root {
   color-scheme: light;
+  /* The publication's two typefaces — the single source of truth for type.
+     --serif (EB Garamond, the Sabon role): names, mastheads, prose.
+     --mono  (IBM Plex Mono): every number + small label. Self-hosted via the Vite
+     app entry (@fontsource); the stacks fall back to system serif/mono. */
+  --serif: "EB Garamond", "Iowan Old Style", Georgia, serif;
+  --mono:  "IBM Plex Mono", ui-monospace, Menlo, monospace;
   --paper:    #ffffff;   /* pure white page/panel ground */
   --paper-2:  #f2f2f3;   /* neutral recessed track */
   --paper-3:  #e7e7ea;   /* neutral placeholder fill */
@@ -18,7 +24,9 @@
   --hairline: rgba(0,0,0,0.14);   /* faint divider lines + chart gridlines */
   --rule:     #e4e4e7;            /* solid light hairline */
   --pill:     #ffffff;            /* active-toggle sliding pill */
-  --frame:    #201f1d;            /* neutral dark surround (panel/emulator) */
+  --frame:      #201f1d;          /* neutral dark surround (panel/emulator) */
+  --frame-face: #2c2c30;          /* moulding face of the station/kiosk frame */
+  --frame-label:#8a8a90;          /* spec caption sitting on the dark frame */
   /* Semantic accents — status + BoCCI conservation (same in both themes) */
   --red:      #c0392b;   /* Red list / errors */
   --amber:    #d99a1c;   /* Amber list / warnings */

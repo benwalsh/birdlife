@@ -9,15 +9,26 @@ class MoonPhase
     'New Moon', 'Waxing Crescent', 'First Quarter', 'Waxing Gibbous',
     'Full Moon', 'Waning Gibbous', 'Last Quarter', 'Waning Crescent'
   ].freeze
+  # Irish names, same order, per the National Terminology Database (téarma.ie):
+  # scothlán = gibbous, corrán = crescent, ag líonadh = waxing, ag caitheamh =
+  # waning, an chéad/dheireanach cheathrú = first/last quarter.
+  NAMES_GA = [
+    'Gealach nua', 'Corrán ag líonadh', 'An chéad cheathrú', 'Scothlán ag líonadh',
+    'Gealach lán', 'Scothlán ag caitheamh', 'An cheathrú dheireanach', 'Corrán ag caitheamh'
+  ].freeze
+  # Unicode moon glyphs, one per named phase (same order as NAMES). Reads in full
+  # colour on a monitor (kiosk); on the Spectra-6 panel it dithers, which the
+  # /station preview deliberately shows.
+  EMOJI = %w[🌑 🌒 🌓 🌔 🌕 🌖 🌗 🌘].freeze
 
-  Phase = Data.define(:name, :illumination)
+  Phase = Data.define(:name, :name_ga, :illumination, :emoji)
 
   class << self
     def for(date = Date.current)
       age = (date - KNOWN_NEW_MOON).to_f % SYNODIC
       index = ((age / SYNODIC) * 8).round % 8
       illumination = (((1 - Math.cos(2 * Math::PI * age / SYNODIC)) / 2) * 100).round
-      Phase.new(name: NAMES[index], illumination: illumination)
+      Phase.new(name: NAMES[index], name_ga: NAMES_GA[index], illumination: illumination, emoji: EMOJI[index])
     end
   end
 end
