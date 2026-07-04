@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_05_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_05_140000) do
   create_table "detections", force: :cascade do |t|
     t.string "Com_Name", null: false
     t.float "Confidence"
@@ -30,6 +30,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_05_130000) do
     t.index ["dedupe_key"], name: "index_detections_on_dedupe_key", unique: true
   end
 
+  create_table "enrichment_bundles", force: :cascade do |t|
+    t.json "blocks", default: [], null: false
+    t.string "common_name"
+    t.datetime "created_at", null: false
+    t.date "date", null: false
+    t.string "irish_name"
+    t.string "sci_name", null: false
+    t.string "source_run_id"
+    t.datetime "updated_at", null: false
+    t.index ["sci_name", "date"], name: "index_enrichment_bundles_on_sci_name_and_date", unique: true
+  end
+
   create_table "events", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "event_type", null: false
@@ -38,6 +50,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_05_130000) do
     t.string "sci_name", null: false
     t.datetime "updated_at", null: false
     t.index ["event_type", "sci_name", "occurred_on"], name: "index_events_on_event_type_and_sci_name_and_occurred_on", unique: true
+  end
+
+  create_table "source_fetch_logs", force: :cascade do |t|
+    t.datetime "fetched_at", null: false
+    t.string "host", null: false
+    t.string "run_id"
+    t.string "sci_name"
+    t.string "url"
+    t.index ["sci_name", "fetched_at"], name: "index_source_fetch_logs_on_sci_name_and_fetched_at"
   end
 
   create_table "species_infos", force: :cascade do |t|
