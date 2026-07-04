@@ -1,0 +1,23 @@
+# Context for the cloud image (docker build . at the repo root). Keep it lean but
+# KEEP avian/assets/illustrations — public/birds symlinks to it and the collage
+# presenter reads the masks at runtime. (The ARM validation build uses its own
+# deploy/Dockerfile.armcheck.dockerignore.)
+.git
+.github
+.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.DS_Store
+node_modules
+collage/node_modules
+collage/vendor
+collage/tmp
+collage/log
+collage/storage/*.sqlite3
+collage/storage/*.sqlite3-*
+collage/public/vite
+collage/public/assets
+avian/assets/references
+.sync_cursor
+storage/almanac.json

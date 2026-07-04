@@ -1,0 +1,41 @@
+- content_for(:title) { "Alerts · Éin Chulfin" }
+
+.acct
+  %header.acct-top
+    %a.acct-home{ href: "/" } ← Éin Chulfin
+    %h1.acct-h1 Alerts
+    %p.acct-lead Get an email when the cottage listening station hears something.
+
+  %section.acct-sec
+    %h2.acct-h2 Standing rules
+    %ul.acct-rules
+      - { "rarity" => "Rarities & vagrants", "first_ever" => "First-ever species" }.each do |type, label|
+        - sub = @subscriptions.find { |s| s.alert_type == type }
+        %li.acct-rule
+          %span.acct-rule-label= label
+          - if sub
+            = button_to "Turn off", subscription_path(sub), method: :delete, class: "acct-btn is-on"
+          - else
+            = button_to "Turn on", subscriptions_path, method: :post, params: { subscription: { alert_type: type } }, class: "acct-btn"
+
+  %section.acct-sec
+    %h2.acct-h2 Species you're watching
+    - watched = @subscriptions.select { |s| s.alert_type == "species" }
+    - if watched.any?
+      %ul.acct-list
+        - watched.each do |sub|
+          - name = BirdName.lookup(sub.sci_name)
+          %li.acct-item
+            %span.acct-name= name.en
+            - if name.ga
+              %span.acct-ga= name.ga
+            = button_to "Remove", subscription_path(sub), method: :delete, class: "acct-btn acct-remove"
+    - else
+      %p.acct-empty You're not watching any species yet.
+
+    = form_with url: subscriptions_path, method: :post, class: "acct-add" do
+      = hidden_field_tag "subscription[alert_type]", "species"
+      = select_tag "subscription[sci_name]",
+        options_for_select(@species.map { |sci, n| [n.ga ? "#{n.en} · #{n.ga}" : n.en, sci] }),
+        prompt: "Choose a species…", class: "acct-select"
+      = submit_tag "Add", class: "acct-btn acct-add-btn"
