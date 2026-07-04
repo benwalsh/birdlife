@@ -40,17 +40,19 @@ class Notifier
       false
     end
 
-    # One digest email — the day's events, built inline (SES *simple* content, not a
-    # template, since the list is variable-length). Same fail-soft contract as deliver.
-    def deliver_digest(user:, date:, events:)
+    # One digest email — a DigestFacts object, narrated by DigestSummary (with the
+    # mechanical list as fallback). SES *simple* content, not a template, since it's
+    # variable and part LLM-written. Same fail-soft contract as deliver.
+    def deliver_digest(user:, date:, facts:)
       return true unless enabled?
 
+      note = DigestSummary.for(facts) # LLM note, or nil → the list stands on its own
       client.send_email(
         from_email_address: ENV.fetch('ALERTS_FROM'),
         destination:        { to_addresses: [user.email] },
         content:            { simple: {
           subject: { data: "Your cottage birds — #{I18n.l(date, format: :long)}" },
-          body:    { html: { data: digest_html(events, date) }, text: { data: digest_text(events, date) } }
+          body:    { html: { data: digest_html(facts, date, note) }, text: { data: digest_text(facts, date, note) } }
         } }
       )
       true
@@ -69,36 +71,49 @@ class Notifier
       @client ||= Aws::SESV2::Client.new
     end
 
-    def digest_html(events, date)
-      rows = events.map do |event|
-        name = BirdName.lookup(event.sci_name)
+    # Display rows: the followed birds heard (with counts), then the flagged arrivals.
+    def digest_rows(facts)
+      follows = facts.follows.map { |f| { en: f[:en], ga: f[:ga], note: "heard #{f[:count]}×" } }
+      alerts  = facts.alerts.map { |a| { en: a[:en], ga: a[:ga], note: REASON.fetch(a[:kind], '') } }
+      follows + alerts
+    end
+
+    def digest_html(facts, date, note)
+      prose = Array(note).map do |para|
+        %(<p style="font-size:16px;line-height:1.55;margin:0 0 12px;">#{h(para)}</p>)
+      end.join
+      rows = digest_rows(facts).map do |row|
         <<-ROW
-          <tr><td style="padding:12px 0;border-bottom:1px solid #e4e4e7;">
-            <div style="font-size:18px;color:#17171a;">#{h(name.en)}</div>
-            <div style="font-size:14px;color:#8b8b91;font-style:italic;">#{h(name.ga)}</div>
-            <div style="font-size:13px;color:#3d3d42;margin-top:3px;">#{h(REASON.fetch(event.event_type, ''))}</div>
+          <tr><td style="padding:11px 0;border-bottom:1px solid #e4e4e7;">
+            <span style="font-size:17px;color:#17171a;">#{h(row[:en])}</span>
+            <span style="font-size:14px;color:#8b8b91;font-style:italic;">&nbsp;#{h(row[:ga])}</span>
+            <span style="font-size:13px;color:#8b8b91;float:right;">#{h(row[:note])}</span>
           </td></tr>
         ROW
       end.join
+      day = if facts.roundup
+              "#{facts.roundup[:species_today]} species, #{facts.roundup[:detections_today]} detections"
+            end
       <<-HTML
         <div style="margin:0;padding:24px;background:#f2f2f3;font-family:Georgia,'Times New Roman',serif;color:#17171a;">
           <div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #e4e4e7;border-radius:10px;padding:24px 28px;">
             <div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8b8b91;">Éist · #{h(I18n.l(date, format: :long))}</div>
-            <div style="font-size:24px;margin:6px 0 2px;">The day's birds at Culfin</div>
-            <table style="width:100%;border-collapse:collapse;margin-top:12px;">#{rows}</table>
-            <a href="#{site_url}" style="display:inline-block;margin-top:22px;background:#17171a;color:#fff;text-decoration:none;font-family:Helvetica,Arial,sans-serif;font-size:14px;padding:11px 20px;border-radius:6px;">See the collage</a>
+            <div style="font-size:24px;margin:6px 0 14px;">The day's birds at Culfin</div>
+            #{prose}
+            #{%(<table style="width:100%;border-collapse:collapse;margin-top:6px;">#{rows}</table>) unless rows.empty?}
+            #{%(<div style="font-size:13px;color:#8b8b91;margin-top:14px;">#{h(day)} logged today.</div>) if day}
+            <a href="#{site_url}" style="display:inline-block;margin-top:20px;background:#17171a;color:#fff;text-decoration:none;font-family:Helvetica,Arial,sans-serif;font-size:14px;padding:11px 20px;border-radius:6px;">See the collage</a>
             <div style="margin-top:16px;font-family:Helvetica,Arial,sans-serif;font-size:12px;color:#8b8b91;">Manage how you're told at <a href="#{site_url}/account" style="color:#8b8b91;">your account</a>.</div>
           </div>
         </div>
       HTML
     end
 
-    def digest_text(events, date)
-      lines = events.map do |event|
-        name = BirdName.lookup(event.sci_name)
-        "- #{name.en} (#{name.ga}) — #{REASON.fetch(event.event_type, '')}"
-      end
-      "The day's birds at Culfin — #{I18n.l(date, format: :long)}\n\n#{lines.join("\n")}\n\n" \
+    def digest_text(facts, date, note)
+      prose = Array(note).join("\n\n")
+      rows = digest_rows(facts).map { |row| "- #{row[:en]} (#{row[:ga]}) — #{row[:note]}" }.join("\n")
+      body = [prose.presence, rows.presence].compact.join("\n\n")
+      "The day's birds at Culfin — #{I18n.l(date, format: :long)}\n\n#{body}\n\n" \
         "See the collage: #{site_url}\nManage: #{site_url}/account"
     end
 

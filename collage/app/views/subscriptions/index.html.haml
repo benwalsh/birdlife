@@ -28,6 +28,19 @@
         = render "cadence", alert_type: "species", current: @follow_cadence
 
   %section.acct-sec
+    %h2.acct-h2 Daily letter
+    %p.acct-lead A short note about the cottage's day, once each morning — even on a day none of the birds you follow turn up.
+    %ul.acct-rules
+      %li.acct-rule
+        %span.acct-rule-label Send me the daily letter
+        = form_with url: subscription_cadence_path, method: :post, class: "acct-cadence", data: { turbo: false } do
+          = hidden_field_tag :alert_type, "roundup"
+          = button_tag "On", type: :submit, name: "cadence", value: "digest",
+            class: "acct-seg#{' is-on' if @roundup}", "aria-pressed": @roundup
+          = button_tag "Off", type: :submit, name: "cadence", value: "off",
+            class: "acct-seg#{' is-on' unless @roundup}", "aria-pressed": !@roundup
+
+  %section.acct-sec
     %h2.acct-h2 Species you're following
     %p.acct-lead Follow a bird here or by ticking it on the site; how you're told is set above.
     - if @follows.any?

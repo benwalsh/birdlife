@@ -18,6 +18,7 @@ class SubscriptionsController < ApplicationController
       subs.find_by(alert_type: type, sci_name: nil)&.cadence || 'off'
     end
     @follow_cadence = @follows.first&.cadence || 'immediate'
+    @roundup = subs.exists?(alert_type: 'roundup')
     @species = species_options
   end
 
@@ -46,9 +47,11 @@ class SubscriptionsController < ApplicationController
       # rubocop:enable Rails/SkipsModelValidations
     elsif wanted == 'off'
       current_user.subscriptions.where(alert_type: type, sci_name: nil).destroy_all
-    elsif STANDING_RULES.key?(type)
+    elsif STANDING_RULES.key?(type) || type == 'roundup'
+      # The daily letter only ever arrives by digest, so pin its cadence.
+      chosen = type == 'roundup' ? 'digest' : wanted
       current_user.subscriptions.find_or_initialize_by(alert_type: type, sci_name: nil).
-        update!(active: true, cadence: wanted)
+        update!(active: true, cadence: chosen)
     end
     redirect_to account_path
   end

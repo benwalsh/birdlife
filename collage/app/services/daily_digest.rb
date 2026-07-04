@@ -30,26 +30,12 @@ class DailyDigest
   def deliver
     return false if @user.last_digest_on == @date
 
-    events = matching_events
-    # Mark the day done even when empty — it's a complete past day, nothing more will
-    # land, so there's no reason to rescan it.
+    facts = DigestFacts.for(user: @user, date: @date)
+    # Mark the day done even when there's nothing to say — it's a complete past day,
+    # nothing more will land, so there's no reason to rescan it.
     @user.update!(last_digest_on: @date)
-    return false if events.empty?
+    return false unless facts.any?
 
-    Notifier.deliver_digest(user: @user, date: @date, events: events)
-  end
-
-  private
-
-  # The day's events matching what this user asked to receive by digest.
-  def matching_events
-    day = Event.where(occurred_on: @date)
-    @user.subscriptions.active.digesting.flat_map do |sub|
-      if sub.alert_type == 'species'
-        day.where(event_type: 'species', sci_name: sub.sci_name).to_a
-      else
-        day.where(event_type: sub.alert_type).to_a
-      end
-    end.uniq
+    Notifier.deliver_digest(user: @user, date: @date, facts: facts)
   end
 end
