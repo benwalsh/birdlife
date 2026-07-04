@@ -73,6 +73,10 @@ data "aws_cloudfront_origin_request_policy" "all_viewer_except_host" {
   name = "Managed-AllViewerExceptHostHeader"
 }
 
+data "aws_cloudfront_cache_policy" "disabled" {
+  name = "Managed-CachingDisabled"
+}
+
 resource "aws_cloudfront_distribution" "main" {
   enabled         = true
   is_ipv6_enabled = true
@@ -99,6 +103,25 @@ resource "aws_cloudfront_distribution" "main" {
     compress                 = true
     cache_policy_id          = aws_cloudfront_cache_policy.app.id
     origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host.id
+  }
+
+  # Auth + authenticated pages must never be cached and must carry cookies both ways:
+  # the OAuth state and the login session live in a cookie, and a cached signed-in page
+  # would leak it to the next visitor. Same origin-request policy as the default (forwards
+  # cookies/query/headers but NOT Host, so the shared ALB still routes on the origin host)
+  # — only the cache policy differs: CachingDisabled instead of our app cache.
+  dynamic "ordered_cache_behavior" {
+    for_each = toset(["/auth/*", "/logout", "/account", "/subscriptions/*"])
+    content {
+      path_pattern             = ordered_cache_behavior.value
+      target_origin_id         = "ecs"
+      viewer_protocol_policy   = "redirect-to-https"
+      allowed_methods          = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
+      cached_methods           = ["GET", "HEAD"]
+      compress                 = true
+      cache_policy_id          = data.aws_cloudfront_cache_policy.disabled.id
+      origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer_except_host.id
+    }
   }
 
   restrictions {

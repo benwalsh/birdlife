@@ -1,12 +1,15 @@
 # Google sign-in. Credentials come from the environment (never committed) — set
 # GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET, and register the callback URL
 # (<host>/auth/google_oauth2/callback) in the Google Cloud console.
+# Behind CloudFront the app sees the origin host (cu-…on.aws), not culfinbirds.net,
+# so OmniAuth would build a callback that doesn't match the one registered with
+# Google. When SITE_URL is set (cloud), pin the redirect_uri to the public callback;
+# locally (no SITE_URL) OmniAuth derives it from the request (http://localhost:…).
+google_options = { scope: 'email,profile', prompt: 'select_account' }
+google_options[:redirect_uri] = "#{ENV.fetch('SITE_URL')}/auth/google_oauth2/callback" if ENV['SITE_URL'].present?
+
 Rails.application.config.middleware.use OmniAuth::Builder do
-  provider :google_oauth2,
-           ENV.fetch('GOOGLE_CLIENT_ID', nil),
-           ENV.fetch('GOOGLE_CLIENT_SECRET', nil),
-           scope:  'email,profile',
-           prompt: 'select_account'
+  provider :google_oauth2, ENV.fetch('GOOGLE_CLIENT_ID', nil), ENV.fetch('GOOGLE_CLIENT_SECRET', nil), google_options
 end
 
 OmniAuth.config.logger = Rails.logger

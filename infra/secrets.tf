@@ -35,3 +35,16 @@ resource "aws_ssm_parameter" "ingest_token" {
   type  = "SecureString"
   value = random_id.ingest_token.hex
 }
+
+# Google OAuth — supplied by you (terraform.tfvars / TF_VAR_*), not generated.
+resource "aws_ssm_parameter" "google_client_id" {
+  name  = "${local.ssm_prefix}/GOOGLE_CLIENT_ID"
+  type  = "SecureString"
+  value = var.google_client_id
+}
+
+resource "aws_ssm_parameter" "google_client_secret" {
+  name  = "${local.ssm_prefix}/GOOGLE_CLIENT_SECRET"
+  type  = "SecureString"
+  value = var.google_client_secret
+}

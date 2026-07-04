@@ -50,6 +50,8 @@ module "express_service" {
       { name = "SECRET_KEY_BASE", value_from = aws_ssm_parameter.secret_key_base.arn },
       { name = "DB_PASSWORD", value_from = aws_ssm_parameter.db_password.arn },
       { name = "CLOUD_INGEST_TOKEN", value_from = aws_ssm_parameter.ingest_token.arn },
+      { name = "GOOGLE_CLIENT_ID", value_from = aws_ssm_parameter.google_client_id.arn },
+      { name = "GOOGLE_CLIENT_SECRET", value_from = aws_ssm_parameter.google_client_secret.arn },
     ]
   }
 
@@ -70,6 +72,8 @@ module "express_service" {
     aws_ssm_parameter.secret_key_base.arn,
     aws_ssm_parameter.db_password.arn,
     aws_ssm_parameter.ingest_token.arn,
+    aws_ssm_parameter.google_client_id.arn,
+    aws_ssm_parameter.google_client_secret.arn,
   ]
 
   # One warm task, scale to two on CPU — parity with the old App Runner min=1/max=2.

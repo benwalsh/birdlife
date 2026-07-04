@@ -4,3 +4,8 @@
 aws_region  = "eu-west-1"
 domain_name = "culfinbirds.net"
 image_tag   = "latest"
+
+# Google OAuth (required for cloud sign-in) — from the Google Cloud console.
+# Put the REAL values in terraform.tfvars (gitignored), not here.
+google_client_id     = "xxxxxxxx.apps.googleusercontent.com"
+google_client_secret = "GOCSPX-xxxxxxxx"

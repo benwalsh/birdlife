@@ -72,3 +72,7 @@ avian/assets/_legacy/
 **/.terraform/*
 model/*.tflite
 
+# Terraform var files may hold secrets (e.g. Google OAuth creds) — keep only the example.
+*.tfvars
+!*.tfvars.example
+
