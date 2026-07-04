@@ -50,44 +50,9 @@ resource "aws_route53_record" "dmarc" {
   records = ["v=DMARC1; p=none;"]
 }
 
-# The alert template the Notifier renders by name. Placeholders match Notifier's
-# data blob: kind, reason, headline, en, ga, sci, date, image_url, site_url,
-# unsubscribe_url. The subject + reason line vary by alert kind (rarity, seasonal,
-# first-ever, follow) so the email says WHY it's worth reading. Email HTML must
-# inline its colours (no CSS vars in mail) — kept on-palette with the site.
-resource "aws_ses_template" "alert" {
-  name    = "eist-alert"
-  subject = "{{headline}}"
-
-  html = <<-HTML
-    <div style="margin:0;padding:24px;background:#f2f2f3;font-family:Georgia,'Times New Roman',serif;color:#17171a;">
-      <div style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #e4e4e7;border-radius:10px;overflow:hidden;">
-        <img src="{{image_url}}" alt="{{en}}" width="520" style="display:block;width:100%;height:auto;background:#f2f2f3;">
-        <div style="padding:24px 28px;">
-          <div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8b8b91;margin-bottom:10px;">Heard at Culfin</div>
-          <div style="font-size:26px;line-height:1.15;">{{en}}</div>
-          <div style="font-size:18px;color:#3d3d42;margin-top:2px;">{{ga}}</div>
-          <div style="font-size:14px;font-style:italic;color:#8b8b91;margin-top:6px;">{{sci}}</div>
-          <p style="font-size:15px;color:#3d3d42;line-height:1.55;margin:18px 0 22px;">
-            <strong>{{reason}}</strong> The listening station at the cottage picked it up on {{date}}.
-          </p>
-          <a href="{{site_url}}" style="display:inline-block;background:#17171a;color:#ffffff;text-decoration:none;font-family:Helvetica,Arial,sans-serif;font-size:14px;padding:11px 20px;border-radius:6px;">See the collage</a>
-        </div>
-        <div style="padding:16px 28px;border-top:1px solid #e4e4e7;font-family:Helvetica,Arial,sans-serif;font-size:12px;color:#8b8b91;">
-          You asked to hear about this. <a href="{{unsubscribe_url}}" style="color:#8b8b91;">Unsubscribe</a>.
-        </div>
-      </div>
-    </div>
-  HTML
-
-  text = <<-TEXT
-    {{en}} ({{ga}}) — {{sci}}
-    {{reason}} Heard at Culfin on {{date}}.
-
-    See the collage: {{site_url}}
-    Unsubscribe: {{unsubscribe_url}}
-  TEXT
-}
+# No email template lives here. Both the alert and the digest are built as SES *simple*
+# content in the Rails Notifier (app/services/notifier.rb) — the HTML/text belong with
+# the app, not in Terraform. This file only proves the domain + authorises sending.
 
 # Let the ECS task send mail as this domain (SES v2 SendEmail authorises on the
 # "From" identity). Attached to the module-created task role.

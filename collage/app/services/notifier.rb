@@ -1,16 +1,14 @@
-# Sends one alert email via SES *templated* email — the template (subject + HTML +
-# text with {{placeholders}}) lives in SES, so there's no ActionMailer or view
-# rendering here; we just pass a data blob. Images are plain URLs to the
-# CloudFront-hosted illustrations, not attachments.
+# Sends alert emails via SES. Both the immediate single-bird alert and the daily
+# digest are built here as SES *simple* content — the HTML/text live in Ruby, not in
+# a SES-stored template (nothing about the email lives in Terraform). Images are plain
+# URLs to the CloudFront-hosted illustrations, not attachments.
 #
 # Disabled unless ALERTS_FROM is set, so dev, test, and the Pi never try to send.
 # Returns true on success (or when disabled) and false on failure — the caller
 # leaves the event unsent on false so the next ingest tick retries.
 class Notifier
-  TEMPLATE = 'eist-alert'.freeze
-
   # Why this bird is worth an email — one line per alert kind, in the house voice.
-  # The SES template prints {{reason}}; {{headline}} is the subject line.
+  # REASON is the body's lead sentence; HEADLINE is the subject.
   REASON = {
     'rarity'     => 'A locally scarce bird — heard on only a handful of days.',
     'seasonal'   => 'Back for the season, after a spell away.',
@@ -28,11 +26,15 @@ class Notifier
     def deliver(event:, subscription:)
       return true unless enabled?
 
+      name = BirdName.lookup(event.sci_name)
       client.send_email(
         from_email_address: ENV.fetch('ALERTS_FROM'),
         destination:        { to_addresses: [subscription.email] },
-        content:            { template: { template_name: TEMPLATE,
-                                          template_data: data_for(event, subscription).to_json } }
+        content:            { simple: {
+          subject: { data: headline(event.event_type, name.en) },
+          body:    { html: { data: alert_html(event, subscription, name) },
+                     text: { data: alert_text(event, subscription, name) } }
+        } }
       )
       true
     rescue StandardError => e
@@ -121,22 +123,46 @@ class Notifier
       ERB::Util.html_escape(text)
     end
 
-    def data_for(event, subscription)
-      name = BirdName.lookup(event.sci_name)
+    def headline(kind, name_en)
+      (HEADLINE[kind] || ->(name) { "#{name} heard at Culfin" }).call(name_en)
+    end
+
+    # The single-bird alert email — one illustrated card, on-palette with the site.
+    def alert_html(event, subscription, name)
       slug = event.sci_name.downcase.tr(' ', '-')
-      kind = event.event_type
-      {
-        kind:            kind,
-        reason:          REASON.fetch(kind, 'Heard at the cottage.'),
-        headline:        (HEADLINE[kind] || ->(n) { "#{n} heard at Culfin" }).call(name.en),
-        en:              name.en,
-        ga:              name.ga,
-        sci:             event.sci_name,
-        date:            I18n.l(event.occurred_on, format: :long),
-        image_url:       "#{site_url}/birds/#{slug}.png",
-        site_url:        site_url,
-        unsubscribe_url: "#{site_url}/subscriptions/#{subscription.token}/unsubscribe"
-      }
+      reason = REASON.fetch(event.event_type, 'Heard at the cottage.')
+      date = I18n.l(event.occurred_on, format: :long)
+      <<-HTML
+        <div style="margin:0;padding:24px;background:#f2f2f3;font-family:Georgia,'Times New Roman',serif;color:#17171a;">
+          <div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #e4e4e7;border-radius:10px;overflow:hidden;">
+            <img src="#{site_url}/birds/#{slug}.png" alt="#{h(name.en)}" width="520" style="display:block;width:100%;height:auto;background:#f2f2f3;">
+            <div style="padding:24px 28px;">
+              <div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8b8b91;margin-bottom:10px;">Heard at Culfin</div>
+              <div style="font-size:26px;line-height:1.15;">#{h(name.en)}</div>
+              <div style="font-size:18px;color:#3d3d42;margin-top:2px;">#{h(name.ga)}</div>
+              <div style="font-size:14px;font-style:italic;color:#8b8b91;margin-top:6px;">#{h(event.sci_name)}</div>
+              <p style="font-size:15px;color:#3d3d42;line-height:1.55;margin:18px 0 22px;">
+                <strong>#{h(reason)}</strong> The listening station at the cottage picked it up on #{h(date)}.
+              </p>
+              <a href="#{site_url}" style="display:inline-block;background:#17171a;color:#fff;text-decoration:none;font-family:Helvetica,Arial,sans-serif;font-size:14px;padding:11px 20px;border-radius:6px;">See the collage</a>
+            </div>
+            <div style="padding:16px 28px;border-top:1px solid #e4e4e7;font-family:Helvetica,Arial,sans-serif;font-size:12px;color:#8b8b91;">
+              You asked to hear about this. <a href="#{unsubscribe_url(subscription)}" style="color:#8b8b91;">Unsubscribe</a>.
+            </div>
+          </div>
+        </div>
+      HTML
+    end
+
+    def alert_text(event, subscription, name)
+      reason = REASON.fetch(event.event_type, 'Heard at the cottage.')
+      "#{name.en} (#{name.ga}) — #{event.sci_name}\n" \
+        "#{reason} Heard at Culfin on #{I18n.l(event.occurred_on, format: :long)}.\n\n" \
+        "See the collage: #{site_url}\nUnsubscribe: #{unsubscribe_url(subscription)}"
+    end
+
+    def unsubscribe_url(subscription)
+      "#{site_url}/subscriptions/#{subscription.token}/unsubscribe"
     end
 
     def site_url

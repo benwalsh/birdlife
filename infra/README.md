@@ -71,9 +71,10 @@ terraform apply
 ## Alert emails (SES)
 
 `ses.tf` sets up the alert path: a DKIM-verified domain identity, a custom MAIL FROM
-(SPF), a DMARC record, the `eist-alert` template, and `ses:SendEmail` on the ECS task
-role. The Rails `Notifier` sends templated email by name; `ALERTS_FROM` on the ECS
-service switches it on (fail-soft — sends that fail just retry on the next ingest tick).
+(SPF), a DMARC record, and `ses:SendEmail` on the ECS task role. No email template
+lives in Terraform — the Rails `Notifier` builds both the alert and the digest as SES
+*simple* content (HTML/text in Ruby). `ALERTS_FROM` on the ECS service switches sending
+on (fail-soft — sends that fail just retry on the next ingest tick).
 
 **Two manual steps `terraform apply` can't do:**
 1. **Wait for DKIM verification.** After apply, SES verifies the domain via the DKIM

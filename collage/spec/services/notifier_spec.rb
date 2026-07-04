@@ -1,6 +1,27 @@
 require 'rails_helper'
 
 RSpec.describe Notifier do
+  describe '.deliver' do
+    it 'is a no-op returning true when disabled' do
+      allow(described_class).to receive(:enabled?).and_return(false)
+      sub = create(:subscription, alert_type: 'species', sci_name: 'Crex crex')
+      event = create(:event, event_type: 'species', sci_name: 'Crex crex')
+      expect(described_class.deliver(event: event, subscription: sub)).to be(true)
+    end
+
+    it 'sends a single-bird alert as SES simple content (no stored template)' do
+      ENV['ALERTS_FROM'] = 'alerts@culfinbirds.net'
+      sub = create(:subscription, alert_type: 'species', sci_name: 'Crex crex')
+      event = create(:event, event_type: 'species', sci_name: 'Crex crex')
+      fake = double('ses') # rubocop:disable RSpec/VerifiedDoubles
+      allow(described_class).to receive(:client).and_return(fake)
+      expect(fake).to receive(:send_email).with(hash_including(content: hash_including(:simple)))
+      expect(described_class.deliver(event: event, subscription: sub)).to be(true)
+    ensure
+      ENV.delete('ALERTS_FROM')
+    end
+  end
+
   describe '.deliver_digest' do
     let(:facts) do
       name = BirdName.lookup('Crex crex') # real UTF-8 Irish name (fada)
