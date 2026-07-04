@@ -70,4 +70,5 @@ avian/assets/_legacy/
 .sync_cursor
 
 **/.terraform/*
+model/*.tflite
 
