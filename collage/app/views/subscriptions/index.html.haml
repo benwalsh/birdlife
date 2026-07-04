@@ -16,25 +16,23 @@
         %span.acct-me-email= current_user.email
 
   %section.acct-sec
-    %h2.acct-h2 Alerts
-    %p.acct-lead Get an email when the cottage listening station hears something.
+    %h2.acct-h2 Alert delivery
+    %p.acct-lead Choose how the cottage tells you what it hears. “Digest” gathers a day’s birds into one morning email; “Off” stays silent.
     %ul.acct-rules
-      - { "rarity" => "Rarities & vagrants", "seasonal" => "Seasonal returns", "first_ever" => "First-ever species" }.each do |type, label|
-        - sub = @subscriptions.find { |s| s.alert_type == type }
+      - SubscriptionsController::STANDING_RULES.each do |type, label|
         %li.acct-rule
           %span.acct-rule-label= label
-          - if sub
-            = button_to "Turn off", subscription_path(sub), method: :delete, class: "acct-btn is-on"
-          - else
-            = button_to "Turn on", subscriptions_path, method: :post, params: { subscription: { alert_type: type } }, class: "acct-btn"
+          = render "cadence", alert_type: type, current: @rule_cadence[type]
+      %li.acct-rule
+        %span.acct-rule-label Birds you follow
+        = render "cadence", alert_type: "species", current: @follow_cadence
 
   %section.acct-sec
     %h2.acct-h2 Species you're following
-    %p.acct-lead Follow a bird here or by ticking it on the site; you'll get an email when it's next heard.
-    - watched = @subscriptions.select { |s| s.alert_type == "species" }
-    - if watched.any?
+    %p.acct-lead Follow a bird here or by ticking it on the site; how you're told is set above.
+    - if @follows.any?
       %ul.acct-list
-        - watched.each do |sub|
+        - @follows.each do |sub|
           - name = BirdName.lookup(sub.sci_name)
           %li.acct-item
             %span.acct-name= name.en

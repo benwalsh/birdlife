@@ -319,6 +319,17 @@ a.bird-card { text-decoration: none; color: inherit; }
 .acct-add-btn { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .acct-remove { color: var(--ink-soft); }
 
+/* Delivery cadence — a quiet segmented control (Now / Digest / Off). */
+.acct-cadence { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+.acct-seg {
+  border: 0; border-left: 1px solid var(--rule); background: var(--paper);
+  color: var(--ink-soft); font: 11px var(--mono); letter-spacing: 0.04em;
+  padding: 7px 13px; cursor: pointer;
+}
+.acct-seg:first-child { border-left: 0; }
+.acct-seg:hover { color: var(--ink-2); }
+.acct-seg.is-on { background: var(--ink); color: var(--paper); }
+
 /* Admin health panel — a plain instrument read-out in the same restrained voice. */
 .adm-lead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; color: var(--ink-2); margin: 0; }
 .adm-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--ink-soft); }

@@ -22,6 +22,7 @@ Rails.application.routes.draw do
   # Corncrake"). Unsubscribe is token-authed (the one-click email link), no login.
   get    'account' => 'subscriptions#index', as: :account
   post   'subscriptions' => 'subscriptions#create'
+  post   'subscriptions/cadence' => 'subscriptions#cadence', as: :subscription_cadence
   delete 'subscriptions/:id' => 'subscriptions#destroy', as: :subscription
   get    'subscriptions/:token/unsubscribe' => 'subscriptions#unsubscribe', as: :unsubscribe
 

@@ -32,7 +32,7 @@ RSpec.describe 'Subscriptions' do
     it 'renders the account page' do
       get '/account'
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include('Alerts')
+      expect(response.body).to include('Alert delivery').and include("Species you're following")
     end
 
     it 'creates a species subscription' do
@@ -46,6 +46,29 @@ RSpec.describe 'Subscriptions' do
       sub = User.find_by(email: 'watcher@example.com').
             subscriptions.create!(alert_type: 'species', sci_name: 'Crex crex')
       expect { delete "/subscriptions/#{sub.id}" }.to change(Subscription, :count).by(-1)
+    end
+
+    describe 'setting a delivery cadence' do
+      def me = User.find_by(email: 'watcher@example.com')
+
+      it 'creates a standing rule at the chosen cadence' do
+        post '/subscriptions/cadence', params: { alert_type: 'rarity', cadence: 'digest' }
+        expect(me.subscriptions.find_by(alert_type: 'rarity')).to have_attributes(cadence: 'digest', active: true)
+      end
+
+      it "removes a standing rule when set to 'off'" do
+        me.subscriptions.create!(alert_type: 'rarity')
+        expect { post '/subscriptions/cadence', params: { alert_type: 'rarity', cadence: 'off' } }.
+          to change { me.subscriptions.where(alert_type: 'rarity').count }.by(-1)
+      end
+
+      it 'bulk-sets the cadence of every followed species, keeping the follows' do
+        me.subscriptions.create!(alert_type: 'species', sci_name: 'Crex crex')
+        me.subscriptions.create!(alert_type: 'species', sci_name: 'Apus apus')
+        post '/subscriptions/cadence', params: { alert_type: 'species', cadence: 'off' }
+        expect(me.subscriptions.where(alert_type: 'species').pluck(:cadence)).to all(eq('off'))
+        expect(me.subscriptions.where(alert_type: 'species').count).to eq(2) # still following
+      end
     end
   end
 

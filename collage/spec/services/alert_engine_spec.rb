@@ -93,4 +93,21 @@ RSpec.describe AlertEngine do
       expect(Event.find_by(event_type: 'species').notified_at).to be_nil
     end
   end
+
+  describe 'cadence gating (the immediate path)' do
+    it 'does not email digest-cadence subscribers now — but still records the event for the digest' do
+      create(:subscription, alert_type: 'species', sci_name: 'Crex crex', cadence: 'digest')
+      stub_facts(item('Crex crex', 'routine'))
+      expect(Notifier).not_to receive(:deliver)
+      described_class.scan
+      expect(Event.where(event_type: 'species', sci_name: 'Crex crex')).to exist
+    end
+
+    it 'never emails off-cadence subscribers' do
+      create(:subscription, alert_type: 'species', sci_name: 'Crex crex', cadence: 'off')
+      stub_facts(item('Crex crex', 'routine'))
+      expect(Notifier).not_to receive(:deliver)
+      described_class.scan
+    end
+  end
 end

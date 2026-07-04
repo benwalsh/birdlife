@@ -8,9 +8,11 @@ class FavouritesController < ApplicationController
   before_action :require_login
 
   def create
-    current_user.subscriptions.
-      find_or_initialize_by(alert_type: 'species', sci_name: sci_name).
-      update!(active: true)
+    sub = current_user.subscriptions.find_or_initialize_by(alert_type: 'species', sci_name: sci_name)
+    # A new follow inherits how the user's other follows are delivered, so the one
+    # "Birds you follow" control on /account keeps meaning what it says.
+    sub.cadence = follow_cadence if sub.new_record?
+    sub.update!(active: true)
     render json: { sci_name: sci_name, following: true }
   end
 
@@ -24,5 +26,9 @@ class FavouritesController < ApplicationController
 
   def sci_name
     params.expect(:sci_name)
+  end
+
+  def follow_cadence
+    current_user.subscriptions.find_by(alert_type: 'species')&.cadence || 'immediate'
   end
 end

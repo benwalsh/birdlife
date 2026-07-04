@@ -1,0 +1,8 @@
+-# A 3-way delivery segmented control for one alert type. One form, three submit
+-# buttons — the clicked button's cadence value is what posts.
+= form_with url: subscription_cadence_path, method: :post, class: "acct-cadence", data: { turbo: false } do
+  = hidden_field_tag :alert_type, alert_type
+  - [["immediate", "Now"], ["digest", "Digest"], ["off", "Off"]].each do |value, text|
+    = button_tag text, type: :submit, name: "cadence", value: value,
+      class: "acct-seg#{' is-on' if current == value}",
+      "aria-pressed": (current == value)

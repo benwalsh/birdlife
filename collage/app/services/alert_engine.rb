@@ -55,9 +55,13 @@ class AlertEngine
     end
   end
 
+  # Immediate delivery only — digest-cadence subscribers are picked up by the daily
+  # DailyDigest run instead, and 'off' never emails. An event with no immediate
+  # recipients settles at once (nothing to send now); the digest reads it later
+  # straight from the day's events, so notified_at only ever tracks immediate sends.
   def deliver_pending
     Event.pending.find_each do |event|
-      recipients = subscriptions_for(event)
+      recipients = subscriptions_for(event).immediate
       delivered = recipients.map { |sub| Notifier.deliver(event:, subscription: sub) }
       # Mark done only if every recipient succeeded (none = nothing to retry); a
       # failure leaves notified_at nil so the next tick retries.

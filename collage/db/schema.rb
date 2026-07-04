@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_04_090200) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_05_120000) do
   create_table "detections", force: :cascade do |t|
     t.string "Com_Name", null: false
     t.float "Confidence"
@@ -56,6 +56,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_04_090200) do
   create_table "subscriptions", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.string "alert_type", default: "species", null: false
+    t.string "cadence", default: "immediate", null: false
     t.datetime "created_at", null: false
     t.string "sci_name"
     t.string "token"
