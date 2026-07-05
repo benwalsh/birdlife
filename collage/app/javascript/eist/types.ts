@@ -100,7 +100,7 @@ export interface Overview {
 
 export interface EnrichmentSource { host: string | null; url: string }
 export type EnrichmentKind = 'fact' | 'regional_note' | 'folklore' | 'station_reading'
-export interface EnrichmentBlock { type: EnrichmentKind; text: string; sources: EnrichmentSource[] }
+export interface EnrichmentBlock { type: EnrichmentKind; text: string; text_ga: string | null; sources: EnrichmentSource[] }
 export interface Enrichment {
   date: string
   blocks: EnrichmentBlock[]

@@ -26,12 +26,13 @@ function loreLabel(type: EnrichmentBlock['type'], t: (en: string, ga?: string) =
 }
 
 // One enrichment block, verbatim from the bundle, with its citations as quiet host
-// links — the card renders what Ruby sourced, it never re-derives.
-function Lore({ kind, block, tone }: { kind: string; block: EnrichmentBlock; tone: string }) {
+// links — the card renders what Ruby sourced, it never re-derives. Shows the Irish
+// rendering in GA when there is one, falling back to English.
+function Lore({ kind, block, tone, ga }: { kind: string; block: EnrichmentBlock; tone: string; ga: boolean }) {
   return (
     <p className={`modal-lore-item ${tone}`}>
       <span className="modal-lore-k">{kind}</span>
-      <span className="modal-lore-text">{block.text}</span>
+      <span className="modal-lore-text">{ga && block.text_ga ? block.text_ga : block.text}</span>
       {block.sources.length > 0 && (
         <span className="modal-lore-src">
           {block.sources.map((s, i) => (
@@ -144,6 +145,7 @@ export function SpeciesModal({ sci, onClose }: { sci: string; onClose: () => voi
                         kind={loreLabel(b.type, t)}
                         block={b}
                         tone={b.type === 'folklore' ? 'is-folk' : 'is-fact'}
+                        ga={lang === 'ga'}
                       />
                     ))}
                   </div>

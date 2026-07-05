@@ -46,7 +46,7 @@ class EnrichmentBundle < ApplicationRecord
   def display_block(block)
     return nil if block.text.blank?
 
-    { type: block.type, text: block.text,
+    { type: block.type, text: block.text, text_ga: block.text_ga.presence,
       sources: block.sources.filter_map { |s| s[:url].presence && { host: s[:host], url: s[:url] } } }
   end
 end

@@ -55,6 +55,7 @@ module Enrichment
         { "type": "fact" | "regional_note" | "folklore",
           "id": "short-kebab-id",
           "text": "one or two plain sentences",
+          "text_ga": "the SAME sentences in natural, idiomatic Irish (Gaeilge)",
           "sources": [ { "host": "en.wikipedia.org", "url": "https://..." } ],
           "gated": false }
 
@@ -72,6 +73,9 @@ module Enrichment
                         and frame it as lore, not fact.
 
       ABSOLUTE RULES:
+      - "text_ga" must say EXACTLY what "text" says — a faithful translation, no fact added
+        or dropped — in natural, idiomatic Irish with correct spelling and síntí fada. Use
+        the bird's Irish name where "text" uses its English name. Keep folklore as folklore.
       - State ONLY what a fetched source supports. Every block needs at least one source you
         actually fetched with fetch_source; put the exact URL(s) in "sources".
       - Never invent, guess, or fill gaps from memory. If you cannot source something, omit

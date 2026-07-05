@@ -47,7 +47,7 @@ class Bedrock
     # shape) and the `tools` specs, returns the raw response so the caller can drive
     # the loop — read stop_reason, run any requested tool, append the result, call
     # again. Kept transport-only; the Builder owns the loop and the prompt.
-    def converse_tools(system:, messages:, tools:, model_id: enrich_model_id, max_tokens: 1500,
+    def converse_tools(system:, messages:, tools:, model_id: enrich_model_id, max_tokens: 4000,
                        temperature: TEMPERATURE)
       raise 'Bedrock disabled (SUMMARY_LLM_DISABLED)' if disabled?
 
