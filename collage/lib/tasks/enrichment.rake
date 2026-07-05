@@ -22,29 +22,30 @@ namespace :birdlife do
 
     rule "1. TODAY'S DATA — #{date}"
     facts = DailyFacts.for(date: date)
+    digest = DigestFacts.for(user: user, date: date)
     puts "  #{facts[:species_today]} species, #{facts[:detections_today]} detections."
-    notable = EnrichmentGate.species_for(facts).pluck(:common_name)
-    puts "  notable birds (clear the enrichment bar): #{notable.presence&.join(', ') || 'none'}"
+    notable = EnrichmentGate.species_for(facts)
+    puts "  notable birds (clear the enrichment bar): #{notable.pluck(:common_name).presence&.join(', ') || 'none'}"
 
     rule '2. STAGE 1 (Claude) — the interesting bits, sourced'
     puts "  model: #{Bedrock.enrich_model_id}   bedrock disabled?: #{Bedrock.disabled?}"
+    # Source the day's notable birds AND the reader's own followed birds heard today,
+    # so their report is actually about their birds. Reuse any bundle already sourced.
+    wanted = (notable.pluck(:sci_name) + digest.follows.pluck(:sci)).uniq
+    wanted.each do |sci|
+      next if EnrichmentBundle.for_date(date).find { |b| b.sci_name == sci }&.block_objects&.any?
+
+      puts "  sourcing #{sci}…"
+      Enrichment::Builder.build_one(date: date, sci_name: sci)
+    end
     bundles = EnrichmentBundle.for_date(date).select { |b| b.block_objects.any? }
     if bundles.empty?
-      puts '  building…'
-      bundles = Enrichment::Builder.run(date: date)
+      puts '  no enrichment available — the email will use the plain summary.'
     else
-      puts "  (using #{bundles.size} bundle(s) already sourced for #{date})"
-    end
-    if bundles.empty?
-      puts('  no enrichment available — the email will use the plain summary.')
-    else
-      bundles.each do |b|
-        print_bundle(b)
-      end
+      bundles.each { |b| print_bundle(b) }
     end
 
     rule "3. THE READER — #{user.email}"
-    digest = DigestFacts.for(user: user, date: date)
     puts "  follows heard: #{digest.follows.map { |f| "#{f[:en]} ×#{f[:count]}" }.presence&.join(', ') || 'none'}"
     puts "  standing-rule arrivals: #{digest.alerts.pluck(:en).presence&.join(', ') || 'none'}"
     puts "  daily letter: #{digest.roundup ? 'yes' : 'no'}"
