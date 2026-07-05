@@ -42,12 +42,25 @@ class CollageController < ApplicationController
     render layout: false
   end
 
-  # /station — the single Inky screen: the collage in the house style, framed and
-  # run through a CSS/SVG "e-ink" filter so a monitor gives a fair idea of what
-  # reads on the physical 7.3" Spectra-6 panel. A title, the collage big and
-  # dominant, and a footer (time · moon · species). Nothing that cycles — e-ink
-  # refreshes on change, it doesn't rotate.
+  # /station — the clean 480×800 screen the Inky shows and the shooter captures: a
+  # title, the collage big and dominant, a news line, a footer (time · moon · species).
+  # No frame, no e-ink filter — the panel dithers a full-colour source itself. Nothing
+  # cycles: e-ink refreshes on change, it doesn't rotate.
   def station
+    load_station
+    render layout: false
+  end
+
+  # /station/preview — the same screen wrapped in the bog-oak frame + a CSS/SVG e-ink
+  # emulation, so a desktop browser previews what reads on the physical panel.
+  def station_preview
+    load_station
+    render layout: false
+  end
+
+  private
+
+  def load_station
     tally = Detection.tally_within(current_window)
     # Portrait cluster (taller than wide) so the flock fills the tall Inky panel
     # with big birds, rather than a landscape band floating in whitespace.
@@ -56,10 +69,7 @@ class CollageController < ApplicationController
     @species_today = Detection.tally_for.size
     @moon = MoonPhase.for
     @news = station_news(tally)
-    render layout: false
   end
-
-  private
 
   def collage
     CollagePresenter.new(Detection.tally_within(current_window))

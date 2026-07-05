@@ -61,7 +61,10 @@ Rails.application.routes.draw do
   #   /kiosk   no chrome, the four cards cycling, for a passive monitor/iPad
   #   /station the single collage screen in the house style, tuned for the Inky
   get 'kiosk' => 'collage#kiosk'
+  # /station = the clean 480×800 device pixels (the panel + shooter target).
+  # /station/preview = the same screen wrapped in the bog-oak frame + e-ink emulation.
   get 'station' => 'collage#station'
+  get 'station/preview' => 'collage#station_preview', as: :station_preview
   # A browser mock-up of the physical Inky Impression 7.3" panel: fetches /panel
   # and applies the same Spectra-6 dither the real glass gets.
   get 'emulator' => 'collage#emulator'

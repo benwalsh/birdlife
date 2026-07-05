@@ -1,0 +1,63 @@
+!!!
+%html{ lang: "en" }
+  %head
+    %meta{ charset: "utf-8" }/
+    %meta{ name: "viewport", content: "width=device-width, initial-scale=1" }/
+    %title Éist · Station preview
+    = favicon_link_tag "cruach-icon.png", rel: "icon", type: "image/png"
+    = stylesheet_link_tag 'colors'
+    = stylesheet_link_tag 'station'
+    = vite_client_tag
+    = vite_javascript_tag 'application'
+    -# The DESKTOP emulation of the wall object: the exact /station screen, wrapped in
+    -# the bog-oak frame and run through a CSS/SVG approximation of Spectra-6 — muted +
+    -# posterised colour with a fine dither grain — so a monitor gives a fair idea of
+    -# what reads on the physical 7.3" panel. None of this touches the device pixels.
+    :css
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; }
+      body {
+        min-height: 100vh; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 16px;
+        padding: 4vmin; background: var(--frame);
+        font-family: "Baskerville", "Hoefler Text", "EB Garamond", Georgia, serif;
+      }
+      /* The bog-oak frame + mat, so the preview reads as an object on the wall. */
+      .frame {
+        padding: 24px; border-radius: 12px; background: var(--frame-face);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.06),
+                    inset 0 -3px 8px rgba(0,0,0,0.6), 0 24px 60px rgba(0,0,0,0.65);
+      }
+      .mat { padding: 10px; border-radius: 3px; background: var(--paper-2); }
+      /* The panel through the e-ink emulation: colour muted + posterised toward
+         Spectra-6's small gamut, dimmed so the paper reads greyish, plus a dither
+         grain the real panel produces. */
+      .inky {
+        position: relative; width: 480px; height: 800px; overflow: hidden;
+        filter: url(#eink) contrast(1.06) brightness(0.92);
+      }
+      /* Fine dither grain (fractal-noise tile), the texture a monitor otherwise lacks. */
+      .inky::after {
+        content: ""; position: absolute; inset: 0; pointer-events: none;
+        opacity: 0.12; mix-blend-mode: multiply; background-size: 160px 160px;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+      }
+      .spec {
+        font: 10px ui-monospace, Menlo, monospace; letter-spacing: 0.14em;
+        text-transform: uppercase; color: var(--frame-label);
+      }
+  %body{ data: { controller: "refresh", "refresh-interval-value": 60000 } }
+    -# Desaturate toward Spectra-6's un-vivid gamut, then band each channel to a few
+    -# discrete levels (whites lift to warm-grey, blacks soften) — posterised e-ink colour.
+    %svg{ width: 0, height: 0, style: 'position:absolute' }
+      %filter#eink
+        %feColorMatrix{ type: 'saturate', values: '0.58' }
+        %feComponentTransfer
+          %feFuncR{ type: 'discrete', tableValues: '0.09 0.42 0.70 0.92' }
+          %feFuncG{ type: 'discrete', tableValues: '0.09 0.42 0.70 0.92' }
+          %feFuncB{ type: 'discrete', tableValues: '0.09 0.42 0.70 0.92' }
+    .frame
+      .mat
+        .inky
+          = render 'station_screen'
+    %span.spec Inky Impression 7.3″ · Spectra 6 · 800×480

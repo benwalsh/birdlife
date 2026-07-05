@@ -19,21 +19,38 @@ RSpec.describe 'Panel' do
     expect(response.body).to include('Inky Impression 7.3')
   end
 
-  # /station is the single Inky screen: one calm collage in the house style, run
-  # through the e-ink preview filter. No rotation, no stats grid (that's /kiosk).
+  # /station is the CLEAN 480x800 device screen the Inky shows and the shooter captures:
+  # one calm collage in the house style, no frame and no e-ink filter (the panel dithers
+  # a full-colour source itself), no rotation, no stats grid (that's /kiosk).
   describe 'GET /station' do
     before do
       travel_to Time.zone.local(2026, 6, 29, 9, 0)
       create_list(:detection, 2, Sci_Name: 'Erithacus rubecula', Com_Name: 'European Robin')
     end
 
-    it 'renders one collage screen, e-ink-framed, with no rotation scaffolding' do
+    it 'renders the bare collage screen — no frame, no e-ink filter, no rotation' do
       get '/station'
       expect(response).to have_http_status(:success)
-      expect(response.body).to include('<svg').and include('Spectra 6')
-      expect(response.body).to include('id=\'eink\'').or include('id="eink"')
-      expect(response.body).not_to include('name="station-screen"')
+      expect(response.body).to include('<svg').and include('class="screen')
+      expect(response.body).not_to include('id="eink"') # the filter is preview-only
+      expect(response.body).not_to include('Spectra 6')  # the frame/spec is preview-only
       expect(response.body).not_to include('stat-grid')
+    end
+  end
+
+  # /station/preview is the desktop emulation: the same screen, wrapped in the bog-oak
+  # frame and run through the CSS/SVG Spectra-6 approximation.
+  describe 'GET /station/preview' do
+    before do
+      travel_to Time.zone.local(2026, 6, 29, 9, 0)
+      create_list(:detection, 2, Sci_Name: 'Erithacus rubecula', Com_Name: 'European Robin')
+    end
+
+    it 'renders the framed, e-ink-filtered emulation of the same screen' do
+      get '/station/preview'
+      expect(response).to have_http_status(:success)
+      expect(response.body).to include('class="screen').and include('id="eink"')
+      expect(response.body).to include('Spectra 6').and include('inky')
     end
   end
 
