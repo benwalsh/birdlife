@@ -86,6 +86,7 @@ class CollagePresenter
       file = illustration_file(name.sci, flying.include?(name.sci))
       { tally: tally, name: name, file: file,
         mask: file && BirdMask.for(file.basename('.png').to_s),
+        flip: facing_flip?(name.sci),
         weight: radii[i]**2, aspect: aspect_for(file) }
     end
   end
@@ -127,7 +128,11 @@ class CollagePresenter
     width, height = size
     mask = bird[:mask]
     if mask
-      { w: width, h: height, cells: mask.cells, mask_w: mask.width, mask_h: mask.height }
+      # Pack the silhouette in the orientation it will actually render (dress flips
+      # ~half the flock horizontally): otherwise a neighbour nestled into the
+      # un-flipped concavity collides with the bird's now-mirrored body.
+      cells = bird[:flip] ? mask.cells.map { |mx, my| [mask.width - 1 - mx, my] } : mask.cells
+      { w: width, h: height, cells: cells, mask_w: mask.width, mask_h: mask.height }
     else
       { w: width, h: height, cells: NO_ART_CELLS, mask_w: NO_ART_DIM, mask_h: NO_ART_DIM }
     end
@@ -158,7 +163,7 @@ class CollagePresenter
       perch_image: illustration_url(illustration_file(name.sci, false)) || illustration_url(bird[:file]),
       fill: FILLS[index % FILLS.size],
       sci: name.sci, ga: name.ga, en: name.en, count: bird[:tally].count,
-      flip: facing_flip?(name.sci)
+      flip: bird[:flip]
     )
   end
 
