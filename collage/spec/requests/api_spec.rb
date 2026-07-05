@@ -42,6 +42,15 @@ RSpec.describe 'API' do
       get '/api/overview', params: { h: 1 }
       expect(response.parsed_body['window']).to eq(1)
     end
+
+    it 'surfaces recent newsworthy events as the breaking strip (a follow is not news)' do
+      Event.create!(event_type: 'rarity', sci_name: 'Pyrrhocorax pyrrhocorax', occurred_on: Date.current)
+      Event.create!(event_type: 'species', sci_name: 'Passer domesticus', occurred_on: Date.current)
+      get '/api/overview'
+      breaking = response.parsed_body['breaking']
+      expect(breaking.pluck('kind', 'sci')).to eq([['rarity', 'Pyrrhocorax pyrrhocorax']])
+      expect(breaking.first).to include('en' => 'Red-billed Chough', 'ga' => 'Cág cosdearg')
+    end
   end
 
   describe 'GET /api/stats' do

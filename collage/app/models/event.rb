@@ -2,9 +2,19 @@
 # (unique index). notified_at is nil until the alert email is sent; a failed send
 # leaves it nil so the next ingest tick retries.
 class Event < ApplicationRecord
+  # The newsworthy kinds — a genuine "stop and look": a rarity, a first-ever, a
+  # seasonal return. A followed-species event ('species') is personal, not news, so it
+  # never appears on the public breaking strip.
+  NEWS_TYPES = %w[rarity first_ever seasonal].freeze
+
   validates :event_type, :sci_name, :occurred_on, presence: true
 
   scope :pending, -> { where(notified_at: nil) }
+  # The breaking strip: newsworthy events of the last couple of days, freshest first.
+  scope :breaking, lambda { |on: Date.current, days: 2|
+    where(event_type: NEWS_TYPES, occurred_on: (on - (days - 1))..on).
+      order(occurred_on: :desc, id: :desc)
+  }
 
   def mark_notified!
     update!(notified_at: Time.current)

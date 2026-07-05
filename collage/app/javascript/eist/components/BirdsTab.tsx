@@ -5,6 +5,7 @@ import { Collage } from './Collage'
 import { HitsStrip } from './HitsStrip'
 import { TodaySpark } from './TodaySpark'
 import { AlmanacRow } from './AlmanacRow'
+import { BreakingNews } from './BreakingNews'
 import { TodayCard } from './TodayCard'
 
 // The home page: the collage, then the TODAY block. Scroll past the collage and it
@@ -54,6 +55,7 @@ export function BirdsTab({
         <>
           <TodaySpark today={data.today} windows={windows} value={windowHours} onChange={onWindow} />
           <AlmanacRow today={data.today} />
+          <BreakingNews items={data.breaking} onSelect={onSelect} />
           <TodayCard today={data.today} />
         </>
       ) : (

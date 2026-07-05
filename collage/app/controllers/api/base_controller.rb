@@ -40,6 +40,16 @@ module Api
       TodayCard.build(window_hours: current_window)
     end
 
+    # The breaking strip: the last couple of days' newsworthy events (rarity /
+    # first-ever / seasonal), bilingual, freshest first — the same fire-once Events
+    # the immediate email alerts fire on, so panel, site and email agree on "news".
+    def breaking_json
+      Event.breaking.limit(6).map do |event|
+        name = BirdName.lookup(event.sci_name)
+        { kind: event.event_type, sci: event.sci_name, en: name.en, ga: name.ga, on: event.occurred_on.iso8601 }
+      end
+    end
+
     def moon_json
       moon = MoonPhase.for
       { name: moon.name, name_ga: moon.name_ga, illumination: moon.illumination, emoji: moon.emoji }

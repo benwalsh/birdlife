@@ -16,7 +16,8 @@ module Api
         periods:    periods_json,
         first_seen: Detection.first_detections(4).map { |e| life_json(e) },
         almanac:    almanac_json,
-        today:      today_json
+        today:      today_json,
+        breaking:   breaking_json
       }
     end
   end

@@ -85,6 +85,9 @@ export interface Today {
   anchors: Anchor[]
   footer: FooterItem[]
 }
+export type BreakingKind = 'rarity' | 'first_ever' | 'seasonal'
+export interface BreakingItem { kind: BreakingKind; sci: string; en: string; ga: string | null; on: string }
+
 export interface Overview {
   window: number
   collage: CollageData
@@ -96,6 +99,7 @@ export interface Overview {
   first_seen: LifeEntry[]
   almanac: Almanac
   today: Today
+  breaking: BreakingItem[]
 }
 
 export interface EnrichmentSource { host: string | null; url: string }

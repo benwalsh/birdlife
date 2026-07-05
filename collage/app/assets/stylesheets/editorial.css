@@ -196,6 +196,29 @@ body.ed {
 .today-almanac li { display: inline-flex; align-items: center; gap: 7px; }
 .today-almanac .ti { font-size: 16px; color: var(--ink-soft); line-height: 1; }
 
+/* Breaking — recent rarities / first-evers / seasonal returns, above the TODAY
+   summary. The one place the calm page raises its voice: a small accent tag and the
+   news, ruled off top and bottom. Each bird is a button to its card. */
+.breaking {
+  margin: 40px auto 0; padding: 13px 0;
+  border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+  display: flex; align-items: baseline; gap: 8px 18px; flex-wrap: wrap;
+}
+.breaking-tag {
+  flex: none; font: 700 9px var(--mono); letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--accent-2);
+}
+.breaking-list { display: flex; flex-wrap: wrap; gap: 10px 24px; margin: 0; padding: 0; list-style: none; }
+.breaking-item {
+  background: none; border: 0; padding: 0; cursor: pointer;
+  display: inline-flex; align-items: baseline; gap: 8px;
+}
+.breaking-kind {
+  font: 8.5px var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft);
+}
+.breaking-name { font: 15px ui-serif, "Iowan Old Style", Georgia, serif; color: var(--ink); }
+.breaking-item:hover .breaking-name { text-decoration: underline; text-underline-offset: 3px; }
+
 /* ---- Numbers band ---- */
 .ed-band { display: grid; grid-template-columns: repeat(2, 1fr); gap: 34px; margin: 30px 0; }
 /* The stats page's three continuity cards ("day N of listening"). */
@@ -414,4 +437,8 @@ button.bird-card { width: 100%; background: transparent; cursor: pointer; font: 
   /* The almanac stacks — each reading on its own full row, complete and never
      clipped, the way the TODAY bird lines stack. */
   .today-almanac { flex-direction: column; gap: 11px; margin-top: 16px; }
+
+  /* Breaking stacks too: the tag on its own line, then one news item per row. */
+  .breaking { flex-direction: column; gap: 12px; }
+  .breaking-list { flex-direction: column; gap: 12px; }
 }
