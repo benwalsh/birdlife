@@ -186,13 +186,14 @@ body.ed {
 }
 .today-anchors span { position: absolute; top: 0; white-space: nowrap; }
 
-/* Ambient footer: muted line-icon + label pairs, wrapping. Never emoji. */
-.today-footer {
-  display: flex; flex-wrap: wrap; gap: 12px 32px; margin: 26px 0 2px; padding: 0; list-style: none;
+/* The almanac — ambient weather/moon/sun/tide/place readings, its own row directly
+   under the sparkline. Muted mono line-icon + label pairs, wrapping. Never emoji. */
+.today-almanac {
+  display: flex; flex-wrap: wrap; gap: 12px 32px; margin: 20px 0 0; padding: 0; list-style: none;
   font: 12px var(--mono); letter-spacing: 0.02em; color: var(--ink-2);
 }
-.today-footer li { display: inline-flex; align-items: center; gap: 7px; }
-.today-footer .ti { font-size: 16px; color: var(--ink-soft); line-height: 1; }
+.today-almanac li { display: inline-flex; align-items: center; gap: 7px; }
+.today-almanac .ti { font-size: 16px; color: var(--ink-soft); line-height: 1; }
 
 /* ---- Numbers band ---- */
 .ed-band { display: grid; grid-template-columns: repeat(2, 1fr); gap: 34px; margin: 30px 0; }
