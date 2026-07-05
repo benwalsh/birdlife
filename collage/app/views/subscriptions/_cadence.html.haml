@@ -1,10 +1,11 @@
--# A 2-way toggle for one thing your daily email can cover: in the email, or off.
--# (Immediate "alerts" are out of scope for now — the daily email is the one channel,
--# so there's no "Now".) "In email" posts the digest cadence; "Off" removes it.
+-# A 2-way delivery toggle. Defaults to the daily-email variant (In email = digest /
+-# Off); pass on_value + on_label for another channel — breaking news is On = immediate.
+- on_value = local_assigns.fetch(:on_value, "digest")
+- on_label = local_assigns.fetch(:on_label, "In email")
 - on = current.present? && current != "off"
 = form_with url: subscription_cadence_path, method: :post, class: "acct-cadence", data: { turbo: false } do
   = hidden_field_tag :alert_type, alert_type
-  = button_tag "In email", type: :submit, name: "cadence", value: "digest",
+  = button_tag on_label, type: :submit, name: "cadence", value: on_value,
     class: "acct-seg#{' is-on' if on}", "aria-pressed": on
   = button_tag "Off", type: :submit, name: "cadence", value: "off",
     class: "acct-seg#{' is-on' unless on}", "aria-pressed": !on

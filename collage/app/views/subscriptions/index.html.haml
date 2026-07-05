@@ -24,13 +24,18 @@
       %li.acct-rule
         %span.acct-rule-label The daily letter
         = render "cadence", alert_type: "roundup", current: (@roundup ? "digest" : "off")
-      - SubscriptionsController::STANDING_RULES.each do |type, label|
-        %li.acct-rule
-          %span.acct-rule-label= label
-          = render "cadence", alert_type: type, current: @rule_cadence[type]
       %li.acct-rule
         %span.acct-rule-label Birds you follow
         = render "cadence", alert_type: "species", current: @follow_cadence
+
+  %section.acct-sec
+    %h2.acct-h2 Breaking news
+    %p.acct-lead A rarity or a first-ever sighting, emailed the moment it turns up — not held for the daily letter.
+    %ul.acct-rules
+      %li.acct-rule
+        %span.acct-rule-label Rarities & first sightings
+        = render "cadence", alert_type: "breaking", current: (@breaking ? "immediate" : "off"),
+          on_value: "immediate", on_label: "On"
 
   %section.acct-sec
     %h2.acct-h2 Species you're following

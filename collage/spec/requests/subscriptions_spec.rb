@@ -32,7 +32,7 @@ RSpec.describe 'Subscriptions' do
     it 'renders the account page' do
       get '/account'
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include('Your daily email').and include("Species you're following")
+      expect(response.body).to include('Your daily email', 'Breaking news', "Species you're following")
     end
 
     it 'creates a species subscription' do
@@ -51,15 +51,16 @@ RSpec.describe 'Subscriptions' do
     describe 'setting a delivery cadence' do
       def me = User.find_by(email: 'watcher@example.com')
 
-      it 'creates a standing rule at the chosen cadence' do
-        post '/subscriptions/cadence', params: { alert_type: 'rarity', cadence: 'digest' }
-        expect(me.subscriptions.find_by(alert_type: 'rarity')).to have_attributes(cadence: 'digest', active: true)
+      it 'turns breaking news on — every newsworthy kind at immediate delivery' do
+        post '/subscriptions/cadence', params: { alert_type: 'breaking', cadence: 'immediate' }
+        news = me.subscriptions.where(alert_type: %w[rarity first_ever seasonal])
+        expect(news.pluck(:cadence)).to contain_exactly('immediate', 'immediate', 'immediate')
       end
 
-      it "removes a standing rule when set to 'off'" do
-        me.subscriptions.create!(alert_type: 'rarity')
-        expect { post '/subscriptions/cadence', params: { alert_type: 'rarity', cadence: 'off' } }.
-          to change { me.subscriptions.where(alert_type: 'rarity').count }.by(-1)
+      it 'turns breaking news off — removing every newsworthy standing rule' do
+        %w[rarity first_ever seasonal].each { |t| me.subscriptions.create!(alert_type: t, cadence: 'immediate') }
+        expect { post '/subscriptions/cadence', params: { alert_type: 'breaking', cadence: 'off' } }.
+          to change { me.subscriptions.where(alert_type: %w[rarity first_ever seasonal]).count }.from(3).to(0)
       end
 
       it 'bulk-sets the cadence of every followed species, keeping the follows' do
