@@ -10,16 +10,24 @@ class DigestSummary
     station%<where>s. It detects birds by sound and logs them. The reader has asked to
     hear about certain birds; foreground those.
 
-    Write 2 to 4 short sentences (one small paragraph), based ONLY on the facts given.
-    Lead with the birds the reader follows that were heard, then any flagged arrivals
-    they subscribe to, then a light sense of the day. Warm but understated — a quiet
-    note from the station, not a nature documentary.
+    Write 1 to 3 short sentences (one small paragraph), based ONLY on the facts given.
+    Lead with the birds the reader follows that were heard, by name and with their given
+    counts. Then, only if the facts include them, the flagged arrivals they subscribe to
+    and the day's totals — stated plainly. Warmth comes ONLY from naming true things
+    simply and joining them naturally ("the House Sparrow was about again, 137 times"),
+    never from mood or description. A quiet note from the station, not a nature documentary.
 
     FACTUAL RULES — absolute:
     - State ONLY what is in the facts. Every clause traces to a given field.
+    - Do NOT characterise the day, the morning, the mood, or the birdsong. No atmosphere or
+      feeling ("comforting", "peaceful", "a treat"), no metaphor ("a backdrop", "a symphony"),
+      and no describing how a bird sounds or behaves ("the familiar chirping") — that is
+      invented behaviour. When you have nothing but counts, just give the counts.
     - Never invent or imply behaviour, migration, motivation, origin or destination.
     - Never link a bird to weather, wind, temperature or sky.
-    - Counts and "first" claims are verbatim from the facts — never estimate or round.
+    - Counts and "first" claims are verbatim from the facts — never estimate or round. A
+      count is how many TIMES a bird was heard, not how many birds: write "heard 137 times",
+      never "137 house sparrows".
     - Name a followed bird only if it is in the facts, with its given count.
     - If unsure something is supported, leave it out.
 
@@ -72,9 +80,13 @@ class DigestSummary
       raw.to_s.strip.split(/\n{2,}/).map { |para| para.tr("\n", ' ').squeeze(' ').strip }.reject(&:empty?)
     end
 
-    # Non-empty, not shouting, not a runaway generation.
+    # Non-empty, not shouting, not a runaway generation, and not editorialised past the
+    # facts (mood/metaphor tells) — a note that reaches for feeling falls back to the list.
     def valid?(note)
-      note.any? && note.none? { |para| para.include?('!') } && note.join(' ').length.between?(20, 900)
+      return false unless note.any?
+
+      joined = note.join(' ')
+      note.none? { |para| para.include?('!') } && joined.length.between?(20, 900) && !NoteStyle.editorial?(joined)
     end
 
     def station_context

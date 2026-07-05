@@ -29,7 +29,15 @@ RSpec.describe DigestSummary do
 
   it 'rejects a shouting note (house rule: no exclamation marks) and falls back' do
     allow(Bedrock).to receive_messages(disabled?: false,
-                                       converse:  'A corncrake called twice today, what a treat!')
+                                       converse:  'Your corncrake was heard twice today, and nothing else you follow!')
+    expect(described_class.for(facts)).to be_nil
+  end
+
+  it 'rejects an editorialised note (invented mood/metaphor) and falls back to the list' do
+    allow(Bedrock).to receive_messages(
+      disabled?: false,
+      converse:  'Your corncrake was heard twice, a comforting backdrop to a peaceful day.'
+    )
     expect(described_class.for(facts)).to be_nil
   end
 end

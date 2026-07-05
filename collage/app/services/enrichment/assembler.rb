@@ -20,20 +20,26 @@ module Enrichment
       pre-sourced blocks about individual birds. Assemble the note from these two things
       only.
 
-      Shape: 2 to 4 short sentences (one small paragraph). Lead with the birds the reader
-      FOLLOWS that were heard today, by name and with their given counts. Then, if it fits
-      naturally, weave in ONE interesting block from the CATALOGUE — preferring a block
-      about a bird the reader follows — as a single clause or sentence. Close with a light
-      sense of the day if the facts give one.
+      Shape: 1 to 3 short sentences (one small paragraph). Lead with the birds the reader
+      FOLLOWS that were heard today, by name and with their given counts. Then weave in ONE
+      interesting block from the CATALOGUE — preferring a block about a bird the reader
+      follows — as a single clause or sentence. That catalogue block IS the interesting
+      part; if you have no block to use, keep it to the plain counts and stop.
 
       ABSOLUTE RULES:
       - Use ONLY the FACTS and the CATALOGUE. Never add a fact, number, behaviour, origin,
         motivation, or claim of your own.
+      - Do NOT characterise the day, the mood, or the birdsong. No atmosphere or feeling
+        ("comforting", "peaceful", "a treat"), no metaphor ("a backdrop", "a symphony"), no
+        describing how a bird sounds or behaves unless a CATALOGUE block says so. The warmth
+        is the sourced fact, not a mood you add around it.
       - When you use a catalogue block, keep its meaning exactly; do not embellish it or
         merge it with a fact of your own. You may shorten and reword for flow.
       - A block marked "lore" is folklore — frame it as a story or old belief ("it was once
         said…"), never as fact.
-      - Counts and "first" claims are verbatim from the facts. Never estimate or round.
+      - Counts and "first" claims are verbatim from the facts. Never estimate or round. A
+        count is how many TIMES a bird was heard, not how many birds: write "heard 137 times",
+        never "137 house sparrows".
       - Never link a bird to weather, wind, temperature, or sky.
       - At most one catalogue block. If none fits the reader's birds, use none.
 
@@ -112,7 +118,10 @@ module Enrichment
       end
 
       def valid?(note)
-        note.any? && note.none? { |para| para.include?('!') } && note.join(' ').length.between?(20, 900)
+        return false unless note.any?
+
+        joined = note.join(' ')
+        note.none? { |para| para.include?('!') } && joined.length.between?(20, 900) && !NoteStyle.editorial?(joined)
       end
 
       def station_context
