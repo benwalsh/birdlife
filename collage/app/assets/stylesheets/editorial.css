@@ -174,8 +174,9 @@ body.ed {
    full content width, with room above (off the collage) and the TODAY section's
    own top margin providing the gap below. */
 .today-spark { margin: 46px auto 0; }
-/* Minimal, true-sparkline chrome: just the total, right-aligned over the line end. */
-.today-spark-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+/* Chrome: the time-window control and its total, grouped together at the top-left as
+   one unit (the total used to float off at the far right and read as detached). */
+.today-spark-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 8px; }
 .today-spark-total { font: 13px var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; }
 .today-spark-svg { display: block; width: 100%; height: 104px; }
 /* A thin green stroke — the only green on the page. */
@@ -403,4 +404,14 @@ button.bird-card { width: 100%; background: transparent; cursor: pointer; font: 
   .ed-mark { height: 36px; }
   .ed-word { font-size: 24px; }
   .ed-nav { width: 100%; flex-wrap: wrap; gap: 12px 18px; }
+
+  /* The sparkline shrinks so the day's TODAY text gets the room: a shorter line and
+     tighter margins, its total already grouped with the window control up top. */
+  .today-spark { margin-top: 30px; }
+  .today-spark-svg { height: 64px; }
+  .today-anchors { font-size: 9.5px; }
+
+  /* The almanac stacks — each reading on its own full row, complete and never
+     clipped, the way the TODAY bird lines stack. */
+  .today-almanac { flex-direction: column; gap: 11px; margin-top: 16px; }
 }
