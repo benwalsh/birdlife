@@ -34,6 +34,10 @@ gem 'omniauth-rails_csrf_protection'
 # needs it: `bundle config set --without cloud` (see deploy/provision.sh).
 group :cloud do
   gem 'aws-sdk-sesv2' # alert emails via SES templated-email (Notifier); cloud-only
+  # Solid Queue runs the once-a-day enrichment + digest sweep (DailyEmailSweep) in the
+  # cloud. DB-backed (reuses RDS — no Redis) and runs inside Puma via its plugin, so
+  # there's no extra worker container. The Pi never runs jobs (bundle --without cloud).
+  gem 'solid_queue'
   gem 'trilogy'
 end
 

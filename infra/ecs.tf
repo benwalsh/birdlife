@@ -42,6 +42,13 @@ module "express_service" {
       # these, but pin them explicitly; refresh runs on ingest via bedrock:InvokeModel.
       { name = "BEDROCK_REGION", value = var.aws_region },
       { name = "BEDROCK_MODEL_ID", value = "eu.amazon.nova-lite-v1:0" },
+      # Enrichment sourcing model (Stage 1 Claude, tool-use). Overridable; needs the
+      # one-time Bedrock Anthropic use-case form submitted on the account to invoke.
+      { name = "ENRICH_MODEL_ID", value = "eu.anthropic.claude-sonnet-4-20250514-v1:0" },
+      # Run Solid Queue's supervisor inside this Puma so the once-a-day enrichment +
+      # digest sweep (DailyEmailSweep, recurring 06:00) needs no separate worker
+      # container. DB-backed against RDS — no Redis. See config/puma.rb + recurring.yml.
+      { name = "SOLID_QUEUE_IN_PUMA", value = "true" },
     ]
 
     # Injected from SSM SecureString at task start — fetched by the EXECUTION role

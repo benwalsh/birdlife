@@ -18,4 +18,11 @@ Rails.application.configure do
   # and point ASSET_HOST at the CDN.
   config.public_file_server.enabled = ENV.fetch('RAILS_SERVE_STATIC_FILES', 'true') == 'true'
   config.asset_host = ENV['ASSET_HOST'] if ENV['ASSET_HOST'].present?
+
+  # Background jobs run only in the cloud (the daily enrichment + digest sweep). Solid
+  # Queue is DB-backed against the same RDS (no Redis) and its supervisor runs inside
+  # Puma when SOLID_QUEUE_IN_PUMA=true (see config/puma.rb), so there's no extra
+  # container. connects_to is left unset → Solid Queue uses the app's default (primary)
+  # connection, so its tables live in the one cloud database (no separate queue DB).
+  config.active_job.queue_adapter = :solid_queue
 end
