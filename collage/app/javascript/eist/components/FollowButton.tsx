@@ -2,7 +2,7 @@ import { useFollow } from '../favourites'
 import { useLang } from '../lang'
 
 // The follow checkbox. A species Subscription in disguise: tick it and you get an
-// email when the cottage next hears the bird. Only shown to signed-in users
+// email when the station next hears the bird. Only shown to signed-in users
 // (`enabled`); a line icon in the muted engraved voice, never a filled/glowing
 // control. `card` is the compact corner mark on a directory plate; `full` carries
 // the word beside it in the species modal.

@@ -166,7 +166,7 @@ class TodayCard
       place = coords[:place]
       place = { en: place, ga: place } if place.is_a?(String)
       place ||= {}
-      en = place[:en] || ENV.fetch('BIRD_PLACE', 'Culfin')
+      en = place[:en] || ENV.fetch('BIRD_PLACE', 'the station')
       { icon: 'ti-map-pin', en: en, ga: place[:ga] || en }
     end
   end

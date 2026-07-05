@@ -18,7 +18,7 @@ class Notifier
   HEADLINE = {
     'rarity'     => ->(name) { "A local rarity: #{name}" },
     'seasonal'   => ->(name) { "#{name} — back for the season" },
-    'first_ever' => ->(name) { "First ever at the cottage: #{name}" },
+    'first_ever' => ->(name) { "First ever at the station: #{name}" },
     'species'    => ->(name) { "#{name} — a bird you follow" }
   }.freeze
 
@@ -53,7 +53,7 @@ class Notifier
         from_email_address: ENV.fetch('ALERTS_FROM'),
         destination:        { to_addresses: [user.email] },
         content:            { simple: {
-          subject: { data: "Your cottage birds — #{I18n.l(date, format: :long)}" },
+          subject: { data: "Your station birds — #{I18n.l(date, format: :long)}" },
           body:    { html: { data: digest_html(facts, date, note) }, text: { data: digest_text(facts, date, note) } }
         } }
       )
@@ -100,7 +100,7 @@ class Notifier
         <div style="margin:0;padding:24px;background:#f2f2f3;font-family:Georgia,'Times New Roman',serif;color:#17171a;">
           <div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #e4e4e7;border-radius:10px;padding:24px 28px;">
             <div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8b8b91;">Éist · #{h(I18n.l(date, format: :long))}</div>
-            <div style="font-size:24px;margin:6px 0 14px;">The day's birds at Culfin</div>
+            <div style="font-size:24px;margin:6px 0 14px;">The day's birds</div>
             #{prose}
             #{%(<table style="width:100%;border-collapse:collapse;margin-top:6px;">#{rows}</table>) unless rows.empty?}
             #{%(<div style="font-size:13px;color:#8b8b91;margin-top:14px;">#{h(day)} logged today.</div>) if day}
@@ -115,7 +115,7 @@ class Notifier
       prose = Array(note).join("\n\n")
       rows = digest_rows(facts).map { |row| "- #{row[:en]} (#{row[:ga]}) — #{row[:note]}" }.join("\n")
       body = [prose.presence, rows.presence].compact.join("\n\n")
-      "The day's birds at Culfin — #{I18n.l(date, format: :long)}\n\n#{body}\n\n" \
+      "The day's birds — #{I18n.l(date, format: :long)}\n\n#{body}\n\n" \
         "See the collage: #{site_url}\nManage: #{site_url}/account"
     end
 
@@ -124,25 +124,25 @@ class Notifier
     end
 
     def headline(kind, name_en)
-      (HEADLINE[kind] || ->(name) { "#{name} heard at Culfin" }).call(name_en)
+      (HEADLINE[kind] || ->(name) { "#{name} heard at the station" }).call(name_en)
     end
 
     # The single-bird alert email — one illustrated card, on-palette with the site.
     def alert_html(event, subscription, name)
       slug = event.sci_name.downcase.tr(' ', '-')
-      reason = REASON.fetch(event.event_type, 'Heard at the cottage.')
+      reason = REASON.fetch(event.event_type, 'Heard at the station.')
       date = I18n.l(event.occurred_on, format: :long)
       <<-HTML
         <div style="margin:0;padding:24px;background:#f2f2f3;font-family:Georgia,'Times New Roman',serif;color:#17171a;">
           <div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #e4e4e7;border-radius:10px;overflow:hidden;">
             <img src="#{site_url}/birds/#{slug}.png" alt="#{h(name.en)}" width="520" style="display:block;width:100%;height:auto;background:#f2f2f3;">
             <div style="padding:24px 28px;">
-              <div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8b8b91;margin-bottom:10px;">Heard at Culfin</div>
+              <div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8b8b91;margin-bottom:10px;">Heard at the station</div>
               <div style="font-size:26px;line-height:1.15;">#{h(name.en)}</div>
               <div style="font-size:18px;color:#3d3d42;margin-top:2px;">#{h(name.ga)}</div>
               <div style="font-size:14px;font-style:italic;color:#8b8b91;margin-top:6px;">#{h(event.sci_name)}</div>
               <p style="font-size:15px;color:#3d3d42;line-height:1.55;margin:18px 0 22px;">
-                <strong>#{h(reason)}</strong> The listening station at the cottage picked it up on #{h(date)}.
+                <strong>#{h(reason)}</strong> The listening station picked it up on #{h(date)}.
               </p>
               <a href="#{site_url}" style="display:inline-block;background:#17171a;color:#fff;text-decoration:none;font-family:Helvetica,Arial,sans-serif;font-size:14px;padding:11px 20px;border-radius:6px;">See the collage</a>
             </div>
@@ -155,9 +155,9 @@ class Notifier
     end
 
     def alert_text(event, subscription, name)
-      reason = REASON.fetch(event.event_type, 'Heard at the cottage.')
+      reason = REASON.fetch(event.event_type, 'Heard at the station.')
       "#{name.en} (#{name.ga}) — #{event.sci_name}\n" \
-        "#{reason} Heard at Culfin on #{I18n.l(event.occurred_on, format: :long)}.\n\n" \
+        "#{reason} Heard at the station on #{I18n.l(event.occurred_on, format: :long)}.\n\n" \
         "See the collage: #{site_url}\nUnsubscribe: #{unsubscribe_url(subscription)}"
     end
 

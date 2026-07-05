@@ -46,7 +46,7 @@ module Api
     end
 
     # Weather + tide + coordinates (from the cached almanac) + the moon, in one
-    # blob for the facts row. Coords fall back to config/Culfin; place is bilingual.
+    # blob for the facts row. Coords fall back to a config default; place is bilingual.
     def almanac_json
       data = Almanac.current
       coords = data[:coords] || {}

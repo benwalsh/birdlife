@@ -4,7 +4,7 @@
 #
 #   follows  — the birds THEY follow that were heard today, with verbatim counts
 #   alerts   — standing-rule events (rarity/seasonal/first-ever) they take by digest
-#   roundup  — the general cottage day (DailyFacts), only if they opted into the letter
+#   roundup  — the general station day (DailyFacts), only if they opted into the letter
 class DigestFacts
   Result = Struct.new(:date, :follows, :alerts, :roundup, keyword_init: true) do
     # Something worth sending: a followed bird turned up, an alert fired, or they
@@ -55,7 +55,7 @@ class DigestFacts
     end
   end
 
-  # The general cottage day — only for users who opted into the daily letter.
+  # The general station day — only for users who opted into the daily letter.
   def roundup_facts
     return nil unless @user.subscriptions.active.exists?(alert_type: 'roundup')
 

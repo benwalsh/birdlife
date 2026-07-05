@@ -82,7 +82,7 @@
           = render partial: 'panel'
         %p.caption
           - if @collage.species_count.positive?
-            heard around the cottage today
+            heard around the station today
           - else
             ag éisteacht…
 
@@ -130,9 +130,9 @@
           %p.empty Waiting for the first confident bird
 
     -# 4 — the almanac
-    %section.card{ data: { "kiosk-target": "screen" }, "aria-label": "The cottage this morning" }
+    %section.card{ data: { "kiosk-target": "screen" }, "aria-label": "The station this morning" }
       .stage
-        %p.kicker The cottage this morning
+        %p.kicker The station this morning
         .almanac
           .tile
             %svg.ico{ viewBox: '0 0 24 24' }

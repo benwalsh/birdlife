@@ -13,7 +13,7 @@ class DigestSummary
     Write 2 to 4 short sentences (one small paragraph), based ONLY on the facts given.
     Lead with the birds the reader follows that were heard, then any flagged arrivals
     they subscribe to, then a light sense of the day. Warm but understated — a quiet
-    note from the cottage, not a nature documentary.
+    note from the station, not a nature documentary.
 
     FACTUAL RULES — absolute:
     - State ONLY what is in the facts. Every clause traces to a given field.
@@ -65,7 +65,7 @@ class DigestSummary
 
     def roundup_line(roundup)
       note = roundup[:activity_note] ? ", #{roundup[:activity_note].tr('_', ' ')}" : ''
-      "The cottage day overall: #{roundup[:species_today]} species, #{roundup[:detections_today]} detections#{note}."
+      "The station day overall: #{roundup[:species_today]} species, #{roundup[:detections_today]} detections#{note}."
     end
 
     def clean(raw)

@@ -6,7 +6,7 @@
 class Station
   class << self
     # A bilingual place label, or nil if nothing is configured or resolved. Config
-    # wins (a fixed cottage), then the almanac's reverse-geocode; the word is never
+    # wins (a fixed station), then the almanac's reverse-geocode; the word is never
     # in our code.
     def place
       en = ENV['BIRD_PLACE'].presence || almanac_place[:en].presence

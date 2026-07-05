@@ -54,7 +54,7 @@ class Almanac
   }.freeze
   # Tide turning point → [English, Irish] (Lán mara = high water, Lag trá = ebb).
   TIDE_LABELS = { high: ['High tide', 'Lán mara'], low: ['Low tide', 'Lag trá'] }.freeze
-  DEFAULT_COORDS = { lat: 53.55, lon: -9.92, place: 'Culfin' }.freeze
+  DEFAULT_COORDS = { lat: 53.55, lon: -9.92, place: 'the station' }.freeze
   # OSM address keys, most-local first — the "best guess" for where we are.
   PLACE_KEYS = %w[hamlet village locality town suburb city municipality].freeze
 
@@ -142,9 +142,9 @@ class Almanac
       { type: kind.to_s, time: hhmm, label: "#{en} #{hhmm}", label_ga: "#{ga} #{hhmm}" }
     end
 
-    # Where are we? Configured coordinates win (the cottage is a fixed spot);
+    # Where are we? Configured coordinates win (the station is a fixed spot);
     # otherwise the device auto-detects via IP geolocation, then the last cache,
-    # then Culfin. The place name is a best guess: an explicit BIRD_PLACE if set,
+    # then a neutral default. The place name is a best guess: an explicit BIRD_PLACE if set,
     # else a reverse-geocode of the coordinates, else whatever IP geo named.
     def resolve_coords
       base = configured_latlon || fetch_geo || current[:coords] || DEFAULT_COORDS

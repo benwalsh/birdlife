@@ -4,7 +4,7 @@
 # the "how": email immediately, batch into the daily digest, or stay silent.
 class Subscription < ApplicationRecord
   # 'roundup' is the standalone daily letter — opt in and you get the narrated
-  # cottage day even without following specific birds. It only ever arrives by
+  # station day even without following specific birds. It only ever arrives by
   # digest, so its cadence is immaterial.
   ALERT_TYPES = %w[species rarity first_ever seasonal roundup].freeze
   # immediate = email as it fires; digest = save for the daily roundup; off = no
