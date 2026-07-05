@@ -125,7 +125,7 @@
 }
 
 /* Species detail modal — avian.css styles the shell (#detail-modal, .modal-card,
-   .modal-stats, …); these fill the gaps for our bilingual, audio-free panel. */
+   .modal-stats, …); these fill the gaps for our bilingual panel. */
 body.modal-open { overflow: hidden; }
 .modal-info .common {
   margin: 2px 0 0;
@@ -133,22 +133,118 @@ body.modal-open { overflow: hidden; }
   color: var(--ink-soft);
   letter-spacing: 0.01em;
 }
-/* Recordings: no audio yet, so a plain two-column row (when · confidence)
-   instead of the parent's play-button grid. */
+
+/* Header bar: the follow checkbox sits far left, the language toggle + close far
+   right — the panel's own chrome, in the mono broadsheet voice like the masthead. */
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; min-height: 26px; margin: -8px 0 16px;
+}
+.modal-head-right { display: inline-flex; align-items: center; gap: 16px; }
+/* EN | GA: parted by a hairline bar, the live one underlined. */
+.modal-head .ed-lang { gap: 0; }
+.modal-head .ed-lang-opt { padding: 0 9px; }
+.modal-head .ed-lang-opt + .ed-lang-opt { border-left: 1px solid var(--rule); }
+.modal-head .ed-lang-opt.is-on { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
+/* The close leaves its round plate for a bare ink mark (scoped so avian.css's
+   About modal keeps its button). */
+.modal-head .modal-close {
+  position: static; top: auto; right: auto;
+  width: auto; height: auto; padding: 0 2px;
+  background: none; box-shadow: none; border-radius: 0;
+  font-size: 20px; color: var(--ink-2);
+}
+.modal-head .modal-close:hover { color: var(--accent-2); }
+
+/* Fact & folklore — the latest enrichment for this bird, each block cited. On the
+   open page: a printer's-mark label over serif prose, folklore set in the voice-
+   italic as lore not fact. No plate. */
+.modal-lore { margin: 2px 0 18px; display: grid; gap: 15px; }
+.modal-lore-item {
+  margin: 0;
+  font: 13.5px/1.6 ui-serif, Georgia, serif; color: var(--ink);
+}
+.modal-lore-item.is-folk { font-style: italic; color: var(--ink-2); }
+.modal-lore-k {
+  display: block; margin-bottom: 5px;
+  font: 8.5px ui-monospace, Menlo, monospace; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--ink-soft); font-style: normal;
+}
+.modal-lore-src {
+  display: inline-flex; flex-wrap: wrap; gap: 4px 12px; margin-left: 8px;
+  font: 9.5px ui-monospace, Menlo, monospace; font-style: normal;
+}
+.modal-lore-src a { color: var(--ink-soft); text-decoration: none; }
+.modal-lore-src a:hover { color: var(--accent-2); text-decoration: underline; }
+
+/* Footer signature — the station's own hand, mono and hairline-ruled, centred to
+   close the panel the way the page footer closes the site. */
+.modal-foot {
+  display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; justify-content: center;
+  margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--rule);
+  font: 9.5px ui-monospace, Menlo, monospace; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--ink-soft);
+}
+.modal-foot span + span::before { content: "· "; color: var(--ink-soft); }
+.modal-foot-mark {
+  font-family: ui-serif, "Iowan Old Style", Georgia, serif;
+  text-transform: none; letter-spacing: 0.02em; font-size: 12px; color: var(--ink-2);
+}
+.modal-foot-mark::before { content: none; }
+
+/* Recordings: open rows on the page, parted by faint dotted rules — no plates. */
+.modal-recordings ol { gap: 0; max-height: 264px; }
 .modal-recordings li {
   display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
-  padding: 6px 10px; border-radius: 6px;
-  background: var(--paper); box-shadow: var(--edge);
+  padding: 11px 2px; border-bottom: 1px dotted var(--rule);
 }
+.modal-recordings li:last-child { border-bottom: 0; }
 .modal-recordings .rec-when { color: var(--ink); }
 .modal-recordings .rec-when small {
-  margin-left: 8px; color: var(--ink-soft);
+  margin-left: 10px; color: var(--ink-soft);
   font-size: 11px; letter-spacing: 0.02em;
 }
 .modal-recordings .rec-conf {
   font-variant-numeric: tabular-nums; color: var(--ink-soft);
   font-size: 12px; font-weight: 600;
 }
+
+/* Call playback — a borderless inline bar, not the native pill: a bare play/pause
+   mark, the label, a thin seek line, a running clock, and a mute toggle. */
+.modal-audio { margin-top: 4px; }
+.modal-audio-label {
+  display: block; margin-bottom: 8px;
+  font: 9px ui-monospace, Menlo, monospace; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--ink-soft);
+}
+.audiobar { display: flex; align-items: center; gap: 14px; }
+.audiobar-btn {
+  flex: 0 0 auto; background: none; border: 0; padding: 0; cursor: pointer;
+  color: var(--ink); line-height: 0;
+}
+.audiobar-btn svg { width: 15px; height: 15px; display: block; }
+.audiobar-btn:hover { color: var(--accent-2); }
+.audiobar-seek {
+  flex: 1 1 auto; position: relative; height: 14px; cursor: pointer;
+  display: flex; align-items: center;
+}
+/* A hairline track with a thin filled lead — the panel's one thread of motion. */
+.audiobar-track { position: absolute; left: 0; right: 0; height: 1px; background: var(--rule); }
+.audiobar-fill { position: absolute; left: 0; height: 1px; background: var(--ink-2); }
+.audiobar-head {
+  position: absolute; top: 50%; width: 7px; height: 7px; border-radius: 999px;
+  background: var(--ink); transform: translate(-50%, -50%);
+}
+.audiobar-time {
+  flex: 0 0 auto; font: 10.5px ui-monospace, Menlo, monospace;
+  color: var(--ink-soft); font-variant-numeric: tabular-nums; letter-spacing: 0.02em;
+}
+.audiobar-mute {
+  flex: 0 0 auto; background: none; border: 0; padding: 0; cursor: pointer;
+  color: var(--ink-soft); line-height: 0;
+}
+.audiobar-mute svg { width: 15px; height: 15px; display: block; }
+.audiobar-mute:hover { color: var(--ink); }
 
 /* Stats page — a clean bar chart + side lists. (Replaces the parent's
    JS-driven editorial timeline, which didn't survive the static port: its

@@ -87,5 +87,27 @@ RSpec.describe 'API' do
       expect(body['illustrations']).to be_an(Array)
       expect(body['all_time']).to eq(6)
     end
+
+    it 'has no enrichment until a bundle exists' do
+      get '/api/species/Erithacus%20rubecula'
+      expect(response.parsed_body['enrichment']).to be_nil
+    end
+
+    it 'surfaces the latest bundle fact + folklore, dropping empty/unsourced blocks' do
+      EnrichmentBundle.create!(
+        sci_name: 'Erithacus rubecula', date: Date.current,
+        blocks: [
+          { type: 'fact', id: 'f1', text: 'Robins hold winter territories.',
+            sources: [{ host: 'rspb.org.uk', url: 'https://rspb.org.uk/robin' }] },
+          { type: 'folklore', id: 'l1', gated: true, text: 'A robin at the door foretells a visitor.',
+            sources: [{ host: 'duchas.ie', url: 'https://duchas.ie/robin' }] }
+        ]
+      )
+      get '/api/species/Erithacus%20rubecula'
+      enr = response.parsed_body['enrichment']
+      expect(enr['fact']).to include('text' => 'Robins hold winter territories.')
+      expect(enr['fact']['sources'].first).to include('host' => 'rspb.org.uk', 'url' => 'https://rspb.org.uk/robin')
+      expect(enr['folklore']['text']).to eq('A robin at the door foretells a visitor.')
+    end
   end
 end

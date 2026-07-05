@@ -27,6 +27,7 @@ module Enrichment
 
     def type = attrs[:type]
     def id = attrs[:id]
+    def text = attrs[:text]
     def sources = Array(attrs[:sources])
     def gated? = attrs[:gated] == true
     def to_h = attrs

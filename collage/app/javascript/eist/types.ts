@@ -98,6 +98,14 @@ export interface Overview {
   today: Today
 }
 
+export interface EnrichmentSource { host: string | null; url: string }
+export interface EnrichmentBlock { text: string; sources: EnrichmentSource[] }
+export interface Enrichment {
+  date: string
+  fact: EnrichmentBlock | null
+  folklore: EnrichmentBlock | null
+}
+
 export interface SpeciesDetail {
   sci: string; en: string; ga: string | null
   all_time: number; today: number; first_seen: string | null
@@ -106,6 +114,7 @@ export interface SpeciesDetail {
   description: string | null; description_ga: string | null
   song: string | null
   recent: { at: string | null; confidence: number }[]
+  enrichment: Enrichment | null
 }
 
 export type Tab = 'birds' | 'stats' | 'directory'

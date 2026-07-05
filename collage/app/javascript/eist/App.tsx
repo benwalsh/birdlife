@@ -47,7 +47,7 @@ export function App({ bootstrap }: { bootstrap: Bootstrap }) {
             {tab === 'directory' && <DirectoryTab onSelect={setSelected} />}
           </main>
           <Footer place={bootstrap.place} />
-          {selected && <SpeciesModal sci={selected} onClose={() => setSelected(null)} />}
+          {selected && <SpeciesModal sci={selected} onClose={() => setSelected(null)} place={bootstrap.place} />}
         </FollowProvider>
       </LangProvider>
     </QueryClientProvider>
