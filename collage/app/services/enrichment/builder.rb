@@ -1,0 +1,176 @@
+require 'securerandom'
+
+module Enrichment
+  # Stage 1 of the enrichment pipeline: the SOURCING pass. For a notable species it
+  # runs Claude (Bedrock Converse tool-use) with exactly one tool — SourceFetcher —
+  # and asks it to read trusted ornithological / heritage pages and return a short set
+  # of typed, cited blocks (a general fact, a regional note, a piece of folklore). The
+  # result is stored once per (sci_name, date) as an EnrichmentBundle, so a single
+  # lookup serves every subscriber's Assembler.
+  #
+  # Integrity is enforced, not trusted: a block survives only if it validates AND every
+  # citation it carries was a URL we actually fetched this run (logged in
+  # source_fetch_log). A fabricated citation is dropped; a block left with none is
+  # dropped with it. "Ruby computes, Claude sources, and nothing unsourced ships."
+  class Builder
+    MAX_ROUNDS = 5
+    MAX_FETCH_CHARS = 6000
+
+    FETCH_TOOL = {
+      tool_spec: {
+        name:         'fetch_source',
+        description:  'Fetch the readable text of a page on a trusted ornithological or ' \
+                      'Irish-heritage host (e.g. en.wikipedia.org, birdwatchireland.ie, ' \
+                      'duchas.ie). Returns plain text to read and cite, or an error if the ' \
+                      'host is not trusted or the page cannot be read. This is the only way ' \
+                      'to see a source; never cite a URL you have not fetched here.',
+        input_schema: { json: {
+          type:       'object',
+          properties: { url: { type: 'string', description: 'Full https:// URL on a trusted host.' } },
+          required:   ['url']
+        } }
+      }
+    }.freeze
+
+    SYSTEM = <<~PROMPT.freeze
+      You research one bird species for a rural Irish bird-listening station%<where>s, so
+      its daily note can carry a little true, sourced colour. You may ONLY use the
+      fetch_source tool to learn anything; you have no other knowledge you are allowed to
+      state. Fetch a few trusted pages (Wikipedia, BirdWatch Ireland, the National Folklore
+      Collection at duchas.ie, and the like), then return the blocks.
+
+      Return 2 to 3 blocks as a JSON array and NOTHING else — no prose, no code fence.
+      Each block is an object:
+        { "type": "fact" | "regional_note" | "folklore",
+          "id": "short-kebab-id",
+          "text": "one or two plain sentences",
+          "sources": [ { "host": "en.wikipedia.org", "url": "https://..." } ],
+          "gated": false }
+
+      Block types:
+        fact          — a general, checkable fact about the species (identification, voice,
+                        diet, nesting). Prefer something a listener would find quietly
+                        interesting.
+        regional_note — its standing in Ireland specifically (status, distribution, an Irish
+                        name's meaning). Include only if a source supports it.
+        folklore      — a genuine piece of recorded lore or naming tradition. Set
+                        "gated": true on folklore, ALWAYS. Frame it as lore, not fact.
+
+      ABSOLUTE RULES:
+      - State ONLY what a fetched source supports. Every block needs at least one source you
+        actually fetched with fetch_source; put the exact URL(s) in "sources".
+      - Never invent, guess, or fill gaps from memory. If you cannot source something, omit
+        that block. Two solid blocks beat three shaky ones.
+      - Never link the bird to weather, wind, temperature, or the sky.
+      - Plain, calm sentences. No exclamation marks. Do not mention this station's own counts.
+      - Output the JSON array only.
+    PROMPT
+
+    class << self
+      # Build (and store) bundles for every notable species on `date`. Returns the
+      # bundles produced. Species that yield no valid block are skipped, not stored.
+      def run(date: Date.current, only: nil)
+        species = only ? [only] : gate_species(date)
+        species.filter_map { |sp| build_one(date: date, **sp.symbolize_keys) }
+      end
+
+      # One species → one stored bundle, or nil when nothing survived validation.
+      def build_one(date:, sci_name:, common_name: nil, irish_name: nil)
+        name = BirdName.lookup(sci_name)
+        blocks = source_blocks(sci_name: sci_name, common_name: common_name || name.en)
+        return nil if blocks.empty?
+
+        bundle = EnrichmentBundle.find_or_initialize_by(sci_name: sci_name, date: date)
+        bundle.update!(
+          common_name: common_name || name.en,
+          irish_name:  irish_name || name.ga,
+          blocks:      blocks.map(&:to_h)
+        )
+        bundle
+      end
+
+      private
+
+      def gate_species(date)
+        EnrichmentGate.species_for(DailyFacts.for(date: date))
+      end
+
+      # Run the tool-use loop and return the surviving validated Blocks.
+      def source_blocks(sci_name:, common_name:)
+        run_id = SecureRandom.uuid
+        fetcher = SourceFetcher.new(sci_name: sci_name, run_id: run_id)
+        final = converse_loop(sci_name: sci_name, common_name: common_name, fetcher: fetcher)
+        fetched = SourceFetchLog.where(run_id: run_id).pluck(:url).to_set
+        parse_blocks(final).filter_map { |raw| vet(raw, fetched) }
+      rescue StandardError => e
+        Rails.logger.warn("Enrichment::Builder: #{sci_name} failed (#{e.class}: #{e.message})")
+        []
+      end
+
+      def converse_loop(sci_name:, common_name:, fetcher:)
+        system = format(SYSTEM, where: station_context)
+        messages = [{ role: 'user', content: [{ text: "Species: #{common_name} (#{sci_name})." }] }]
+
+        MAX_ROUNDS.times do
+          resp = Bedrock.converse_tools(system: system, messages: messages, tools: [FETCH_TOOL])
+          message = resp.output.message
+          messages << { role: 'assistant', content: echo(message.content) }
+
+          uses = message.content.select(&:tool_use)
+          return text_of(message.content) if resp.stop_reason != 'tool_use' || uses.empty?
+
+          messages << { role: 'user', content: uses.map { |c| tool_result(c, fetcher) } }
+        end
+        '' # ran out of rounds still asking for tools — nothing usable
+      end
+
+      # Re-shape response content structs back into request-shape content hashes so the
+      # assistant turn can be echoed into the next request.
+      def echo(content)
+        content.filter_map do |c|
+          if c.tool_use
+            { tool_use: { tool_use_id: c.tool_use.tool_use_id, name: c.tool_use.name, input: c.tool_use.input } }
+          elsif c.text.present?
+            { text: c.text }
+          end
+        end
+      end
+
+      def tool_result(content, fetcher)
+        input = content.tool_use.input || {}
+        url = input['url'] || input[:url]
+        out = fetcher.fetch(url)
+        text = out[:error] ? "ERROR: #{out[:error]}" : out[:text].to_s.first(MAX_FETCH_CHARS)
+        { tool_result: { tool_use_id: content.tool_use.tool_use_id,
+                         content:     [{ text: text }],
+                         status:      out[:error] ? 'error' : 'success' } }
+      end
+
+      def text_of(content)
+        content.filter_map(&:text).join.strip
+      end
+
+      # Pull the JSON array out of the model's final turn (tolerate a stray code fence).
+      def parse_blocks(text)
+        json = text.to_s[/\[.*\]/m]
+        json ? Array(JSON.parse(json)) : []
+      rescue JSON::ParserError
+        []
+      end
+
+      # A block survives only if, once its citations are cut to URLs we truly fetched,
+      # it still validates (folklore gated, non-station types sourced, etc.).
+      def vet(raw, fetched)
+        return nil unless raw.is_a?(Hash)
+
+        cited = Array(raw['sources'] || raw[:sources]).select { |s| fetched.include?(s['url'] || s[:url]) }
+        block = Block.from(raw.merge('sources' => cited))
+        block if block&.valid?
+      end
+
+      def station_context
+        Station.region.present? ? " in #{Station.region}" : ''
+      end
+    end
+  end
+end

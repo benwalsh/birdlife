@@ -48,7 +48,10 @@ class Notifier
     def deliver_digest(user:, date:, facts:)
       return true unless enabled?
 
-      note = DigestSummary.for(facts) # LLM note, or nil → the list stands on its own
+      # Prefer the enrichment-aware assembly (Nova over the day's cited blocks); fall
+      # back to the plain summary, then to the mechanical list — warmth degrades, the
+      # send never does.
+      note = Enrichment::Assembler.for(user: user, date: date) || DigestSummary.for(facts)
       client.send_email(
         from_email_address: ENV.fetch('ALERTS_FROM'),
         destination:        { to_addresses: [user.email] },

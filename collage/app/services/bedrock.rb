@@ -15,6 +15,10 @@ class Bedrock
   # against the account's enabled model access — it must match a profile you can call
   # from the configured region.
   DEFAULT_MODEL = 'eu.amazon.nova-lite-v1:0'.freeze
+  # The stronger model used for the enrichment SOURCING pass (Stage 1), which needs
+  # tool-use + judgement Nova Lite isn't meant for. A Claude inference profile; the
+  # exact id is env-driven since it depends on what the account has enabled.
+  DEFAULT_ENRICH_MODEL = 'eu.anthropic.claude-sonnet-4-20250514-v1:0'.freeze
   MAX_TOKENS = 400
   TEMPERATURE = 0.4
 
@@ -26,20 +30,41 @@ class Bedrock
     # Send a system prompt + user message through Converse and return the model's
     # plain text. Raises on any transport/credential error — the caller decides how
     # to degrade (keep last-good cache, else template).
-    def converse(system:, user:)
+    def converse(system:, user:, model_id: self.model_id, max_tokens: MAX_TOKENS, temperature: TEMPERATURE)
       raise 'Bedrock disabled (SUMMARY_LLM_DISABLED)' if disabled?
 
       response = client.converse(
         model_id:         model_id,
         system:           [{ text: system }],
         messages:         [{ role: 'user', content: [{ text: user }] }],
-        inference_config: { max_tokens: MAX_TOKENS, temperature: TEMPERATURE }
+        inference_config: { max_tokens: max_tokens, temperature: temperature }
       )
       response.output.message.content.map(&:text).join.strip
     end
 
+    # One round of a tool-use conversation. Given the running `messages` (Converse
+    # shape) and the `tools` specs, returns the raw response so the caller can drive
+    # the loop — read stop_reason, run any requested tool, append the result, call
+    # again. Kept transport-only; the Builder owns the loop and the prompt.
+    def converse_tools(system:, messages:, tools:, model_id: enrich_model_id, max_tokens: 1500,
+                       temperature: TEMPERATURE)
+      raise 'Bedrock disabled (SUMMARY_LLM_DISABLED)' if disabled?
+
+      client.converse(
+        model_id:         model_id,
+        system:           [{ text: system }],
+        messages:         messages,
+        tool_config:      { tools: tools },
+        inference_config: { max_tokens: max_tokens, temperature: temperature }
+      )
+    end
+
     def model_id
       ENV.fetch('BEDROCK_MODEL_ID', DEFAULT_MODEL)
+    end
+
+    def enrich_model_id
+      ENV.fetch('ENRICH_MODEL_ID', DEFAULT_ENRICH_MODEL)
     end
 
     def region
