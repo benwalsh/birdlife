@@ -4,7 +4,7 @@ import { useLang } from '../lang'
 import { FollowButton } from './FollowButton'
 import { AudioBar } from './AudioBar'
 import { ago, stamp } from '../time'
-import type { Bilingual, EnrichmentBlock } from '../types'
+import type { EnrichmentBlock } from '../types'
 
 // One fact/folklore block, verbatim from the enrichment bundle, with its citations
 // as quiet host links — the card renders what Ruby sourced, it never re-derives.
@@ -30,15 +30,7 @@ function Lore({ kind, block, tone }: { kind: string; block: EnrichmentBlock; ton
 // via avian/application.css); data from /api/species/:sci. Header carries the
 // follow checkbox (left) and the EN|GA toggle + close (right); the panel closes
 // with the station's own signature.
-export function SpeciesModal({
-  sci,
-  onClose,
-  place,
-}: {
-  sci: string
-  onClose: () => void
-  place: Bilingual | null
-}) {
+export function SpeciesModal({ sci, onClose }: { sci: string; onClose: () => void }) {
   const { data } = useSpecies(sci)
   const { lang, setLang, t } = useLang()
 
@@ -107,7 +99,7 @@ export function SpeciesModal({
                 )}
                 {data.song && (
                   <div className="modal-audio">
-                    <span className="modal-audio-label">{t('Listen to the call', 'Éist leis an nglao')}</span>
+                    <span className="modal-audio-label">{t('Listen to the call', 'Éist leis an nglaoch')}</span>
                     <AudioBar src={data.song} />
                   </div>
                 )}
@@ -128,12 +120,6 @@ export function SpeciesModal({
                 ))}
               </ol>
             </div>
-
-            <footer className="modal-foot">
-              <span className="modal-foot-mark">Éist</span>
-              <span>{t('Listening station', 'Stáisiún éisteachta')}</span>
-              {place && <span>{lang === 'ga' ? place.ga : place.en}</span>}
-            </footer>
           </>
         )}
       </article>

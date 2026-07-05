@@ -177,21 +177,6 @@ body.modal-open { overflow: hidden; }
 .modal-lore-src a { color: var(--ink-soft); text-decoration: none; }
 .modal-lore-src a:hover { color: var(--accent-2); text-decoration: underline; }
 
-/* Footer signature — the station's own hand, mono and hairline-ruled, centred to
-   close the panel the way the page footer closes the site. */
-.modal-foot {
-  display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; justify-content: center;
-  margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--rule);
-  font: 9.5px ui-monospace, Menlo, monospace; letter-spacing: 0.12em;
-  text-transform: uppercase; color: var(--ink-soft);
-}
-.modal-foot span + span::before { content: "· "; color: var(--ink-soft); }
-.modal-foot-mark {
-  font-family: ui-serif, "Iowan Old Style", Georgia, serif;
-  text-transform: none; letter-spacing: 0.02em; font-size: 12px; color: var(--ink-2);
-}
-.modal-foot-mark::before { content: none; }
-
 /* Recordings: open rows on the page, parted by faint dotted rules — no plates. */
 .modal-recordings ol { gap: 0; max-height: 264px; }
 .modal-recordings li {
