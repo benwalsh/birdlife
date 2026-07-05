@@ -13,8 +13,12 @@ module Enrichment
   # source_fetch_log). A fabricated citation is dropped; a block left with none is
   # dropped with it. "Ruby computes, Claude sources, and nothing unsourced ships."
   class Builder
-    MAX_ROUNDS = 5
+    MAX_ROUNDS = 8
     MAX_FETCH_CHARS = 6000
+    # When research runs long, this forces the model to stop and answer from what it has
+    # already fetched, so a thorough explorer still yields blocks instead of nothing.
+    FINALISE = 'Stop searching now. Using ONLY the sources you have already fetched ' \
+               'successfully, output the JSON array of blocks and nothing else.'.freeze
 
     FETCH_TOOL = {
       tool_spec: {
@@ -37,10 +41,14 @@ module Enrichment
       research one species and save a small set of true, well-sourced blocks that a separate
       writer will later stitch into readers' notes. You do the research; nobody downstream
       does any. You may ONLY use the fetch_source tool to learn anything — you have no
-      knowledge of your own that you are allowed to state. Fetch several trusted pages
-      (Wikipedia for the species, BirdWatch Ireland for its Irish status, the National
-      Folklore Collection at duchas.ie and CELT at celt.ucc.ie for lore), read them, then
-      return the blocks.
+      knowledge of your own that you are allowed to state.
+
+      Wikipedia (en.wikipedia.org) is the most reliably fetchable source and its species,
+      folklore and mythology pages are deep — lead with it, and follow its links. CELT
+      (celt.ucc.ie) is good for older Irish texts. BirdWatch Ireland and dúchas.ie are
+      worth trying but you often WON'T know a working URL — if a fetch fails, do NOT keep
+      guessing paths on the same site; move on and use what you have. A few good sources
+      beat a long hunt. Fetch what you need, then return the blocks.
 
       Return up to 3 blocks as a JSON array and NOTHING else — no prose, no code fence.
       Each block is an object:
@@ -145,7 +153,11 @@ module Enrichment
 
           messages << { role: 'user', content: uses.map { |c| tool_result(c, fetcher) } }
         end
-        '' # ran out of rounds still asking for tools — nothing usable
+
+        # Still researching at the round cap — make it answer now from what it has.
+        messages << { role: 'user', content: [{ text: FINALISE }] }
+        resp = Bedrock.converse_tools(system: system, messages: messages, tools: [FETCH_TOOL])
+        text_of(resp.output.message.content)
       end
 
       # Re-shape response content structs back into request-shape content hashes so the

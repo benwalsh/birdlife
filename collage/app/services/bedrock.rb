@@ -16,9 +16,10 @@ class Bedrock
   # from the configured region.
   DEFAULT_MODEL = 'eu.amazon.nova-lite-v1:0'.freeze
   # The stronger model used for the enrichment SOURCING pass (Stage 1), which needs
-  # tool-use + judgement Nova Lite isn't meant for. A Claude inference profile; the
-  # exact id is env-driven since it depends on what the account has enabled.
-  DEFAULT_ENRICH_MODEL = 'eu.anthropic.claude-sonnet-4-20250514-v1:0'.freeze
+  # tool-use + judgement Nova Lite isn't meant for. A current Claude inference profile
+  # (Sonnet 4.5, dated/pinned — Bedrock retires older ones as "Legacy"). Env-driven, so
+  # bump ENRICH_MODEL_ID when a newer profile is enabled without a redeploy.
+  DEFAULT_ENRICH_MODEL = 'eu.anthropic.claude-sonnet-4-5-20250929-v1:0'.freeze
   MAX_TOKENS = 400
   TEMPERATURE = 0.4
 
