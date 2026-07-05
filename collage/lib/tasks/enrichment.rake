@@ -30,11 +30,16 @@ namespace :birdlife do
     rule '2. STAGE 1 (Claude) — the interesting bits, sourced'
     puts "  model: #{Bedrock.enrich_model_id}   bedrock disabled?: #{Bedrock.disabled?}"
     # Source the day's notable birds AND the reader's own followed birds heard today,
-    # so their report is actually about their birds. Reuse any bundle already sourced.
+    # each only when the importance-keyed backoff says it's DUE — so a routine follow
+    # (a house sparrow) is sourced once and then left alone, while a rare or newly-
+    # arrived bird gets fresh facts every day for its window.
+    importance = facts.fetch(:items, []).to_h { |i| [i[:sci_name], i[:importance]] }
     wanted = (notable.pluck(:sci_name) + digest.follows.pluck(:sci)).uniq
     wanted.each do |sci|
-      next if EnrichmentBundle.for_date(date).find { |b| b.sci_name == sci }&.block_objects&.any?
-
+      unless Enrichment::Policy.due?(sci, importance[sci].to_i, as_of: date)
+        puts "  #{sci}: current (backoff) — reusing"
+        next
+      end
       puts "  sourcing #{sci}…"
       Enrichment::Builder.build_one(date: date, sci_name: sci)
     end

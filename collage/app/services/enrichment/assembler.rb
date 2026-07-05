@@ -77,7 +77,10 @@ module Enrichment
       # of "[Bird — context] (type) text" lines Nova can pick from.
       def catalogue_for(facts, date)
         followed = facts.follows.index_by { |f| f[:sci] }
-        bundles = EnrichmentBundle.for_date(date).select { |b| b.block_objects.any? }
+        # The reader's own birds and the day's notable birds, each drawn from its
+        # CURRENT bundle (latest sourced, reused across days — facts are durable).
+        notable = EnrichmentGate.species_for(DailyFacts.for(date: date)).pluck(:sci_name)
+        bundles = EnrichmentBundle.current_for((followed.keys + notable).uniq).select { |b| b.block_objects.any? }
         ordered = bundles.sort_by { |b| followed.key?(b.sci_name) ? 0 : 1 }
 
         ordered.flat_map do |bundle|

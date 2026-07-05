@@ -79,11 +79,21 @@ module Enrichment
       # rather than silently returning empty.
       attr_reader :last_error
 
-      # Build (and store) bundles for every notable species on `date`. Returns the
-      # bundles produced. Species that yield no valid block are skipped, not stored.
+      # Build (and store) bundles for the day's notable species that are DUE a refresh
+      # under the importance-keyed backoff (Enrichment::Policy) — so a bird already
+      # sourced recently isn't re-researched until its facts are worth revisiting.
+      # `only:` forces one species regardless of backoff (manual/on-demand sourcing).
+      # Returns the bundles produced (nil results filtered out).
       def run(date: Date.current, only: nil)
-        species = only ? [only] : gate_species(date)
-        species.filter_map { |sp| build_one(date: date, **sp.symbolize_keys) }
+        return [build_one(date: date, **only.symbolize_keys)].compact if only
+
+        facts = DailyFacts.for(date: date)
+        importance = facts.fetch(:items, []).to_h { |i| [i[:sci_name], i[:importance]] }
+        EnrichmentGate.species_for(facts).filter_map do |sp|
+          next unless Policy.due?(sp[:sci_name], importance[sp[:sci_name]].to_i, as_of: date)
+
+          build_one(date: date, **sp.symbolize_keys)
+        end
       end
 
       # One species → one stored bundle, or nil when nothing survived validation.
