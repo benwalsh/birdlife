@@ -81,6 +81,86 @@ namespace :birdlife do
     puts text.lines.map { |l| "  #{l}" }.join
     puts "\n  HTML preview written to #{out}"
   end
+
+  # A self-contained "try it" for when Claude's sourcing is still gated by the Bedrock
+  # Anthropic use-case form. It STANDS IN a few real, cited Claude-quality bundles, then
+  # runs the REAL Nova assembler + render for a reader who follows the interesting birds,
+  # and shows the importance backoff deciding when to re-source. Everything runs inside a
+  # transaction that is rolled back — no temp user, no bundle, nothing persists.
+  # Needs Nova creds for the live stitch:  AWS_PROFILE=birdlife bin/rake birdlife:email_demo
+  task email_demo: :environment do
+    date = ENV['DATE'].present? ? Date.parse(ENV['DATE']) : Date.new(2026, 7, 4)
+    ENV['BIRD_PLACE'] ||= 'Culfin, Connemara' # so the station reads as somewhere evocative
+    place = Station.region
+
+    # rubocop:disable Layout/LineLength -- prose data reads better unwrapped
+    demo_bundles = {
+      'Apus apus'           => ['Common Swift', 'Gabhlán gaoithe', [
+        ['fact', false,
+         'The swift spends almost its whole life on the wing — feeding, mating and even sleeping in flight — and a young bird may stay airborne for its first two or three years.', 'en.wikipedia.org'],
+        ['regional_note', false,
+         'In Ireland it is a summer visitor only, arriving in May and gone by August, its screaming parties racing low over coastal villages.', 'birdwatchireland.ie'],
+        ['folklore', true,
+         'Its dark, scythe-winged shape and shrill call earned it old country names like “devil bird”.', 'en.wikipedia.org']
+      ]],
+      'Carduelis carduelis' => ['European Goldfinch', 'Lasair choille', [
+        ['fact', false,
+         'Its slender, pointed bill lets it pull seeds from teasel and thistle heads that heavier-billed finches cannot reach.', 'en.wikipedia.org'],
+        ['regional_note', false,
+         'A common Irish resident whose Irish name, Lasair choille, means “flame of the woods”, for the crimson face and gold wing-flash.', 'birdwatchireland.ie'],
+        ['folklore', true,
+         'A flock of goldfinches is called a “charm”; in medieval painting the bird stood for the soul.', 'en.wikipedia.org']
+      ]]
+    }
+    # rubocop:enable Layout/LineLength
+
+    ActiveRecord::Base.transaction do
+      demo_bundles.each do |sci, (common, irish, rows)|
+        EnrichmentBundle.create!(sci_name: sci, date: date, common_name: common, irish_name: irish,
+                                 blocks: rows.map do |type, gated, text, host|
+                                   { type: type, id: "#{sci.parameterize}-#{type}", text: text, gated: gated,
+                                     sources: [{ host: host, url: "https://#{host}/#{sci.parameterize}" }] }
+                                 end)
+      end
+
+      rule '1. BACKOFF — how often each bird is re-sourced (importance-keyed)'
+      [['Cuculus canorus', 'cuckoo, newly back', 80],
+       ['Passer domesticus', 'house sparrow, routine', 5]].each do |sci, label, imp|
+        every = Enrichment::Policy.refresh_interval_days(imp)
+        cur = EnrichmentBundle.current(sci)
+        state = cur ? "last sourced #{(date - cur.date).to_i}d ago" : 'never sourced'
+        puts "  #{label}: importance #{imp} → re-source every #{every} day#{'s' unless every == 1} (#{state})"
+      end
+
+      reader = User.create!(provider: 'demo', uid: "demo-#{date}", email: 'you@example.com', name: 'You')
+      demo_bundles.each_key do |sci|
+        reader.subscriptions.create!(alert_type: 'species', sci_name: sci, cadence: 'digest')
+      end
+      reader.subscriptions.create!(alert_type: 'roundup', cadence: 'digest')
+
+      facts = DigestFacts.for(user: reader, date: date)
+      follows = facts.follows.map { |f| "#{f[:en]} ×#{f[:count]}" }.join(', ').presence
+      rule "2. THE READER at #{place} — follows #{follows || '(none heard — try DATE=2026-07-04)'}"
+
+      rule '3. NOVA stitches the saved pieces into the note'
+      note = Enrichment::Assembler.for(user: reader, date: date)
+      if note
+        puts '  source: Nova over the cited blocks'
+      else
+        note = DigestSummary.for(facts)
+        fallback = note ? 'plain summary (no enrichment)' : 'mechanical list — set AWS_PROFILE=birdlife'
+        puts "  source: #{fallback}"
+      end
+      Array(note).each { |p| puts "  #{p}" }
+
+      out = Rails.root.join('tmp/email_demo.html')
+      File.write(out, Notifier.send(:digest_html, facts, date, note))
+      puts "\n  HTML preview written to #{out}  (open it: open #{out})"
+
+      raise ActiveRecord::Rollback
+    end
+    puts "\n  (nothing was saved — the demo user and bundles were rolled back)"
+  end
 end
 
 def print_bundle(bundle)
