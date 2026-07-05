@@ -38,14 +38,14 @@ RSpec.describe 'On-demand enrichment' do
       robin_bundle.save!
       expect(Enrichment::Builder).not_to receive(:build_one)
       post "/species/#{ERB::Util.url_encode(sci)}/enrichment"
-      expect(response.parsed_body.dig('enrichment', 'fact', 'text')).to eq('Robins hold winter territories.')
+      expect(response.parsed_body.dig('enrichment', 'blocks', 0, 'text')).to eq('Robins hold winter territories.')
     end
 
     it 'sources on demand when nothing is stored yet' do
       allow(Enrichment::Builder).to receive(:build_one).
         with(date: Date.current, sci_name: sci).and_return(robin_bundle)
       post "/species/#{ERB::Util.url_encode(sci)}/enrichment"
-      expect(response.parsed_body.dig('enrichment', 'fact', 'text')).to eq('Robins hold winter territories.')
+      expect(response.parsed_body.dig('enrichment', 'blocks', 0, 'text')).to eq('Robins hold winter territories.')
     end
 
     it 'returns null when the look-up finds nothing (e.g. the model is unavailable)' do

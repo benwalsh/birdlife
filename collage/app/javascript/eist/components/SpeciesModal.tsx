@@ -11,8 +11,22 @@ function csrf(): string {
   return document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? ''
 }
 
-// One fact/folklore block, verbatim from the enrichment bundle, with its citations
-// as quiet host links — the card renders what Ruby sourced, it never re-derives.
+// The printer's-mark label for each block type, bilingual.
+function loreLabel(type: EnrichmentBlock['type'], t: (en: string, ga?: string) => string): string {
+  switch (type) {
+    case 'folklore':
+      return t('Folklore', 'Béaloideas')
+    case 'regional_note':
+      return t('In Ireland', 'In Éirinn')
+    case 'station_reading':
+      return t('At the station', 'Ag an stáisiún')
+    default:
+      return t('Fact', 'Fíric')
+  }
+}
+
+// One enrichment block, verbatim from the bundle, with its citations as quiet host
+// links — the card renders what Ruby sourced, it never re-derives.
 function Lore({ kind, block, tone }: { kind: string; block: EnrichmentBlock; tone: string }) {
   return (
     <p className={`modal-lore-item ${tone}`}>
@@ -122,10 +136,16 @@ export function SpeciesModal({ sci, onClose }: { sci: string; onClose: () => voi
                   <div><span className="n">{ago(data.first_seen)}</span><span className="lbl">{t('first heard', 'chéad chloiste')}</span></div>
                 </div>
                 {desc && <p className="desc">{desc}</p>}
-                {enr && (enr.fact || enr.folklore) ? (
+                {enr && enr.blocks.length > 0 ? (
                   <div className="modal-lore">
-                    {enr.fact && <Lore kind={t('Fact', 'Fíric')} block={enr.fact} tone="is-fact" />}
-                    {enr.folklore && <Lore kind={t('Folklore', 'Béaloideas')} block={enr.folklore} tone="is-folk" />}
+                    {enr.blocks.map((b, i) => (
+                      <Lore
+                        key={i}
+                        kind={loreLabel(b.type, t)}
+                        block={b}
+                        tone={b.type === 'folklore' ? 'is-folk' : 'is-fact'}
+                      />
+                    ))}
                   </div>
                 ) : signedIn ? (
                   <button type="button" className="modal-lore-lookup" onClick={lookUp} disabled={looking}>

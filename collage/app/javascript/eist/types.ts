@@ -99,11 +99,11 @@ export interface Overview {
 }
 
 export interface EnrichmentSource { host: string | null; url: string }
-export interface EnrichmentBlock { text: string; sources: EnrichmentSource[] }
+export type EnrichmentKind = 'fact' | 'regional_note' | 'folklore' | 'station_reading'
+export interface EnrichmentBlock { type: EnrichmentKind; text: string; sources: EnrichmentSource[] }
 export interface Enrichment {
   date: string
-  fact: EnrichmentBlock | null
-  folklore: EnrichmentBlock | null
+  blocks: EnrichmentBlock[]
 }
 
 export interface SpeciesDetail {

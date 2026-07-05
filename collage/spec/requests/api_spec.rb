@@ -93,7 +93,7 @@ RSpec.describe 'API' do
       expect(response.parsed_body['enrichment']).to be_nil
     end
 
-    it 'surfaces the latest bundle fact + folklore, dropping empty/unsourced blocks' do
+    it 'surfaces the latest bundle blocks in order, dropping empty/unsourced ones' do
       EnrichmentBundle.create!(
         sci_name: 'Erithacus rubecula', date: Date.current,
         blocks: [
@@ -104,10 +104,12 @@ RSpec.describe 'API' do
         ]
       )
       get '/api/species/Erithacus%20rubecula'
-      enr = response.parsed_body['enrichment']
-      expect(enr['fact']).to include('text' => 'Robins hold winter territories.')
-      expect(enr['fact']['sources'].first).to include('host' => 'rspb.org.uk', 'url' => 'https://rspb.org.uk/robin')
-      expect(enr['folklore']['text']).to eq('A robin at the door foretells a visitor.')
+      blocks = response.parsed_body.dig('enrichment', 'blocks')
+      expect(blocks.pluck('type', 'text')).to eq([
+                                                   ['fact', 'Robins hold winter territories.'],
+                                                   ['folklore', 'A robin at the door foretells a visitor.']
+                                                 ])
+      expect(blocks.first['sources'].first).to include('host' => 'rspb.org.uk', 'url' => 'https://rspb.org.uk/robin')
     end
   end
 end
