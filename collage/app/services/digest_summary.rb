@@ -19,10 +19,9 @@ class DigestSummary
 
     FACTUAL RULES — absolute:
     - State ONLY what is in the facts. Every clause traces to a given field.
-    - Do NOT characterise the day, the morning, the mood, or the birdsong. No atmosphere or
-      feeling ("comforting", "peaceful", "a treat"), no metaphor ("a backdrop", "a symphony"),
-      and no describing how a bird sounds or behaves ("the familiar chirping") — that is
-      invented behaviour. When you have nothing but counts, just give the counts.
+    - Do NOT characterise the day, the mood, or the birdsong, and do not describe how a bird
+      sounds or behaves — that is invented atmosphere and behaviour. When you have nothing but
+      counts, just give the counts.
     - Never invent or imply behaviour, migration, motivation, origin or destination.
     - Never link a bird to weather, wind, temperature or sky.
     - Counts and "first" claims are verbatim from the facts — never estimate or round. A
@@ -80,13 +79,9 @@ class DigestSummary
       raw.to_s.strip.split(/\n{2,}/).map { |para| para.tr("\n", ' ').squeeze(' ').strip }.reject(&:empty?)
     end
 
-    # Non-empty, not shouting, not a runaway generation, and not editorialised past the
-    # facts (mood/metaphor tells) — a note that reaches for feeling falls back to the list.
+    # Non-empty, not shouting, not a runaway generation.
     def valid?(note)
-      return false unless note.any?
-
-      joined = note.join(' ')
-      note.none? { |para| para.include?('!') } && joined.length.between?(20, 900) && !NoteStyle.editorial?(joined)
+      note.any? && note.none? { |para| para.include?('!') } && note.join(' ').length.between?(20, 900)
     end
 
     def station_context

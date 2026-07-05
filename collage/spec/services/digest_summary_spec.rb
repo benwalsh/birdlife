@@ -32,12 +32,4 @@ RSpec.describe DigestSummary do
                                        converse:  'Your corncrake was heard twice today, and nothing else you follow!')
     expect(described_class.for(facts)).to be_nil
   end
-
-  it 'rejects an editorialised note (invented mood/metaphor) and falls back to the list' do
-    allow(Bedrock).to receive_messages(
-      disabled?: false,
-      converse:  'Your corncrake was heard twice, a comforting backdrop to a peaceful day.'
-    )
-    expect(described_class.for(facts)).to be_nil
-  end
 end

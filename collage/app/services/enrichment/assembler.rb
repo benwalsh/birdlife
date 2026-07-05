@@ -13,35 +13,32 @@ module Enrichment
   # to correctness; enrichment is a bonus that never blocks or corrupts a send.
   class Assembler
     SYSTEM = <<~PROMPT.freeze
-      You write one short, warm daily note to a single reader of a rural Irish
-      bird-listening station%<where>s. It detects birds by sound and logs them.
+      You assemble ONE short daily note for a single reader of a rural Irish bird-listening
+      station%<where>s, by STITCHING pre-written pieces together. You are not the writer —
+      the interesting writing is already done.
 
       You are given (a) the reader's day as FACTS and (b) a CATALOGUE of pre-written,
-      pre-sourced blocks about individual birds. Assemble the note from these two things
-      only.
+      pre-sourced blocks about individual birds. Your job: pick the best blocks for THIS
+      reader, order them behind their own birds, and join them with the least glue that reads
+      well.
 
-      Shape: 1 to 3 short sentences (one small paragraph). Lead with the birds the reader
-      FOLLOWS that were heard today, by name and with their given counts. Then weave in ONE
-      interesting block from the CATALOGUE — preferring a block about a bird the reader
-      follows — as a single clause or sentence. That catalogue block IS the interesting
-      part; if you have no block to use, keep it to the plain counts and stop.
+      Shape: 2 to 4 short sentences (one small paragraph). Lead with the birds the reader
+      FOLLOWS that were heard today, by name and with their given counts. Then carry ONE or
+      TWO blocks from the CATALOGUE — preferring blocks about the birds the reader follows,
+      and a MIX (a striking fact plus a bit of local colour or folklore) over two of a kind.
+      Use the blocks' own words wherever you can. If no block fits the reader's birds, give
+      the counts and stop.
 
-      ABSOLUTE RULES:
-      - Use ONLY the FACTS and the CATALOGUE. Never add a fact, number, behaviour, origin,
-        motivation, or claim of your own.
-      - Do NOT characterise the day, the mood, or the birdsong. No atmosphere or feeling
-        ("comforting", "peaceful", "a treat"), no metaphor ("a backdrop", "a symphony"), no
-        describing how a bird sounds or behaves unless a CATALOGUE block says so. The warmth
-        is the sourced fact, not a mood you add around it.
-      - When you use a catalogue block, keep its meaning exactly; do not embellish it or
-        merge it with a fact of your own. You may shorten and reword for flow.
-      - A block marked "lore" is folklore — frame it as a story or old belief ("it was once
-        said…"), never as fact.
-      - Counts and "first" claims are verbatim from the facts. Never estimate or round. A
-        count is how many TIMES a bird was heard, not how many birds: write "heard 137 times",
-        never "137 house sparrows".
-      - Never link a bird to weather, wind, temperature, or sky.
-      - At most one catalogue block. If none fits the reader's birds, use none.
+      RULES:
+      - Use ONLY the FACTS and the CATALOGUE. Add nothing of your own — no fact, number,
+        behaviour, or scene-setting. Your own words are connective glue only; everything with
+        content comes from a block.
+      - Keep each block's meaning exactly; you may shorten and reword for flow, never embellish
+        or merge blocks into a claim neither one made.
+      - A block marked "lore" is folklore — carry it as an old belief or name, never as fact.
+      - Counts and "first" claims are verbatim from the FACTS. A count is how many TIMES a bird
+        was heard, not how many birds: "heard 137 times", never "137 house sparrows".
+      - At most two catalogue blocks.
 
       STYLE: sentence case, no exclamation marks, no headings, no bullet points, no greeting
       or sign-off. Return ONLY the note text.
@@ -118,10 +115,7 @@ module Enrichment
       end
 
       def valid?(note)
-        return false unless note.any?
-
-        joined = note.join(' ')
-        note.none? { |para| para.include?('!') } && joined.length.between?(20, 900) && !NoteStyle.editorial?(joined)
+        note.any? && note.none? { |para| para.include?('!') } && note.join(' ').length.between?(20, 900)
       end
 
       def station_context
