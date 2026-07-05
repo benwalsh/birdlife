@@ -2,90 +2,19 @@
 %html{ lang: "en" }
   %head
     %meta{ charset: "utf-8" }/
-    %meta{ name: "viewport", content: "width=device-width, initial-scale=1" }/
+    %meta{ name: "viewport", content: "width=480, initial-scale=1" }/
     %title Éist · Station
     = favicon_link_tag "cruach-icon.png", rel: "icon", type: "image/png"
     = stylesheet_link_tag 'colors'
+    = stylesheet_link_tag 'station'
     = vite_client_tag
     = vite_javascript_tag 'application'
+    -# The device view: JUST the 480×800 screen, full colour, no frame and no e-ink
+    -# filter. This is what the shooter captures and the panel dithers to Spectra-6 —
+    -# a fake frame or a pre-applied filter would fight the real panel. The desktop
+    -# emulation lives at /station/preview.
     :css
       * { box-sizing: border-box; }
-      html, body { margin: 0; min-height: 100%; }
-      body {
-        min-height: 100vh; display: flex; flex-direction: column;
-        align-items: center; justify-content: center; gap: 14px;
-        padding: 4vmin; background: var(--frame);
-        font-family: "Baskerville", "Hoefler Text", "EB Garamond", Georgia, serif;
-      }
-      /* The bog-oak frame + mat, so /station reads as an object on the wall. */
-      .frame {
-        padding: 24px; border-radius: 12px; background: var(--frame-face);
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.06),
-                    inset 0 -3px 8px rgba(0,0,0,0.6), 0 24px 60px rgba(0,0,0,0.65);
-      }
-      .mat { padding: 10px; border-radius: 3px; background: var(--paper-2); }
-      /* The 480x800 panel, through the e-ink filter: desaturated, posterised, and
-         a touch dim so the paper reads greyish (not pure white) like real Spectra-6. */
-      .inky {
-        width: 480px; height: 800px; overflow: hidden;
-        filter: url(#eink) contrast(1.05) brightness(0.91);
-      }
-      .spec {
-        font: 10px ui-monospace, Menlo, monospace; letter-spacing: 0.14em;
-        text-transform: uppercase; color: var(--frame-label);
-      }
-
-      /* The page itself — the actual pixels the Inky would show. */
-      .screen {
-        width: 480px; height: 800px; overflow: hidden;
-        background: var(--paper); color: var(--ink);
-        padding: 30px 34px; display: flex; flex-direction: column;
-      }
-      .head { flex: 0 0 auto; display: flex; align-items: baseline; justify-content: space-between; }
-      .wordmark { margin: 0; font-size: 46px; font-weight: 500; line-height: 1; }
-      .place { margin: 0; font-style: italic; font-size: 19px; color: var(--ink-soft); }
-      .rule { border: 0; border-top: 1px solid var(--ink); margin: 12px 0 0; }
-
-      /* The collage: the dominant element, filling the middle. */
-      .collage-area { flex: 1 1 auto; min-height: 0; margin: 8px 0; display: flex; align-items: center; justify-content: center; }
-      .collage-area svg { width: 100%; height: 100%; display: block; }
-
-      .news { flex: 0 0 auto; margin: 0 0 16px; text-align: center; font-style: italic; font-size: 21px; line-height: 1.25; }
-      .news.quiet { color: var(--ink-soft); }
-
-      .foot {
-        flex: 0 0 auto; border-top: 1px solid var(--ink); padding-top: 12px;
-        display: flex; justify-content: space-between; align-items: baseline;
-        font: 12px ui-monospace, Menlo, monospace; letter-spacing: 0.06em;
-        text-transform: uppercase; color: var(--ink-2);
-      }
-      .foot .moon { font-family: "Baskerville", Georgia, serif; text-transform: none; letter-spacing: 0; font-size: 16px; }
+      html, body { margin: 0; background: var(--paper); }
   %body{ data: { controller: "refresh", "refresh-interval-value": 60000 } }
-    -# The CSS/SVG "e-ink" approximation: desaturate, then posterise each channel to
-    -# a few discrete levels — a monitor preview of Spectra-6's muted, banded colour.
-    %svg{ width: 0, height: 0, style: 'position:absolute' }
-      %filter#eink
-        %feColorMatrix{ type: 'saturate', values: '0.68' }
-        %feComponentTransfer
-          %feFuncR{ type: 'discrete', tableValues: '0 0.33 0.66 1' }
-          %feFuncG{ type: 'discrete', tableValues: '0 0.33 0.66 1' }
-          %feFuncB{ type: 'discrete', tableValues: '0 0.33 0.66 1' }
-    .frame
-      .mat
-        .inky
-          %main.screen.station
-            %header.head
-              %h1.wordmark Éist
-              %p.place= Station.place&.dig(:en)
-            %hr.rule/
-            %section.collage-area{ "aria-label": "Birds heard today" }
-              = render partial: 'panel'
-            - if @news
-              %p.news= @news
-            - else
-              %p.news.quiet ag éisteacht…
-            %footer.foot
-              %span= Time.current.strftime('%-l:%M %P')
-              %span.moon #{@moon.emoji} #{@moon.name}
-              %span= "#{@species_today} species"
-    %span.spec Inky Impression 7.3″ · Spectra 6 · 800×480
+    = render 'station_screen'

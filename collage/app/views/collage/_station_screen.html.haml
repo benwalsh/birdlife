@@ -1,0 +1,18 @@
+-# The station screen — the exact pixels the Inky shows. Shared by /station (the clean
+-# device view the shooter captures) and /station/preview (the framed e-ink emulation),
+-# so the desktop preview can never drift from what the panel actually renders.
+%main.screen.station
+  %header.head
+    %h1.wordmark Éist
+    %p.place= Station.place&.dig(:en)
+  %hr.rule/
+  %section.collage-area{ "aria-label": "Birds heard today" }
+    = render partial: 'panel'
+  - if @news
+    %p.news= @news
+  - else
+    %p.news.quiet ag éisteacht…
+  %footer.foot
+    %span= Time.current.strftime('%-l:%M %P')
+    %span.moon #{@moon.emoji} #{@moon.name}
+    %span= "#{@species_today} species"
