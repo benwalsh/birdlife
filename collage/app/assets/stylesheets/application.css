@@ -278,9 +278,17 @@ a.bird-card { text-decoration: none; color: inherit; }
 .acct-me-id { display: flex; flex-direction: column; }
 .acct-me-name { font-size: 18px; color: var(--ink); }
 .acct-me-email { font-size: 13px; color: var(--ink-soft); }
-/* Sign out / Admin, pushed to the right of the profile row. */
-.acct-me-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-.acct-me-actions .acct-btn { text-decoration: none; }
+/* Admin (right of the profile row) + Sign out (page foot) — quiet mono links in the
+   masthead-nav voice, not bordered buttons. */
+.acct-me-admin { margin-left: auto; }
+.acct-link {
+  background: transparent; border: 0; padding: 0; cursor: pointer;
+  font: 11px var(--mono); letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-soft); text-decoration: none; transition: color 140ms ease;
+}
+.acct-link:hover { color: var(--ink); }
+.acct-foot { margin-top: 44px; padding-top: 20px; border-top: 1px solid var(--rule); }
+.acct-foot form { margin: 0; }
 .acct-h2 {
   font-size: 13px;
   letter-spacing: 0.08em;

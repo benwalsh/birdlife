@@ -32,7 +32,7 @@ RSpec.describe 'Subscriptions' do
     it 'renders the account page' do
       get '/account'
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include('Alert delivery').and include("Species you're following")
+      expect(response.body).to include('Your daily email').and include("Species you're following")
     end
 
     it 'creates a species subscription' do

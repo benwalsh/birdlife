@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_05_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_05_150000) do
   create_table "detections", force: :cascade do |t|
     t.string "Com_Name", null: false
     t.float "Confidence"

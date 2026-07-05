@@ -17,7 +17,7 @@ class SubscriptionsController < ApplicationController
     @rule_cadence = STANDING_RULES.keys.index_with do |type|
       subs.find_by(alert_type: type, sci_name: nil)&.cadence || 'off'
     end
-    @follow_cadence = @follows.first&.cadence || 'immediate'
+    @follow_cadence = @follows.first&.cadence || 'digest'
     @roundup = subs.exists?(alert_type: 'roundup')
     @species = species_options
   end
@@ -74,7 +74,7 @@ class SubscriptionsController < ApplicationController
   end
 
   def current_follow_cadence
-    current_user.subscriptions.find_by(alert_type: 'species')&.cadence || 'immediate'
+    current_user.subscriptions.find_by(alert_type: 'species')&.cadence || 'digest'
   end
 
   # The 206 Irish (BoCCI) species, bilingual, sorted by English name — a sane

@@ -1,8 +1,8 @@
-- content_for(:title) { "Account · Éin Chulfin" }
+- content_for(:title) { "Account · Éist" }
 
 .acct
   %header.acct-top
-    %a.acct-home{ href: "/" } ← Éin Chulfin
+    %a.acct-home{ href: "/" } ← Éist
     %h1.acct-h1 Account
 
   %section.acct-me
@@ -14,15 +14,16 @@
       %span.acct-me-name= current_user.display_name
       - if current_user.email.present? && current_user.email != current_user.display_name
         %span.acct-me-email= current_user.email
-    .acct-me-actions
-      - if current_user.admin?
-        %a.acct-btn{ href: admin_path } Admin
-      = button_to "Sign out", logout_path, method: :delete, class: "acct-btn acct-remove"
+    - if current_user.admin?
+      %a.acct-link.acct-me-admin{ href: admin_path } Admin
 
   %section.acct-sec
-    %h2.acct-h2 Alert delivery
-    %p.acct-lead Choose how the cottage tells you what it hears. “Digest” gathers a day’s birds into one morning email; “Off” stays silent.
+    %h2.acct-h2 Your daily email
+    %p.acct-lead One email a day. Choose what it covers; “Off” leaves it out.
     %ul.acct-rules
+      %li.acct-rule
+        %span.acct-rule-label The daily letter
+        = render "cadence", alert_type: "roundup", current: (@roundup ? "digest" : "off")
       - SubscriptionsController::STANDING_RULES.each do |type, label|
         %li.acct-rule
           %span.acct-rule-label= label
@@ -32,21 +33,8 @@
         = render "cadence", alert_type: "species", current: @follow_cadence
 
   %section.acct-sec
-    %h2.acct-h2 Daily letter
-    %p.acct-lead A short note about the cottage's day, once each morning — even on a day none of the birds you follow turn up.
-    %ul.acct-rules
-      %li.acct-rule
-        %span.acct-rule-label Send me the daily letter
-        = form_with url: subscription_cadence_path, method: :post, class: "acct-cadence", data: { turbo: false } do
-          = hidden_field_tag :alert_type, "roundup"
-          = button_tag "On", type: :submit, name: "cadence", value: "digest",
-            class: "acct-seg#{' is-on' if @roundup}", "aria-pressed": @roundup
-          = button_tag "Off", type: :submit, name: "cadence", value: "off",
-            class: "acct-seg#{' is-on' unless @roundup}", "aria-pressed": !@roundup
-
-  %section.acct-sec
     %h2.acct-h2 Species you're following
-    %p.acct-lead Follow a bird here or by ticking it on the site; how you're told is set above.
+    %p.acct-lead Follow a bird here or by ticking it on the site; what's in your email is set above.
     - if @follows.any?
       %ul.acct-list
         - @follows.each do |sub|
@@ -65,3 +53,6 @@
         options_for_select(@species.map { |sci, n| [n.ga ? "#{n.en} · #{n.ga}" : n.en, sci] }),
         prompt: "Choose a species…", class: "acct-select"
       = submit_tag "Follow", class: "acct-btn acct-add-btn"
+
+  %footer.acct-foot
+    = button_to "Sign out", logout_path, method: :delete, class: "acct-link"

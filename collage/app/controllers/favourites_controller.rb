@@ -29,6 +29,6 @@ class FavouritesController < ApplicationController
   end
 
   def follow_cadence
-    current_user.subscriptions.find_by(alert_type: 'species')&.cadence || 'immediate'
+    current_user.subscriptions.find_by(alert_type: 'species')&.cadence || 'digest'
   end
 end
