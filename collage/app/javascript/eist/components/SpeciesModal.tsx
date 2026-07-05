@@ -1,10 +1,15 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useSpecies } from '../api'
 import { useLang } from '../lang'
+import { useFollow } from '../favourites'
 import { FollowButton } from './FollowButton'
 import { AudioBar } from './AudioBar'
 import { ago, stamp } from '../time'
-import type { EnrichmentBlock } from '../types'
+import type { Enrichment, EnrichmentBlock } from '../types'
+
+function csrf(): string {
+  return document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? ''
+}
 
 // One fact/folklore block, verbatim from the enrichment bundle, with its citations
 // as quiet host links — the card renders what Ruby sourced, it never re-derives.
@@ -33,6 +38,18 @@ function Lore({ kind, block, tone }: { kind: string; block: EnrichmentBlock; ton
 export function SpeciesModal({ sci, onClose }: { sci: string; onClose: () => void }) {
   const { data } = useSpecies(sci)
   const { lang, setLang, t } = useLang()
+  const { enabled: signedIn } = useFollow()
+  // On-demand look-up result, kept locally so a fetch shows without refetching the card.
+  const [looked, setLooked] = useState<Enrichment | null>(null)
+  const [looking, setLooking] = useState(false)
+  const [lookFailed, setLookFailed] = useState(false)
+
+  // Reset the look-up when the card switches to a different bird (same component).
+  useEffect(() => {
+    setLooked(null)
+    setLooking(false)
+    setLookFailed(false)
+  }, [sci])
 
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -44,12 +61,26 @@ export function SpeciesModal({ sci, onClose }: { sci: string; onClose: () => voi
     }
   }, [onClose])
 
+  // Ask the server to source this bird's facts & folklore now (authed), then show them.
+  const lookUp = () => {
+    setLooking(true)
+    setLookFailed(false)
+    fetch(`/species/${encodeURIComponent(sci)}/enrichment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-Token': csrf() },
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((j) => (j.enrichment ? setLooked(j.enrichment) : setLookFailed(true)))
+      .catch(() => setLookFailed(true))
+      .finally(() => setLooking(false))
+  }
+
   const name = data ? (lang === 'ga' && data.ga ? data.ga : data.en) : ''
   // The other language, shown as the subtitle (Irish under English, or vice versa).
   const subtitle = data ? (lang === 'ga' ? data.en : data.ga) : null
   const desc = data ? (lang === 'ga' ? data.description_ga || data.description : data.description) : null
   const cons = data?.conservation
-  const enr = data?.enrichment
+  const enr = data?.enrichment ?? looked
 
   return (
     <div id="detail-modal" className="is-open">
@@ -91,12 +122,21 @@ export function SpeciesModal({ sci, onClose }: { sci: string; onClose: () => voi
                   <div><span className="n">{ago(data.first_seen)}</span><span className="lbl">{t('first heard', 'chéad chloiste')}</span></div>
                 </div>
                 {desc && <p className="desc">{desc}</p>}
-                {enr && (enr.fact || enr.folklore) && (
+                {enr && (enr.fact || enr.folklore) ? (
                   <div className="modal-lore">
                     {enr.fact && <Lore kind={t('Fact', 'Fíric')} block={enr.fact} tone="is-fact" />}
                     {enr.folklore && <Lore kind={t('Folklore', 'Béaloideas')} block={enr.folklore} tone="is-folk" />}
                   </div>
-                )}
+                ) : signedIn ? (
+                  <button type="button" className="modal-lore-lookup" onClick={lookUp} disabled={looking}>
+                    <i className={`ti ${looking ? 'ti-loader' : 'ti-books'}`} aria-hidden="true" />
+                    {looking
+                      ? t('Looking…', 'Ag cuardach…')
+                      : lookFailed
+                        ? t('Nothing found — try again', 'Faic fós — féach arís')
+                        : t('Look up facts & folklore', 'Cuardaigh fíricí is béaloideas')}
+                  </button>
+                ) : null}
                 {data.song && (
                   <div className="modal-audio">
                     <span className="modal-audio-label">{t('Listen to the call', 'Éist leis an nglaoch')}</span>

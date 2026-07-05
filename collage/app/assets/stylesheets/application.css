@@ -159,6 +159,21 @@ body.modal-open { overflow: hidden; }
 /* Fact & folklore — the latest enrichment for this bird, each block cited. On the
    open page: a printer's-mark label over serif prose, folklore set in the voice-
    italic as lore not fact. No plate. */
+/* The on-demand "look it up now" — a quiet mono prompt (line icon + words), no plate,
+   shown to a signed-in viewer when this bird hasn't been enriched yet. */
+.modal-lore-lookup {
+  display: inline-flex; align-items: center; gap: 8px; margin: 2px 0 18px;
+  background: none; border: 0; padding: 0; cursor: pointer;
+  font: 10px ui-monospace, Menlo, monospace; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--ink-soft);
+  transition: color 140ms ease;
+}
+.modal-lore-lookup .ti { font-size: 15px; }
+.modal-lore-lookup:hover { color: var(--ink); }
+.modal-lore-lookup:disabled { cursor: default; color: var(--ink-soft); }
+@keyframes modal-lore-spin { to { transform: rotate(360deg); } }
+.modal-lore-lookup .ti-loader { animation: modal-lore-spin 900ms linear infinite; }
+
 .modal-lore { margin: 2px 0 18px; display: grid; gap: 15px; }
 .modal-lore-item {
   margin: 0;

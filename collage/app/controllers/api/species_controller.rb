@@ -18,7 +18,10 @@ module Api
         description_ga: SpeciesInfo.irish_for(sci, name.ga),
         song: SongSample.url_for(sci),
         recent: recent.map { |d| { at: d.heard_at&.iso8601, confidence: d.confidence.to_f } },
-        enrichment: enrichment_for(sci)
+        # The latest fact + folklore, if a bundle has been sourced for this bird. Nil
+        # otherwise — the card then offers a signed-in viewer an on-demand look-up
+        # (EnrichmentController), so facts stay reachable regardless of the daily backoff.
+        enrichment: EnrichmentBundle.current(sci)&.to_display
       }
     end
 
@@ -28,29 +31,6 @@ module Api
       Time.zone.parse(string) if string.present?
     rescue ArgumentError
       nil
-    end
-
-    # The latest day's fact + folklore for this bird, drawn verbatim from the most
-    # recent EnrichmentBundle (Ruby computes/sources, the card only renders). Nil
-    # until the enrichment Builder has produced a bundle for the species — the card
-    # simply omits the section, so this is safe to ship ahead of that pipeline.
-    def enrichment_for(sci)
-      bundle = EnrichmentBundle.where(sci_name: sci).order(date: :desc).first
-      return nil unless bundle
-
-      blocks = bundle.block_objects
-      fact = block_json(blocks.find { |b| b.type == 'fact' })
-      folklore = block_json(blocks.find { |b| b.type == 'folklore' })
-      return nil unless fact || folklore
-
-      { date: bundle.date.iso8601, fact: fact, folklore: folklore }
-    end
-
-    def block_json(block)
-      return nil if block.nil? || block.text.blank?
-
-      { text:    block.text,
-        sources: block.sources.filter_map { |s| s[:url].presence && { host: s[:host], url: s[:url] } } }
     end
   end
 end

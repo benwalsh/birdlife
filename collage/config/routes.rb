@@ -32,6 +32,10 @@ Rails.application.routes.draw do
   post   'favourites' => 'favourites#create'
   delete 'favourites' => 'favourites#destroy'
 
+  # On-demand facts & folklore for a bird — the card's "look it up now" for a signed-in
+  # viewer. Authed + CSRF (it triggers a real sourcing run), so out of the /api cache.
+  post 'species/:sci/enrichment' => 'enrichment#create', constraints: { sci: %r{[^/]+} }
+
   # Admin-only health panel (User#admin?, fail-closed). Not linked publicly.
   get 'admin' => 'admin#index', as: :admin
 

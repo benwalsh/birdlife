@@ -29,4 +29,25 @@ class EnrichmentBundle < ApplicationRecord
   def block_objects
     Array(blocks).filter_map { |raw| Enrichment::Block.from(raw) }.select(&:valid?)
   end
+
+  # The card-facing shape: the latest fact + folklore for this bird, each with its
+  # citations. Nil when neither is present. Shared by the species API and the
+  # on-demand look-up so the card renders one consistent object.
+  def to_display
+    found = block_objects
+    fact = display_block(found.find { |b| b.type == 'fact' })
+    folklore = display_block(found.find { |b| b.type == 'folklore' })
+    return nil unless fact || folklore
+
+    { date: date.iso8601, fact: fact, folklore: folklore }
+  end
+
+  private
+
+  def display_block(block)
+    return nil if block.nil? || block.text.blank?
+
+    { text:    block.text,
+      sources: block.sources.filter_map { |s| s[:url].presence && { host: s[:host], url: s[:url] } } }
+  end
 end
