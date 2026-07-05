@@ -34,11 +34,19 @@ gem 'omniauth-rails_csrf_protection'
 # needs it: `bundle config set --without cloud` (see deploy/provision.sh).
 group :cloud do
   gem 'aws-sdk-sesv2' # alert emails via SES templated-email (Notifier); cloud-only
-  # Solid Queue runs the once-a-day enrichment + digest sweep (DailyEmailSweep) in the
-  # cloud. DB-backed (reuses RDS — no Redis) and runs inside Puma via its plugin, so
-  # there's no extra worker container. The Pi never runs jobs (bundle --without cloud).
-  gem 'solid_queue'
   gem 'trilogy'
+end
+
+# The job runner + its dashboard. Solid Queue runs the once-a-day enrichment + digest
+# sweep (DailyEmailSweep) — DB-backed (reuses RDS, no Redis), inside Puma via its plugin
+# so there's no extra worker container. Mission Control is the admin-gated /jobs
+# dashboard: watch each sweep run, inspect its args + the AI text it produced, retry a
+# failure. In :development too so the dashboard can be previewed on the desktop. NOT on
+# the Pi: it runs no jobs (production env; provision.sh sets --without cloud, and
+# production never requires the development group).
+group :development, :cloud do
+  gem 'mission_control-jobs'
+  gem 'solid_queue'
 end
 
 group :development, :test do

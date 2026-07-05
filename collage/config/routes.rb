@@ -39,6 +39,10 @@ Rails.application.routes.draw do
   # Admin-only health panel (User#admin?, fail-closed). Not linked publicly.
   get 'admin' => 'admin#index', as: :admin
 
+  # The background-jobs dashboard (Solid Queue via Mission Control). Admin-gated by
+  # JobsBaseController; cloud-only, so guarded — the gem isn't installed on the Pi.
+  mount MissionControl::Jobs::Engine, at: '/jobs' if defined?(MissionControl::Jobs::Engine)
+
   # The Pi's lazy push lands here (cloud mirror only; 404 on the Pi). Token-authed.
   post 'ingest/detections' => 'ingest#detections'
 

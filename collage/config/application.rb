@@ -36,6 +36,15 @@ module Collage
     # The frame hangs in Connemara; keep everything on Irish local time.
     config.time_zone = 'Europe/Dublin'
 
+    # The jobs dashboard (Mission Control, cloud/dev only — see the Gemfile group).
+    # Configure here, before the engine's own initializer captures the defaults: gate it
+    # through JobsBaseController (admin-only) and drop its built-in HTTP basic auth in
+    # favour of that. Guarded so the Pi (no gem loaded) is unaffected.
+    if defined?(MissionControl::Jobs)
+      config.mission_control.jobs.base_controller_class = 'JobsBaseController'
+      config.mission_control.jobs.http_basic_auth_enabled = false
+    end
+
     config.generators do |g|
       g.template_engine :haml
       g.test_framework :rspec, fixtures: false, view_specs: false,
