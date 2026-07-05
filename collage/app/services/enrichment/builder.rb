@@ -33,13 +33,16 @@ module Enrichment
     }.freeze
 
     SYSTEM = <<~PROMPT.freeze
-      You research one bird species for a rural Irish bird-listening station%<where>s, so
-      its daily note can carry a little true, sourced colour. You may ONLY use the
-      fetch_source tool to learn anything; you have no other knowledge you are allowed to
-      state. Fetch a few trusted pages (Wikipedia, BirdWatch Ireland, the National Folklore
-      Collection at duchas.ie, and the like), then return the blocks.
+      You are the daily researcher for a bird-listening station at %<place>s. Once a day you
+      research one species and save a small set of true, well-sourced blocks that a separate
+      writer will later stitch into readers' notes. You do the research; nobody downstream
+      does any. You may ONLY use the fetch_source tool to learn anything — you have no
+      knowledge of your own that you are allowed to state. Fetch several trusted pages
+      (Wikipedia for the species, BirdWatch Ireland for its Irish status, the National
+      Folklore Collection at duchas.ie and CELT at celt.ucc.ie for lore), read them, then
+      return the blocks.
 
-      Return 2 to 3 blocks as a JSON array and NOTHING else — no prose, no code fence.
+      Return up to 3 blocks as a JSON array and NOTHING else — no prose, no code fence.
       Each block is an object:
         { "type": "fact" | "regional_note" | "folklore",
           "id": "short-kebab-id",
@@ -47,26 +50,35 @@ module Enrichment
           "sources": [ { "host": "en.wikipedia.org", "url": "https://..." } ],
           "gated": false }
 
-      Block types:
-        fact          — a general, checkable fact about the species (identification, voice,
-                        diet, nesting). Prefer something a listener would find quietly
-                        interesting.
-        regional_note — its standing in Ireland specifically (status, distribution, an Irish
-                        name's meaning). Include only if a source supports it.
-        folklore      — a genuine piece of recorded lore or naming tradition. Set
-                        "gated": true on folklore, ALWAYS. Frame it as lore, not fact.
+      Aim for ONE of each type when the sources support it:
+        fact          — the most vivid, memorable thing about the species: a striking
+                        behaviour, its voice, how it feeds or nests, a naming quirk. Reach for
+                        what would make a listener look up, NOT its length and weight. Skip
+                        bare measurements.
+        regional_note — its connection to %<place>s and Ireland specifically: local status or
+                        distribution, where near here it turns up, or the meaning of its Irish
+                        name. This is the local hook — source it from BirdWatch Ireland (incl.
+                        the relevant county branch) where you can.
+        folklore      — a genuine piece of recorded lore, belief, or naming tradition, ideally
+                        Irish (duchas.ie / celt.ucc.ie). Set "gated": true on folklore ALWAYS,
+                        and frame it as lore, not fact.
 
       ABSOLUTE RULES:
       - State ONLY what a fetched source supports. Every block needs at least one source you
         actually fetched with fetch_source; put the exact URL(s) in "sources".
       - Never invent, guess, or fill gaps from memory. If you cannot source something, omit
-        that block. Two solid blocks beat three shaky ones.
+        that block. Two vivid, solid blocks beat three dull or shaky ones.
       - Never link the bird to weather, wind, temperature, or the sky.
-      - Plain, calm sentences. No exclamation marks. Do not mention this station's own counts.
+      - Plain, calm sentences. No exclamation marks. Do not mention the station's own counts.
       - Output the JSON array only.
     PROMPT
 
     class << self
+      # The last exception the model call raised (or nil) — so a caller can explain WHY
+      # a run produced nothing (e.g. the Bedrock Anthropic use-case form isn't submitted)
+      # rather than silently returning empty.
+      attr_reader :last_error
+
       # Build (and store) bundles for every notable species on `date`. Returns the
       # bundles produced. Species that yield no valid block are skipped, not stored.
       def run(date: Date.current, only: nil)
@@ -97,18 +109,20 @@ module Enrichment
 
       # Run the tool-use loop and return the surviving validated Blocks.
       def source_blocks(sci_name:, common_name:)
+        @last_error = nil
         run_id = SecureRandom.uuid
         fetcher = SourceFetcher.new(sci_name: sci_name, run_id: run_id)
         final = converse_loop(sci_name: sci_name, common_name: common_name, fetcher: fetcher)
         fetched = SourceFetchLog.where(run_id: run_id).pluck(:url).to_set
         parse_blocks(final).filter_map { |raw| vet(raw, fetched) }
       rescue StandardError => e
+        @last_error = e
         Rails.logger.warn("Enrichment::Builder: #{sci_name} failed (#{e.class}: #{e.message})")
         []
       end
 
       def converse_loop(sci_name:, common_name:, fetcher:)
-        system = format(SYSTEM, where: station_context)
+        system = format(SYSTEM, place: station_place)
         messages = [{ role: 'user', content: [{ text: "Species: #{common_name} (#{sci_name})." }] }]
 
         MAX_ROUNDS.times do
@@ -168,8 +182,10 @@ module Enrichment
         block if block&.valid?
       end
 
-      def station_context
-        Station.region.present? ? " in #{Station.region}" : ''
+      # The station's precise place (config-resolved, never hard-coded), which anchors
+      # the local-connection block. Falls back to the country when nothing is configured.
+      def station_place
+        Station.region.presence || 'a location in Ireland'
       end
     end
   end

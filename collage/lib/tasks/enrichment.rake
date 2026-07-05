@@ -41,6 +41,14 @@ namespace :birdlife do
     bundles = EnrichmentBundle.for_date(date).select { |b| b.block_objects.any? }
     if bundles.empty?
       puts '  no enrichment available — the email will use the plain summary.'
+      if (err = Enrichment::Builder.last_error)
+        puts "  reason: #{err.class} — #{err.message.to_s.lines.first&.strip}"
+        if err.message.to_s.match?(/use case|not been submitted|AccessDenied|ResourceNotFound/i)
+          puts '  → the Bedrock Anthropic "use case details" form is not submitted for this'
+          puts '    account. Fill it in the AWS console (Bedrock → Model access), wait ~15 min,'
+          puts '    then re-run. Claude is the sourcing model; do not swap in another.'
+        end
+      end
     else
       bundles.each { |b| print_bundle(b) }
     end
