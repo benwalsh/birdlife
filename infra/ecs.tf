@@ -95,8 +95,10 @@ locals {
   ecs_origin_host = replace(module.express_service.ingress_paths[0].endpoint, "https://", "")
 }
 
-# Let the ECS task call Nova Lite (Converse → InvokeModel) for the "today" summary,
-# scoped to the EU inference profile + its underlying foundation model.
+# Let the ECS task call Bedrock (Converse → InvokeModel) — Nova Lite for the "today"
+# summary, and Claude for the enrichment pass. Bedrock no longer requires per-model
+# access grants, so this allows InvokeModel across foundation models + inference
+# profiles rather than naming one model.
 resource "aws_iam_role_policy" "task_bedrock" {
   name = "culfinbirds-task-bedrock"
   role = module.express_service.task_iam_role_name
@@ -104,12 +106,12 @@ resource "aws_iam_role_policy" "task_bedrock" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Sid    = "InvokeNovaLite"
+      Sid    = "InvokeBedrock"
       Effect = "Allow"
-      Action = ["bedrock:InvokeModel"]
+      Action = ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"]
       Resource = [
-        "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:inference-profile/eu.amazon.nova-lite-v1:0",
-        "arn:aws:bedrock:*::foundation-model/amazon.nova-lite-v1:0"
+        "arn:aws:bedrock:*::foundation-model/*",
+        "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:inference-profile/*"
       ]
     }]
   })
