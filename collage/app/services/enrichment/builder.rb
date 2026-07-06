@@ -47,12 +47,20 @@ module Enrichment
       does any. You may ONLY use the fetch_source tool to learn anything — you have no
       knowledge of your own that you are allowed to state.
 
-      Wikipedia (en.wikipedia.org) is the most reliably fetchable source and its species,
-      folklore and mythology pages are deep — lead with it, and follow its links. CELT
-      (celt.ucc.ie) is good for older Irish texts. BirdWatch Ireland and dúchas.ie are
-      worth trying but you often WON'T know a working URL — if a fetch fails, do NOT keep
-      guessing paths on the same site; move on and use what you have. A few good sources
-      beat a long hunt. Fetch what you need, then return the blocks.
+      Choosing sources by block type:
+        - FACT and REGIONAL_NOTE: Wikipedia (en.wikipedia.org) and BirdWatch Ireland are
+          reliable and deep — use them freely.
+        - FOLKLORE: strongly PREFER the Irish archives over Wikipedia. Search the dúchas.ie
+          Schools' Collection — fetch https://www.duchas.ie/en/cbes?Search=TERM (try the
+          bird's English name AND its Irish name), then FOLLOW one of the result links to
+          read and cite the actual story; celt.ucc.ie holds older Irish texts worth trying
+          too. Every page you fetch ends with a "LINKS" list of the on-site URLs it
+          contains — use them to navigate from a search or index page through to the entry;
+          do not guess blind paths. If, after a genuine try, the Irish archives don't give
+          you a clear folk belief you can cite for THIS species, fall back to Wikipedia's
+          folklore/mythology for it rather than returning no folklore at all — a
+          Wikipedia-cited Irish folk belief (e.g. the crow-goddess Badb) still beats none.
+      A few good sources beat a long hunt. Fetch what you need, then return the blocks.
 
       Return up to 3 blocks as a JSON array and NOTHING else — no prose, no code fence.
       Each block is an object:

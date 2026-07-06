@@ -21,6 +21,7 @@ module Enrichment
     ].freeze
     AFFILIATE = /\Abirdwatch[a-z]+\.(?:ie|org)\z/
     MAX_CHARS = 4000
+    MAX_LINKS = 30 # on-site links appended so the model can navigate a search/index page
     USER_AGENT = 'birdlife/1.0 (Eist bird detector; enrichment)'.freeze
     # The Irish heritage sources (dúchas.ie, CELT) answer with a 301 before serving the
     # page, so we MUST follow redirects or they always read as "fetch failed" and the model
@@ -42,7 +43,7 @@ module Enrichment
       return { error: "fetch failed: #{url}" } unless body
 
       log!(host, url)
-      { host: host, url: url, text: extract_text(body) }
+      { host: host, url: url, text: extract_text(body, url) }
     rescue StandardError => e
       { error: "#{e.class}: #{e.message}" }
     end
@@ -55,10 +56,10 @@ module Enrichment
 
     private
 
+    # Host straight off the string — robust to un-encoded query chars (e.g. a fada in a
+    # dúchas search term), where URI.parse would choke and wrongly read as untrusted.
     def host_of(url)
-      URI.parse(url.to_s).host&.downcase
-    rescue URI::InvalidURIError
-      nil
+      url.to_s[%r{\Ahttps?://([^/?#]+)}i, 1]&.downcase
     end
 
     def http_get(url, redirects_left: MAX_REDIRECTS)
@@ -87,10 +88,43 @@ module Enrichment
       nil
     end
 
-    def extract_text(html)
+    def extract_text(html, base_url)
       doc = Nokogiri::HTML(html)
       doc.search('script, style, nav, header, footer').remove
-      doc.text.gsub(/\s+/, ' ').strip.first(MAX_CHARS)
+      text = doc.text.gsub(/\s+/, ' ').strip.first(MAX_CHARS)
+      links = onsite_links(doc, base_url)
+      links.empty? ? text : "#{text}\n\nLINKS (fetch one to read the full entry):\n#{links.join("\n")}"
+    end
+
+    # Trusted, on-host links found in the content, absolutised and de-duped — so the model
+    # can navigate a search or index page (e.g. a dúchas result list) through to the actual
+    # entry. Capped so they never crowd out the text. Stripping the hrefs was why dúchas/CELT
+    # searches were dead ends: the model saw result titles but no URL to follow.
+    def onsite_links(doc, base_url)
+      base = safe_uri(base_url)
+      return [] unless base
+
+      doc.css('a[href]').filter_map do |a|
+        next if a.text.strip.empty?
+
+        target = safe_join(base, a['href'])
+        host = host_of(target)
+        next if target.nil? || host.nil? || !trusted?(host) || target == base_url
+
+        target
+      end.uniq.first(MAX_LINKS)
+    end
+
+    def safe_uri(url)
+      URI.parse(url)
+    rescue URI::InvalidURIError
+      nil
+    end
+
+    def safe_join(base, href)
+      URI.join(base, href).to_s
+    rescue URI::InvalidURIError, ArgumentError
+      nil
     end
 
     def log!(host, url)

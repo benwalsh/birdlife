@@ -39,6 +39,19 @@ RSpec.describe Enrichment::SourceFetcher do
       expect(SourceFetchLog.last).to have_attributes(host: 'www.duchas.ie', sci_name: 'Cuculus canorus')
     end
 
+    # Stripping hrefs was why dúchas/CELT searches dead-ended: the model saw result titles
+    # but no URL to follow. Trusted on-site links are now appended (relative → absolute),
+    # off-allowlist ones excluded, so a search page can be navigated to the actual entry.
+    it 'appends trusted on-site links so a search/index page can be navigated' do
+      html = '<html><body><p>Results for crow.</p>' \
+             '<a href="/en/cbes/4602668">A story mentioning crows</a>' \
+             '<a href="https://evil.example.com/x">off-site</a></body></html>'
+      allow(fetcher).to receive(:http_get).and_return(html)
+      result = fetcher.fetch('https://www.duchas.ie/en/cbes?Search=crow')
+      expect(result[:text]).to include('LINKS').and include('https://www.duchas.ie/en/cbes/4602668')
+      expect(result[:text]).not_to include('evil.example.com')
+    end
+
     it 'returns an error (no raise, no log) when the request fails' do
       allow(fetcher).to receive(:http_get).and_return(nil)
       result = fetcher.fetch('https://duchas.ie/x')
