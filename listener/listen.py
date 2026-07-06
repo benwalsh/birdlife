@@ -29,7 +29,7 @@ import sqlite3
 import sys
 import tempfile
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 def _install_litert_shim():
@@ -91,6 +91,40 @@ def insert_detections(detections: list[dict], source: str, lat: float, lon: floa
     finally:
         con.close()
     return len(rows)
+
+
+# When we last wrote a liveness tick (monotonic seconds). Throttles the writes so a 15s
+# capture loop doesn't insert thousands of rows a day — one a minute is ample resolution.
+_last_heartbeat = 0.0
+HEARTBEAT_EVERY = 60.0  # seconds between ticks
+HEARTBEAT_KEEP = timedelta(days=2)  # ticks older than this are pruned; only the recent window matters
+
+
+def record_heartbeat(source: str) -> None:
+    """Note that the listener captured and analysed a chunk just now, even a quiet one —
+    proof the mic -> BirdNET loop is alive. Throttled (see _last_heartbeat) and
+    self-pruning so the table stays tiny. A capture error skips this, so a dead mic
+    leaves a gap in the ticks rather than a false 'alive'."""
+    global _last_heartbeat
+    now_mono = time.monotonic()
+    if now_mono - _last_heartbeat < HEARTBEAT_EVERY:
+        return
+    _last_heartbeat = now_mono
+
+    path = db_path()
+    if not path.exists():
+        return
+    now = datetime.now()
+    con = sqlite3.connect(path)
+    con.execute("PRAGMA busy_timeout=5000")
+    try:
+        con.execute("INSERT INTO heartbeats (at, source) VALUES (?, ?)",
+                    (now.strftime("%Y-%m-%d %H:%M:%S"), source))
+        con.execute("DELETE FROM heartbeats WHERE at < ?",
+                    ((now - HEARTBEAT_KEEP).strftime("%Y-%m-%d %H:%M:%S"),))
+        con.commit()
+    finally:
+        con.close()
 
 
 def analyze_file(analyzer, path: Path, lat: float, lon: float, min_conf: float) -> list[dict]:
@@ -177,6 +211,10 @@ def cmd_listen(args, analyzer, lat, lon, min_conf):
                 insert_detections(detections, "live-mic", lat, lon)
             else:
                 print(f"[{stamp}] quiet")
+            # Either way the mic was alive and we analysed a chunk — record a liveness
+            # tick (throttled) so this window is a true 0, not missing data. Reached only
+            # on a clean capture; the PortAudioError branch above `continue`s past it.
+            record_heartbeat("live-mic")
     except KeyboardInterrupt:
         print("\nstopped.")
 

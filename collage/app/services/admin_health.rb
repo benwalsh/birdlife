@@ -2,15 +2,15 @@
 # computed in one place so the view only prints. Read-only; safe to call on every
 # admin page load.
 #
-# Liveness is inferred from the most recent detection's heard-at time, because the
-# detections table carries no ingest timestamp. That's an honest proxy — during the
-# day birds are frequent enough that a stale "last heard" means the mic → BirdNET →
-# push → RDS chain has stalled — but it can't tell a genuinely quiet night from a
-# broken pipe. A dedicated push heartbeat (a ping every cycle, even empty ones) would
-# make it unambiguous; that needs a listener-side change, so it's a follow-up.
+# Liveness keys off the listener's HEARTBEAT — a tick written every listening cycle, even
+# quiet ones (see Heartbeat / listener). So the dot reflects "is the mic → BirdNET loop
+# running", which a genuinely quiet night no longer dims: a quiet spell still ticks, only
+# a stalled feed goes dark. "Last heard" is reported alongside as activity, not liveness.
+# Where no ticks exist yet (the cloud mirror, which doesn't sync them; or a pre-upgrade
+# box), it falls back to the old last-heard proxy so the panel still says something.
 class AdminHealth
-  FRESH = 30.minutes  # green: heard something recently, chain is flowing
-  QUIET = 6.hours     # amber: nothing lately — quiet, or possibly stalled
+  FRESH = 30.minutes  # green: ticked recently, the loop is running
+  QUIET = 6.hours     # amber: no tick lately — likely stalled
 
   class << self
     def snapshot(now: Time.current)
@@ -31,10 +31,13 @@ class AdminHealth
   def listening
     last = Detection.where.not(Date: nil).where.not(Time: nil).order(Date: :desc, Time: :desc).first
     heard = last&.heard_at
+    alive = Heartbeat.last_at
     {
       last_heard_at:       heard,
       last_heard_ago:      heard && (@now - heard),
-      freshness:           freshness(heard),
+      last_alive_at:       alive,
+      last_alive_ago:      alive && (@now - alive),
+      freshness:           freshness(alive, heard),
       last_species:        last && BirdName.lookup(last.Sci_Name),
       detections_today:    Detection.today.count,
       detections_all_time: Detection.count,
@@ -43,11 +46,15 @@ class AdminHealth
     }
   end
 
-  # fresh / quiet / stale — or none when nothing has ever been heard.
-  def freshness(heard)
-    return :none unless heard
+  # fresh / quiet / stale — from whichever is more recent, a heartbeat or a detection
+  # (both prove the loop ran). The heartbeat is what keeps a genuinely quiet spell green;
+  # a detection alone still works where ticks aren't present (cloud mirror / pre-upgrade).
+  # Only when neither has happened lately is the feed actually stalled. None if never.
+  def freshness(alive, heard)
+    signal = [alive, heard].compact.max
+    return :none unless signal
 
-    ago = @now - heard
+    ago = @now - signal
     return :fresh if ago <= FRESH
     return :quiet if ago <= QUIET
 

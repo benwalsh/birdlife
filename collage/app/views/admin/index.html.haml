@@ -18,15 +18,18 @@
     %h2.acct-h2 Listening
     %p.adm-lead
       %span.adm-dot{ class: l[:freshness] }
-      - if l[:last_heard_at]
-        %span
-          Last heard #{time_ago_in_words(l[:last_heard_at])} ago
-          - if l[:last_species]
-            — #{l[:last_species].en}
-        %span.adm-abs= l[:last_heard_at].strftime("%-d %b, %H:%M")
+      - if l[:last_alive_at]
+        %span Mic alive — last tick #{time_ago_in_words(l[:last_alive_at])} ago
+        %span.adm-abs= l[:last_alive_at].strftime("%-d %b, %H:%M")
+      - elsif l[:last_heard_at]
+        %span Last heard #{time_ago_in_words(l[:last_heard_at])} ago
+        %span.adm-abs no heartbeat yet
       - else
-        %span Nothing heard yet.
-    %p.adm-note Liveness is inferred from the last detection — a quiet night reads the same as a stalled feed. A push heartbeat would tell them apart.
+        %span Nothing yet.
+    %p.adm-note
+      - if l[:last_heard_at]
+        Last bird #{time_ago_in_words(l[:last_heard_at])} ago#{l[:last_species] ? " — #{l[:last_species].en}" : ''}.
+      A heartbeat ticks every listening cycle, even quiet ones — so the dot dims only when the mic → BirdNET loop actually stalls, not on a quiet spell. A quiet window is a true zero; a missing tick is missing data.
     .adm-stats
       .adm-stat
         %span.adm-fig= number_with_delimiter(l[:detections_today])

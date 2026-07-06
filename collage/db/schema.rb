@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_05_170000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_05_180000) do
   create_table "detections", force: :cascade do |t|
     t.string "Com_Name", null: false
     t.float "Confidence"
@@ -50,6 +50,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_05_170000) do
     t.string "sci_name", null: false
     t.datetime "updated_at", null: false
     t.index ["event_type", "sci_name", "occurred_on"], name: "index_events_on_event_type_and_sci_name_and_occurred_on", unique: true
+  end
+
+  create_table "heartbeats", force: :cascade do |t|
+    t.datetime "at", null: false
+    t.string "source"
+    t.index ["at"], name: "index_heartbeats_on_at"
   end
 
   create_table "settings", force: :cascade do |t|

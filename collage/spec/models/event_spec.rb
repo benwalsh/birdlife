@@ -17,8 +17,9 @@ RSpec.describe Event do
   # The kind label is the shared "news" wording the wall, the site strip and the email
   # all read from — one source, so the three surfaces never drift apart.
   it 'names each newsworthy kind bilingually' do
-    expect(described_class.new(event_type: 'rarity').kind_label).to eq(en: 'Rarity', ga: 'Annamh')
-    expect(described_class.new(event_type: 'first_ever').kind_label).to eq(en: 'First ever', ga: 'Céaduair riamh')
-    expect(described_class.new(event_type: 'seasonal').kind_label).to eq(en: 'Seasonal return', ga: 'Filleadh séasúrach')
+    label = ->(kind) { described_class.new(event_type: kind).kind_label }
+    expect(label['rarity']).to eq(en: 'Rarity', ga: 'Annamh')
+    expect(label['first_ever']).to eq(en: 'First ever', ga: 'Céaduair riamh')
+    expect(label['seasonal']).to eq(en: 'Seasonal return', ga: 'Filleadh séasúrach')
   end
 end
