@@ -36,6 +36,22 @@ RSpec.describe 'Panel' do
       expect(response.body).not_to include('Spectra 6')  # the frame/spec is preview-only
       expect(response.body).not_to include('stat-grid')
     end
+
+    # The news line is a subset of the SAME breaking Events the website strip and the
+    # email carry — never copy of the panel's own — with the shared bilingual kind label.
+    it 'shows the freshest breaking event, using the shared kind label' do
+      create(:event, event_type: 'rarity', sci_name: 'Piranga olivacea', occurred_on: Date.current)
+      get '/station'
+      expect(response.body).to include('Annamh · Scarlet Tanager')
+    end
+
+    # A quiet day carries no news: the panel falls through to the listening state rather
+    # than inventing a headline of its own.
+    it 'falls through to the listening state when nothing is breaking' do
+      get '/station'
+      expect(response.body).to include('ag éisteacht')
+      expect(response.body).not_to include('leads the morning')
+    end
   end
 
   # /station/preview is the desktop emulation: the same screen, wrapped in the bog-oak

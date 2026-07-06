@@ -68,7 +68,7 @@ class CollageController < ApplicationController
                                            margin: 6, x_bias: 0.82, y_bias: 1.0)
     @species_today = Detection.tally_for.size
     @moon = MoonPhase.for
-    @news = station_news(tally)
+    @news = station_news
   end
 
   def collage
@@ -90,30 +90,19 @@ class CollageController < ApplicationController
     @moon = MoonPhase.for
   end
 
-  # One calm line of "news" for the glass, from the same facts engine the website
-  # reads — no LLM on the panel (the wall owes the internet nothing). Leads with the
-  # day's most notable item (a first / arrival / rarity); falls back to the busiest
-  # species when nothing stands out.
-  def station_news(tally)
-    return nil if tally.empty?
+  # One calm line of news for the glass — a subset of the exact same content the website
+  # and the email carry, never anything of the panel's own. It's the freshest breaking
+  # Event (rarity / first-ever / seasonal), shown with the shared bilingual kind label,
+  # Irish-first in the wall's voice. Quiet days carry no news, so the view falls through
+  # to the listening state rather than the panel inventing a headline. No LLM on the
+  # panel — it reads a fired Event from the store, it doesn't narrate.
+  def station_news
+    event = Event.breaking.first
+    return nil unless event
 
-    notable = DailyFacts.for[:notable_today].first
-    if notable
-      name = BirdName.lookup(notable[:sci_name])
-      "#{name.ga || name.en} · #{station_news_note(notable)}"
-    else
-      top = tally.max_by(&:count)
-      name = top.name
-      "#{name.ga || name.en} leads the morning · #{top.count} calls"
-    end
-  end
-
-  # The house-voice reason a notable item matters, from its flags.
-  def station_news_note(item)
-    return 'first record at the station' if item[:flags].include?('all_time_first')
-    return 'first of the year' if item[:flags].include?('year_first')
-
-    'a scarce visitor'
+    label = event.kind_label
+    name = BirdName.lookup(event.sci_name)
+    "#{label[:ga] || label[:en]} · #{name.ga || name.en}"
   end
 
   # The card's featured bird: most recently heard, ties broken by call count.

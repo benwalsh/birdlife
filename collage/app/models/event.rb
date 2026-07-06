@@ -7,6 +7,15 @@ class Event < ApplicationRecord
   # never appears on the public breaking strip.
   NEWS_TYPES = %w[rarity first_ever seasonal].freeze
 
+  # The bilingual name for each newsworthy kind — the one wording the wall, the site's
+  # breaking strip and the alert email all use, so "news" reads identically everywhere.
+  # (BreakingNews.tsx carries the same words for the client strip.)
+  KIND_LABEL = {
+    'first_ever' => { en: 'First ever',      ga: 'Céaduair riamh' },
+    'rarity'     => { en: 'Rarity',          ga: 'Annamh' },
+    'seasonal'   => { en: 'Seasonal return', ga: 'Filleadh séasúrach' }
+  }.freeze
+
   validates :event_type, :sci_name, :occurred_on, presence: true
 
   scope :pending, -> { where(notified_at: nil) }
@@ -18,5 +27,10 @@ class Event < ApplicationRecord
 
   def mark_notified!
     update!(notified_at: Time.current)
+  end
+
+  # The kind's bilingual label, e.g. { en: 'Rarity', ga: 'Annamh' }.
+  def kind_label
+    KIND_LABEL[event_type] || { en: event_type, ga: event_type }
   end
 end
