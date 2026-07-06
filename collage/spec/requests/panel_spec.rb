@@ -37,37 +37,38 @@ RSpec.describe 'Panel' do
       expect(response.body).not_to include('stat-grid')
     end
 
-    # The news line is a subset of the SAME breaking Events the website strip and the
-    # email carry — never copy of the panel's own — with the shared bilingual kind label.
-    it 'shows the freshest breaking event, using the shared kind label' do
-      create(:event, event_type: 'rarity', sci_name: 'Piranga olivacea', occurred_on: Date.current)
+    # The plate is a frozen daily edition; the day's growth shows only in the live line —
+    # the running species count and the most recent arrival with its time.
+    it 'shows the running species count and the most recent arrival' do
+      Station.language = :en
       get '/station'
-      expect(response.body).to include('Annamh · Scarlet Tanager')
+      expect(response.body).to include('1 species today')
+      expect(response.body).to match(%r{\+ European Robin at \d{2}:\d{2}})
     end
 
-    # A quiet day carries no news: the panel falls through to the listening state rather
-    # than inventing a headline of its own.
-    it 'falls through to the listening state when nothing is breaking' do
+    # An honest "updated" stamp + a listening status marker — NOT a live clock.
+    it 'stamps when it was updated and shows the recorder status, not a clock' do
+      Station.language = :en
       get '/station'
-      expect(response.body).to include('ag éisteacht')
-      expect(response.body).not_to include('leads the morning')
+      expect(response.body).to include('class="status"')
+      expect(response.body).to match(/updated \d{2}:\d{2}/)
+      expect(response.body).to include('listening')          # a recent detection → alive
+      expect(response.body).not_to include('class="clock"')  # the live clock is gone
     end
 
-    # Device chrome (not bird content): a clock and a pointer to the full site.
-    it 'shows a clock and a wayfinding link to the site' do
+    # With nothing heard today, the arrival line rests in the listening state.
+    it 'rests in the listening state before anything is heard' do
+      Detection.delete_all
       get '/station'
-      expect(response.body).to include('class="clock"')
-      expect(response.body).to include(Station.url)
-      expect(response.body).to match(/class="wayfind-hint">.*ag/m) # Irish by default
+      expect(response.body).to include('ag éisteacht') # Irish by default
     end
 
     # The panel speaks ONE language throughout — the admin-set one, never mixed.
     it 'renders every string in the configured language' do
       Station.language = :en
       get '/station'
-      expect(response.body).to include('listening…')      # not "ag éisteacht…"
-      expect(response.body).to include('see more at')     # not "tuilleadh ag"
-      expect(response.body).not_to include('ag éisteacht')
+      expect(response.body).to include('species today').and include('updated').and include('see more at')
+      expect(response.body).not_to include('speiceas inniu')
     end
   end
 

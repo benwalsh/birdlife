@@ -4,6 +4,8 @@ class CollageController < ApplicationController
   # How long each kiosk card holds before the next fades in (seconds). Floor of 8s
   # so an over-eager env value can't strobe the display.
   KIOSK_DWELL_SECONDS = [ENV.fetch('KIOSK_DWELL_SECONDS', 30).to_i, 8].max
+  # A heartbeat within this reads "listening"; older, "recorder quiet since…".
+  STATION_FRESH = 30.minutes
 
   # / — the Éist React SPA host. The editorial layout renders only the mount
   # point; all view data comes from /api/*. The first paint is seeded by a small
@@ -42,10 +44,10 @@ class CollageController < ApplicationController
     render layout: false
   end
 
-  # /station — the clean 480×800 screen the Inky shows and the shooter captures: a
-  # title, the collage big and dominant, a news line, a footer (time · moon · species).
-  # No frame, no e-ink filter — the panel dithers a full-colour source itself. Nothing
-  # cycles: e-ink refreshes on change, it doesn't rotate.
+  # /station — the clean 480×800 screen the Inky shows and the shooter captures: a daily
+  # printed-broadside edition — the frozen collage plate, a live line (species count + the
+  # latest arrival), the ambient almanac, and a status marker with an honest "updated"
+  # stamp (not a live clock). No frame, no e-ink filter — the panel dithers it itself.
   def station
     load_station
     render layout: false
@@ -61,16 +63,45 @@ class CollageController < ApplicationController
   private
 
   def load_station
-    tally = Detection.tally_within(current_window)
-    # Portrait cluster (taller than wide) so the flock fills the tall Inky panel
-    # with big birds, rather than a landscape band floating in whitespace.
-    @collage = CollagePresenter.new(tally, width: 452, height: 600, top_inset: 4, bottom_inset: 4,
-                                           margin: 6, x_bias: 0.82, y_bias: 1.0)
-    @news = station_news
+    now = Time.current
+    @updated_at = now
+    # The collage is a FROZEN daily edition — the day's flock packed once and held, so the
+    # panel reads like a printed field-guide plate, not a churning dashboard. New birds land
+    # only in the live line below; tomorrow brings a fresh plate. Cached by the Dublin date
+    # (the packer is date-seeded, so a fixed input is a fixed layout all day).
+    edition = Rails.cache.fetch("station-edition-#{now.to_date}", expires_in: 26.hours) do
+      Detection.tally_within(current_window)
+    end
+    @collage = CollagePresenter.new(edition, width: 452, height: 600, top_inset: 4, bottom_inset: 4,
+                                             margin: 6, x_bias: 0.82, y_bias: 1.0)
+    @species_today = Detection.tally_for.size
+    @arrival = latest_arrival
+    @status = station_status(now)
     # The footer is a subset of the home page's ambient almanac — the same bilingual
     # line-icon readings — not a parallel set of the panel's own. Place already sits in
     # the header, so drop that one item to avoid saying it twice.
     @almanac = TodayCard.almanac.reject { |item| item[:icon] == 'ti-map-pin' }
+  end
+
+  # The most recent species to make its FIRST appearance today, with that time — the one
+  # addition worth a line while the frozen plate stays put. nil until something is heard.
+  def latest_arrival
+    firsts = Detection.on_date(Time.zone.today).group(:Sci_Name).minimum(Arel.sql(Detection.when_sql))
+    return nil if firsts.blank?
+
+    sci, whenstr = firsts.max_by { |_sci, w| w.to_s }
+    { name: BirdName.lookup(sci), at: Time.zone.parse(whenstr.to_s) }
+  rescue ArgumentError, TypeError
+    nil
+  end
+
+  # Is the recorder alive? The freshest of a heartbeat tick or a detection — "listening" if
+  # recent, else quiet-since. Same signal as AdminHealth, in the wall's calmer voice.
+  def station_status(now)
+    tick  = Heartbeat.last_at
+    heard = Detection.where.not(Date: nil).where.not(Time: nil).order(Date: :desc, Time: :desc).first&.heard_at
+    alive = [tick, heard].compact.max
+    { listening: alive.present? && alive > now - STATION_FRESH, since: alive }
   end
 
   def collage
@@ -90,20 +121,6 @@ class CollageController < ApplicationController
     @featured = station_feature(tally)
     @periods = Detection.by_period
     @moon = MoonPhase.for
-  end
-
-  # One calm line of news for the glass — a subset of the exact same content the website
-  # and the email carry, never anything of the panel's own. It's the freshest breaking
-  # Event (rarity / first-ever / seasonal), shown with the shared bilingual kind label,
-  # Irish-first in the wall's voice. Quiet days carry no news, so the view falls through
-  # to the listening state rather than the panel inventing a headline. No LLM on the
-  # panel — it reads a fired Event from the store, it doesn't narrate.
-  def station_news
-    event = Event.breaking.first
-    return nil unless event
-
-    name = BirdName.lookup(event.sci_name)
-    "#{station_text(event.kind_label)} · #{name.public_send(station_lang) || name.en}"
   end
 
   # The panel's one language (:ga or :en) — an admin sets it; every string on the screen
