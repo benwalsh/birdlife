@@ -47,6 +47,7 @@ Rails.application.routes.draw do
 
   # The Pi's lazy push lands here (cloud mirror only; 404 on the Pi). Token-authed.
   post 'ingest/detections' => 'ingest#detections'
+  post 'ingest/heartbeats' => 'ingest#heartbeats'
 
   # JSON API for the React SPA (and, later, api.culfinbirds.net). Read-only GETs.
   namespace :api do

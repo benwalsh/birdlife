@@ -21,6 +21,11 @@ RSpec.describe 'Ingest' do
       ingest(rows)
       expect(response).to have_http_status(:not_found)
     end
+
+    it 'disables the heartbeats endpoint too' do
+      post '/ingest/heartbeats', params: { heartbeats: [] }, as: :json
+      expect(response).to have_http_status(:not_found)
+    end
   end
 
   context 'when a token is configured (the cloud)' do
@@ -60,6 +65,41 @@ RSpec.describe 'Ingest' do
 
     it 'skips rows without a dedupe_key' do
       expect { ingest([rows.first.except(:dedupe_key)]) }.not_to change(Detection, :count)
+    end
+
+    describe 'heartbeats — the liveness half of the push' do
+      let(:ticks) do
+        [{ at: 2.minutes.ago.strftime('%F %T'), source: 'live-mic', dedupe_key: 'hb-a' },
+         { at: 1.minute.ago.strftime('%F %T'), source: 'live-mic', dedupe_key: 'hb-b' }]
+      end
+
+      def ingest_ticks(body, bearer: token)
+        headers = bearer ? { 'Authorization' => "Bearer #{bearer}" } : {}
+        post '/ingest/heartbeats', params: { heartbeats: body }, headers: headers, as: :json
+      end
+
+      it 'upserts ticks, keyed on dedupe_key' do
+        ingest_ticks(ticks)
+        expect(response.parsed_body['upserted']).to eq(2)
+        expect(Heartbeat.pluck(:dedupe_key)).to contain_exactly('hb-a', 'hb-b')
+      end
+
+      it 'is idempotent — re-POSTing the same ticks adds nothing' do
+        ingest_ticks(ticks)
+        expect { ingest_ticks(ticks) }.not_to change(Heartbeat, :count)
+      end
+
+      it 'rejects a bad token and skips keyless rows' do
+        ingest_ticks(ticks, bearer: 'wrong')
+        expect(response).to have_http_status(:unauthorized)
+        expect { ingest_ticks([ticks.first.except(:dedupe_key)]) }.not_to change(Heartbeat, :count)
+      end
+
+      it 'prunes ticks older than the retention window' do
+        stale = create(:heartbeat, at: 3.days.ago, dedupe_key: 'old')
+        ingest_ticks(ticks)
+        expect(Heartbeat.exists?(stale.id)).to be(false)
+      end
     end
   end
 end

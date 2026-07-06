@@ -22,11 +22,11 @@ serve:  ## run the collage web app  (override with: make serve PORT=4030)
 # NB: lines are joined with `\` so `source .env` and the command share one shell.
 # macOS ships GNU Make 3.81, which ignores .ONESHELL, so each bare line would
 # otherwise run in its own shell and lose the sourced env.
-listen:  ## listen on the window mic and write detections (Ctrl-C to stop)
+listen:  ## listen on the mic: write detections + liveness heartbeats, mirror to cloud as it goes (Ctrl-C to stop)
 	set -a; source .env; set +a; \
 	uv run python listener/listen.py listen
 
-push:  ## push new local detections up to the cloud mirror (reads CLOUD_INGEST_* from .env)
+push:  ## push new local detections + heartbeats up to the cloud mirror (reads CLOUD_INGEST_* from .env)
 	set -a; source .env; set +a; \
 	uv run python listener/push.py
 

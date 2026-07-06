@@ -5,6 +5,10 @@
 class IngestController < ActionController::API
   # Only the listener's own columns; the cloud assigns its own id + timestamps.
   UPSERT_COLUMNS = %w[Date Time Sci_Name Com_Name Confidence Lat Lon Week File_Name dedupe_key].freeze
+  # A liveness tick's columns; dedupe_key (SHA-256 of at|source) is the upsert target.
+  HEARTBEAT_COLUMNS = %w[at source dedupe_key].freeze
+  # Keep the mirror's ticks bounded like the Pi's — they only feed the recent window.
+  HEARTBEAT_RETENTION = 2.days
 
   def detections
     return head :not_found if ingest_token.blank?
@@ -15,6 +19,21 @@ class IngestController < ActionController::API
       store_batch(rows)
       scan_alerts(rows)
       refresh_summary
+    end
+    render json: { upserted: rows.size }
+  end
+
+  # The liveness half of the push: the same ticks the listener writes, so the cloud can
+  # tell a quiet spell from a stalled feed (AdminHealth) and ghost blind spots in the
+  # sparkline. No alerts/summary — a tick isn't news.
+  def heartbeats
+    return head :not_found if ingest_token.blank?
+    return head :unauthorized unless authorized?
+
+    rows = permitted_heartbeats
+    if rows.any?
+      store_heartbeats(rows)
+      Heartbeat.where(at: ...HEARTBEAT_RETENTION.ago).delete_all
     end
     render json: { upserted: rows.size }
   end
@@ -47,6 +66,20 @@ class IngestController < ActionController::API
     else
       Detection.upsert_all(rows, unique_by: :dedupe_key) # rubocop:disable Rails/SkipsModelValidations
     end
+  end
+
+  # Same idempotent-upsert shape as detections, keyed on the heartbeat dedupe_key.
+  def store_heartbeats(rows)
+    if Heartbeat.connection.adapter_name.match?(/mysql|trilogy/i)
+      Heartbeat.upsert_all(rows) # rubocop:disable Rails/SkipsModelValidations
+    else
+      Heartbeat.upsert_all(rows, unique_by: :dedupe_key) # rubocop:disable Rails/SkipsModelValidations
+    end
+  end
+
+  def permitted_heartbeats
+    params.permit(heartbeats: HEARTBEAT_COLUMNS).fetch(:heartbeats, []).
+      map(&:to_h).select { |row| row['dedupe_key'].present? }
   end
 
   def ingest_token

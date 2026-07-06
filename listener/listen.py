@@ -28,6 +28,7 @@ import os
 import sqlite3
 import sys
 import tempfile
+import threading
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -127,6 +128,41 @@ def record_heartbeat(source: str) -> None:
         con.close()
 
 
+# When we last kicked off a cloud push (monotonic seconds), and a lock so a slow push
+# never stacks up behind the next tick.
+_last_push = 0.0
+PUSH_EVERY = float(os.environ.get("PUSH_EVERY", 300))  # 0 disables the in-loop push
+_push_lock = threading.Lock()
+
+
+def maybe_push() -> None:
+    """Every PUSH_EVERY seconds, mirror new detections + heartbeats to the cloud in a
+    background thread so `make listen` syncs as it goes — without ever stalling capture.
+    A no-op unless CLOUD_INGEST_* are set (push.sync handles that), so it's harmless on a
+    stand-alone box."""
+    global _last_push
+    if PUSH_EVERY <= 0:
+        return
+    now = time.monotonic()
+    if now - _last_push < PUSH_EVERY:
+        return
+    _last_push = now
+
+    def run() -> None:
+        if not _push_lock.acquire(blocking=False):
+            return  # a previous push is still going; skip this tick
+        try:
+            import push  # lazy: push imports back from this module
+
+            push.sync()
+        except Exception as err:  # noqa: BLE001 — a mirror hiccup must never touch capture
+            print(f"cloud push skipped: {err}", file=sys.stderr)
+        finally:
+            _push_lock.release()
+
+    threading.Thread(target=run, daemon=True).start()
+
+
 def analyze_file(analyzer, path: Path, lat: float, lon: float, min_conf: float) -> list[dict]:
     from birdnetlib import Recording
 
@@ -215,6 +251,9 @@ def cmd_listen(args, analyzer, lat, lon, min_conf):
             # tick (throttled) so this window is a true 0, not missing data. Reached only
             # on a clean capture; the PortAudioError branch above `continue`s past it.
             record_heartbeat("live-mic")
+            # Mirror detections + ticks to the cloud as we go (throttled, backgrounded),
+            # so `make listen` on the Mac keeps culfinbirds.net current with no extra step.
+            maybe_push()
     except KeyboardInterrupt:
         print("\nstopped.")
 
