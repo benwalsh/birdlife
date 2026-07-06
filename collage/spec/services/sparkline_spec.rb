@@ -38,4 +38,36 @@ RSpec.describe Sparkline do
       expect(ys.max).to be <= Sparkline::H
     end
   end
+
+  describe 'blind spots (coverage → ghost)' do
+    let(:busy) { Array.new(24, 5) }
+
+    it 'has no ghost, and one continuous curve, when every bucket was covered' do
+      result = described_class.paths(busy, coverage: Array.new(24, true))
+      expect(result.ghost).to be_nil
+      expect(result.path.scan('M ').size).to eq(1)
+    end
+
+    it 'ghosts a mic-down stretch on the baseline and breaks the curve around it' do
+      coverage = Array.new(24, true)
+      (8..15).each { |i| coverage[i] = false } # mic down mid-window
+      result = described_class.paths(busy, coverage: coverage)
+
+      base = Sparkline::H - Sparkline::PAD
+      expect(result.ghost).to match(/\AM [\d.]+ #{base} L [\d.]+ #{base}\z/o) # a dotted baseline span
+      expect(result.path.scan('M ').size).to eq(2)                            # curve split into two runs
+    end
+
+    it 'still marks a blind spot even when the covered part was silent' do
+      coverage = Array.new(24, true)
+      (0..5).each { |i| coverage[i] = false }
+      result = described_class.paths(Array.new(24, 0), coverage: coverage)
+      expect(result.ghost).to be_present # the resting line, but the outage is shown as unknown
+    end
+
+    it 'assumes full coverage (no ghost) when there is no coverage signal at all' do
+      expect(described_class.paths(busy, coverage: nil).ghost).to be_nil
+      expect(described_class.paths(busy, coverage: Array.new(24, false)).ghost).to be_nil
+    end
+  end
 end

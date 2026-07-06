@@ -4,7 +4,7 @@ import type { SparkPaths } from '../types'
 // Sparkline service); this only prints the two path strings. A very low-opacity
 // vertical gradient fills under a thin green stroke — no axes, no dots.
 export function Sparkline({ paths }: { paths: SparkPaths }) {
-  const { path, fill, w, h } = paths
+  const { path, fill, ghost, w, h } = paths
   return (
     <svg className="today-spark-svg" viewBox={`0 0 ${w} ${h}`} width={w} height={h}
          preserveAspectRatio="none" aria-hidden="true">
@@ -15,6 +15,8 @@ export function Sparkline({ paths }: { paths: SparkPaths }) {
         </linearGradient>
       </defs>
       <path d={fill} fill="url(#spark-fill)" stroke="none" />
+      {/* A blind spot — the mic was down — as a faint dotted baseline: unknown, not zero. */}
+      {ghost && <path d={ghost} fill="none" className="today-spark-ghost" />}
       <path d={path} fill="none" className="today-spark-line" />
     </svg>
   )

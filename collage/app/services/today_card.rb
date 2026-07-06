@@ -33,14 +33,14 @@ class TodayCard
     def build(now: Time.current, window_hours: 24)
       facts = DailyFacts.for(now: now)
       summary = TodaySummary.current(facts: facts)
-      counts, total, start = series(now, window_hours)
-      spark = Sparkline.paths(counts)
+      counts, total, start, coverage = series(now, window_hours)
+      spark = Sparkline.paths(counts, coverage: coverage)
       {
         date_label: date_label(now),
         summary:    emphasised_bullets(summary[:bullets], facts),
         source:     summary[:source],
         total:      total,
-        sparkline:  { path: spark.path, fill: spark.fill, w: spark.w, h: spark.h },
+        sparkline:  { path: spark.path, fill: spark.fill, ghost: spark.ghost, w: spark.w, h: spark.h },
         anchors:    anchors(now, start),
         footer:     footer_items(now)
       }
@@ -106,7 +106,18 @@ class TodayCard
         idx = BUCKETS - 1 if idx == BUCKETS # the exact 'now' edge lands in the last slot
         buckets[idx] += 1 if idx.between?(0, BUCKETS - 1)
       end
-      [buckets, rows.length, start]
+      [buckets, rows.length, start, coverage(start, width, buckets)]
+    end
+
+    # Which buckets were OPERATIVE: the listener ticked in them, or (equivalently) a
+    # detection landed. With no ticks in the window at all — the cloud mirror, or before
+    # the mic is installed — we can't claim any blind spots, so treat it as fully covered
+    # (the sparkline then draws exactly as it always did).
+    def coverage(start, width, buckets)
+      alive = Heartbeat.coverage(start, width, buckets.length)
+      return Array.new(buckets.length, true) unless alive.any?
+
+      buckets.each_index.map { |i| alive[i] || buckets[i].positive? }
     end
 
     # The span's start: a fixed window back from now, or — for the "all time"
