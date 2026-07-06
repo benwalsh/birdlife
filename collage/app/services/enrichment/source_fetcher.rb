@@ -111,11 +111,18 @@ module Enrichment
 
     # The dúchas XML holds one or more <transcript> elements (a page can carry several
     # stories); return them all, so the model can quote the one about the bird in full.
+    # A single ENTRY can also run across pages, so surface each <story> URL (the entry
+    # endpoint, which returns the whole story) as human /en/ links — the model should
+    # fetch the entry, not just the page, when a story spans.
     def extract_duchas_xml(xml)
-      Nokogiri::XML(xml).css('transcript').filter_map do |t|
+      doc = Nokogiri::XML(xml)
+      transcripts = doc.css('transcript').filter_map do |t|
         text = t.text.gsub(/\s+/, ' ').strip
         text unless text.empty?
       end.join("\n\n").first(MAX_CHARS)
+
+      entries = doc.css('story[url]').filter_map { |s| s['url']&.sub('/xml/cbes/', '/en/cbes/') }.uniq
+      entries.empty? ? transcripts : "#{transcripts}\n\nENTRIES (fetch one for the whole story):\n#{entries.join("\n")}"
     end
 
     # Trusted, on-host links found in the content, absolutised and de-duped — so the model

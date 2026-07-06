@@ -55,10 +55,13 @@ RSpec.describe Enrichment::SourceFetcher do
     # A dúchas STORY page is fetched via its clean open-data XML transcript, but cited by
     # the human /en/ URL the model followed — so the block's source matches the fetch log.
     it 'reads a dúchas story from the XML endpoint yet cites the /en/ page' do
-      xml = '<pPage><story><transcript>The magpie and the wren build nests with a roof.</transcript></story></pPage>'
+      xml = '<pPage><story url="https://www.duchas.ie/xml/cbes/4758602/4757997/4955154">' \
+            '<transcript>The magpie and the wren build nests with a roof.</transcript></story></pPage>'
       expect(fetcher).to receive(:http_get).with('https://www.duchas.ie/xml/cbes/4758602/4757997').and_return(xml)
       result = fetcher.fetch('https://www.duchas.ie/en/cbes/4758602/4757997')
-      expect(result[:text]).to eq('The magpie and the wren build nests with a roof.')
+      expect(result[:text]).to include('The magpie and the wren build nests with a roof.')
+      # the entry (story) URL is surfaced as a human /en/ link so a spanning story can be isolated
+      expect(result[:text]).to include('https://www.duchas.ie/en/cbes/4758602/4757997/4955154')
       expect(result[:url]).to eq('https://www.duchas.ie/en/cbes/4758602/4757997')
     end
 

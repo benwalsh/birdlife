@@ -61,8 +61,10 @@ module Enrichment
           bird's Irish name, e.g. its name in the task, and/or English). The result ends
           with a "LINKS" list; FOLLOW one promising /en/cbes/<id>/<id> story link — that
           returns the clean transcribed text, and you may quote or closely retell a FULL
-          short story (folklore blocks can run long; that's wanted, not a snippet). Cite the
-          /en/cbes/ URL you fetched. celt.ucc.ie is a second Irish option. Be economical —
+          short story (folklore blocks can run long; that's wanted, not a snippet). A story
+          can carry over pages — a page fetch ends with an "ENTRIES" list, so fetch the entry
+          (story) URL for the whole story rather than a page fragment. Cite the /en/cbes/ URL
+          you fetched. celt.ucc.ie is a second Irish option. Be economical —
           dúchas rate-limits, so one search and one or two story fetches, not a dozen. ONLY
           if dúchas and CELT genuinely have nothing for this bird, fall back to Wikipedia's
           folklore/mythology (e.g. the crow-goddess Badb) rather than returning none.
