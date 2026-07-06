@@ -125,6 +125,27 @@ RSpec.describe TodaySummary do
       end
     end
 
+    context 'when the model invents a "first" on a day with no arrivals' do
+      let(:routine_facts) do
+        facts.merge(items: [{ common_name: 'Graylag Goose', irish_name: 'Gé ghlas',
+                              call_count: 8, importance: 5, flags: %w[routine] }])
+      end
+
+      before do
+        allow(DailyFacts).to receive(:for).and_return(routine_facts)
+        allow(Bedrock).to receive_messages(
+          disabled?: false,
+          converse: "- First detection today of the Graylag Goose.\n- A quiet day otherwise."
+        )
+      end
+
+      it 'rejects the untrue novelty claim and falls through to the template' do
+        # Nothing is flagged all_time_first/year_first, so "first" cannot be true.
+        expect(described_class.refresh[:source]).to eq('template')
+        expect(described_class.current[:bullets][:en].join).not_to match(/first/i)
+      end
+    end
+
     context 'when generation fails but a good summary is already cached' do
       before { allow(Bedrock).to receive(:disabled?).and_return(false) }
 

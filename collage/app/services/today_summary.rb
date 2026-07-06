@@ -26,6 +26,11 @@ class TodaySummary
     species are flagged as firsts today, feature the two most important and fold the
     remaining firsts into one line (e.g. "with first records also of X, Y and Z").
 
+    A species is a "first" ONLY if its facts line carries an all_time_first or
+    year_first flag. If NOTHING today carries such a flag, do NOT call any bird a
+    first, a new arrival, or newly detected — those words would be untrue. Just report
+    the day plainly: the totals, and the most-heard species as texture.
+
     TONE: warm but understated. This is a quiet rural station, not a nature
     documentary. A little character is welcome in how you connect facts. Restraint
     over enthusiasm.
@@ -41,21 +46,15 @@ class TodaySummary
     - Counts, species totals, and "first" claims come verbatim from the facts.
       Never estimate, round differently, or embellish a number.
     - If unsure whether something is supported, leave it out.
-    - Each flagged arrival (a first / year-first) is followed by a Background line
-      about THAT species (an encyclopedia extract). For an arrival, WEAVE IN one
-      genuinely INTERESTING detail drawn from its OWN Background — reach for the
-      striking or surprising: a remarkable habit or behaviour, an extreme, something a
-      reader would repeat to someone else. (For example: that swifts eat, sleep and
-      even mate on the wing and almost never land; that a cuckoo lays its eggs in other
-      birds' nests for them to raise.) In your own plain words, a single clause.
-      AVOID the dull — these are NOT interesting and must never be your detail:
-      taxonomy or classification ("a member of the order Cuculiformes", "a passerine"),
-      and size or resemblance to another bird ("similar to a swallow but larger",
-      "a medium-sized bird"). If the striking fact is further down the Background, use
-      it — do not default to the first sentence. Use ONLY the Background; NEVER add a
-      fact from your own memory (it may be wrong); never copy its sentences; never
-      contradict the detection data. If the Background genuinely offers nothing striking,
-      name the bird plainly with no filler detail.
+    - ONLY when an item's facts line includes a "Background:" line may you add one
+      detail about that species — and it must be drawn ONLY from that Background. Reach
+      for the one striking or surprising thing in it (a remarkable habit or behaviour, an
+      extreme — something a reader would repeat), in your own plain words, a single
+      clause. If the striking fact is further down the Background, use it rather than the
+      opening sentence. Skip the dull: taxonomy or classification, and size or
+      resemblance to another bird. If an item has NO Background line, add NO detail about
+      it — name it plainly. NEVER add a fact from your own knowledge (it may be wrong),
+      never copy a source sentence, never contradict the detection data.
 
     STYLE:
     - Sentence case. No exclamation marks. No headings.
@@ -84,6 +83,11 @@ class TodaySummary
     Sentence case, no exclamation marks, no preamble. Return the SAME number of bullets, one
     per line, each starting with "- ".
   PROMPT
+
+  # The flags that make "first"/"arrival" language truthful.
+  ARRIVAL_FLAGS = %w[all_time_first all_time_first_young year_first].freeze
+  # Words that assert novelty — legitimate only when the facts actually flag an arrival.
+  NOVELTY = /\b(first|arriv\w+|debut|maiden|newly)\b/i
 
   class << self
     # The last-good summary for the page — bilingual { en: [...], ga: [...] }. Never
@@ -141,11 +145,20 @@ class TodaySummary
     # to a shaky translation.
     def generate(facts)
       en = attempt(format(SYSTEM, where: station_context), user_message(facts))
-      return nil unless en
+      return nil unless en && supported?(en, facts)
 
       ga = attempt(TRANSLATE, en.map { |b| "- #{b}" }.join("\n"))
       ga = DailyFacts.template_bullets(facts)[:ga] unless ga && ga.size == en.size
       { en: en, ga: ga }
+    end
+
+    # A last-ditch factuality gate the model can't argue with: if nothing today is a first,
+    # a summary that still calls something a first is wrong — reject it, take the template.
+    # (When a real arrival is flagged, first-language is allowed and this passes.)
+    def supported?(bullets, facts)
+      return true if facts[:items].any? { |i| Array(i[:flags]).intersect?(ARRIVAL_FLAGS) }
+
+      bullets.none? { |b| b.match?(NOVELTY) }
     end
 
     # One model round-trip → validated bullets, or nil (unreachable model, or output that
