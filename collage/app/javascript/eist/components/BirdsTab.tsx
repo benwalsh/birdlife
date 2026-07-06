@@ -51,7 +51,7 @@ export function BirdsTab({
         <Collage data={data.collage} onSelect={onSelect} />
       </section>
 
-      {data.today?.summary?.length ? (
+      {data.today?.summary?.en?.length ? (
         <>
           <TodaySpark today={data.today} windows={windows} value={windowHours} onChange={onWindow} />
           <AlmanacRow today={data.today} />

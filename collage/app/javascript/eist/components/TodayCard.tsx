@@ -6,9 +6,10 @@ import type { Today } from '../types'
 // in Ruby; this view just iterates and prints.
 export function TodayCard({ today }: { today: Today }) {
   const { t, lang } = useLang()
-  if (!today?.summary?.length) return null
-
   const pick = (item: { en: string; ga: string }) => (lang === 'ga' ? item.ga : item.en)
+  // The summary is bilingual { en, ga } — show the current language's bullets.
+  const bullets = lang === 'ga' ? today?.summary?.ga : today?.summary?.en
+  if (!bullets?.length) return null
 
   return (
     <section className="today-card">
@@ -19,7 +20,7 @@ export function TodayCard({ today }: { today: Today }) {
       <hr className="today-rule" />
 
       <ul className="today-summary">
-        {today.summary.map((html, i) => (
+        {bullets.map((html, i) => (
           <li key={i} dangerouslySetInnerHTML={{ __html: html }} />
         ))}
       </ul>

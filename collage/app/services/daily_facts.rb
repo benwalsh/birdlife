@@ -42,6 +42,18 @@ class DailyFacts
     unusual_volume:       40,
     routine:              5
   }.freeze
+  # The deterministic template's wording, per language. Irish scaffolding is a first
+  # pass — worth a native check — but the counts and names it wraps are exact.
+  TEMPLATE_PHRASES = {
+    en: { count:  '%<species>s species and %<detections>s detections logged today.',
+          firsts: 'New for the station: %<names>s.',
+          years:  'First of the year: %<names>s.',
+          common: 'Most heard: %<names>s.' },
+    ga: { count:  '%<species>s speiceas agus %<detections>s brath logáilte inniu.',
+          firsts: 'Nua ag an stáisiún: %<names>s.',
+          years:  'Céaduair i mbliana: %<names>s.',
+          common: 'Ba mhó a chualathas: %<names>s.' }
+  }.freeze
 
   class << self
     # The whole facts object for a day. `spotlight_blurb:` gates the one network
@@ -58,32 +70,47 @@ class DailyFacts
       first ? (now.to_date - first).to_i : 0
     end
 
-    # The deterministic, always-correct fallback: pure Ruby bullets off the facts
-    # hash, no model. Ugly but honest — used when there is no cached LLM summary.
+    # The deterministic, always-correct fallback: pure Ruby bullets off the facts hash,
+    # no model. Plain but honest — used when there is no cached LLM summary. Bilingual
+    # (the panel and site both speak one language), returned as { en: [...], ga: [...] }.
     def template_bullets(facts)
-      bullets = ["#{facts[:species_today]} species and " \
-                 "#{facts[:detections_today]} detections logged today."]
-      firsts = names_with(facts, 'all_time_first')
-      years  = names_with(facts, 'year_first')
-      common = facts[:items].select { |i| i[:flags].include?('most_common') }.first(3).pluck(:common_name)
-      bullets << "New for the station: #{lead_phrase(firsts)}." if firsts.any?
-      bullets << "First of the year: #{lead_phrase(years)}." if years.any?
-      bullets << "Most heard: #{common.join(', ')}." if common.any? && bullets.length < 4
-      bullets.first(4)
+      { en: template_lines(facts, :en), ga: template_lines(facts, :ga) }
     end
 
     private
 
-    def names_with(facts, flag)
-      facts[:items].select { |i| i[:flags].include?(flag) }.pluck(:common_name)
+    def template_lines(facts, lang)
+      phrases = TEMPLATE_PHRASES[lang]
+      bullets = [format(phrases[:count], species: facts[:species_today], detections: facts[:detections_today])]
+      firsts = names_with(facts, 'all_time_first', lang)
+      years  = names_with(facts, 'year_first', lang)
+      common = common_names(facts, lang)
+      bullets << format(phrases[:firsts], names: lead_phrase(firsts, lang)) if firsts.any?
+      bullets << format(phrases[:years], names: lead_phrase(years, lang)) if years.any?
+      bullets << format(phrases[:common], names: common.join(', ')) if common.any? && bullets.length < 4
+      bullets.first(4)
     end
 
-    # Name the single most important item; collapse the rest to "+N more" so a
-    # bullet is never an unbounded comma-list of species (a layout contract).
-    def lead_phrase(names)
+    def names_with(facts, flag, lang = :en)
+      facts[:items].select { |i| i[:flags].include?(flag) }.map { |i| item_name(i, lang) }
+    end
+
+    def common_names(facts, lang)
+      facts[:items].select { |i| i[:flags].include?('most_common') }.first(3).map { |i| item_name(i, lang) }
+    end
+
+    # The item's name in the chosen language — Irish where we have it, English otherwise.
+    def item_name(item, lang)
+      lang == :ga ? item[:irish_name].presence || item[:common_name] : item[:common_name]
+    end
+
+    # Name the single most important item; collapse the rest to "+N more" so a bullet is
+    # never an unbounded comma-list of species (a layout contract).
+    def lead_phrase(names, lang = :en)
       return names.first if names.length == 1
 
-      "#{names.first}, and #{names.length - 1} more"
+      more = lang == :ga ? "agus #{names.length - 1} eile" : "and #{names.length - 1} more"
+      "#{names.first}, #{more}"
     end
   end
 

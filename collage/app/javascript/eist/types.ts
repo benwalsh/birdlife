@@ -78,7 +78,7 @@ export interface FooterItem { icon: string; en: string; ga: string }
 export interface Today {
   date_label: Bilingual
   // Pre-shaped, HTML-safe bullet strings (species names already wrapped in <strong>).
-  summary: string[]
+  summary: { en: string[]; ga: string[] }
   source: 'llm' | 'template'
   total: number
   sparkline: SparkPaths

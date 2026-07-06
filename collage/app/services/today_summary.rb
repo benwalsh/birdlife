@@ -75,16 +75,26 @@ class TodaySummary
     'busier_than_typical'  => 'busier than typical'
   }.freeze
 
-  class << self
-    # The last-good summary for the page. Never touches the model or blocks. Pass
-    # `facts:` (the caller usually already built them) to skip a rebuild on a cache
-    # miss; otherwise a fresh DailyFacts is computed for the template.
-    def current(facts: nil)
-      cached = read_cache
-      return cached if cached
+  # Prompt Nova for a short Irish rendering of already-approved English bullets. Kept as a
+  # translation (not a second free write) so the two languages can't disagree on the facts
+  # — the English is the source of truth, the Irish tracks it.
+  TRANSLATE = <<~PROMPT.freeze
+    Translate these bird-station summary bullets into Irish (Gaeilge). Use the correct,
+    established Irish name for each bird. Keep every number and every "first" claim exactly.
+    Sentence case, no exclamation marks, no preamble. Return the SAME number of bullets, one
+    per line, each starting with "- ".
+  PROMPT
 
+  class << self
+    # The last-good summary for the page — bilingual { en: [...], ga: [...] }. Never
+    # touches the model or blocks. The cache is only used when it's for the SAME day we're
+    # rendering; a summary left over from yesterday is discarded so "today" is never stale.
+    def current(facts: nil)
       facts ||= DailyFacts.for
-      { bullets: DailyFacts.template_bullets(facts), source: 'template', generated_at: nil }
+      cached = read_cache
+      return cached if cached && cached[:facts_date].to_s == facts[:date].to_s
+
+      { bullets: DailyFacts.template_bullets(facts), source: 'template', facts_date: facts[:date], generated_at: nil }
     end
 
     # Regenerate and cache. Best-effort: on model failure keep the last-good cache,
@@ -95,17 +105,18 @@ class TodaySummary
 
       bullets = generate(facts)
       return store(bullets, 'llm', facts) if bullets
-      return current if STORE.exist?
+      return current(facts: facts) if valid_cache_for?(facts)
 
       store(DailyFacts.template_bullets(facts), 'template', facts)
     end
 
-    # Regenerate only when the cache is missing or older than max_age. Cheap to call
-    # on every ingest — the cloud's trigger for a fresh summary as new data lands,
-    # without a Bedrock hit on each push.
+    # Regenerate when the cache is missing, older than max_age, OR for a previous day
+    # (a new day is always stale). Cheap to call on every ingest.
     def refresh_if_stale(max_age: 15.minutes, now: Time.current)
       cached = read_cache
-      return cached if cached && cached[:generated_at] && cached[:generated_at] > max_age.ago
+      fresh = cached && cached[:generated_at] && cached[:generated_at] > max_age.ago &&
+              cached[:facts_date].to_s == now.to_date.to_s
+      return cached if fresh
 
       refresh(now: now)
     end
@@ -124,12 +135,26 @@ class TodaySummary
 
     private
 
+    # Bilingual bullets { en:, ga: } or nil. English is generated from the facts; Irish is
+    # a translation of that English, falling back to the deterministic Irish template if
+    # the translation is unavailable or malformed — so a good English summary is never lost
+    # to a shaky translation.
     def generate(facts)
-      raw = Bedrock.converse(system: format(SYSTEM, where: station_context), user: user_message(facts))
-      bullets = parse(raw)
+      en = attempt(format(SYSTEM, where: station_context), user_message(facts))
+      return nil unless en
+
+      ga = attempt(TRANSLATE, en.map { |b| "- #{b}" }.join("\n"))
+      ga = DailyFacts.template_bullets(facts)[:ga] unless ga && ga.size == en.size
+      { en: en, ga: ga }
+    end
+
+    # One model round-trip → validated bullets, or nil (unreachable model, or output that
+    # breaks a house rule). Isolated so an Irish-translation failure never sinks the English.
+    def attempt(system, user)
+      bullets = parse(Bedrock.converse(system: system, user: user))
       valid?(bullets) ? bullets : nil
     rescue StandardError => e
-      Rails.logger.warn("TodaySummary: LLM generation failed (#{e.class}: #{e.message})")
+      Rails.logger.warn("TodaySummary: LLM call failed (#{e.class}: #{e.message})")
       nil
     end
 
@@ -174,14 +199,28 @@ class TodaySummary
       Station.region.present? ? " in #{Station.region}" : ''
     end
 
+    # Is there a cache, and is it for the day we're about to render? Guards refresh's
+    # keep-last-good path so a generation failure never resurrects yesterday's summary.
+    def valid_cache_for?(facts)
+      cached = read_cache
+      cached.present? && cached[:facts_date].to_s == facts[:date].to_s
+    end
+
     def read_cache
       return nil unless STORE.exist?
 
       data = JSON.parse(STORE.read, symbolize_names: true)
-      bullets = Array(data[:bullets]).compact_blank
-      return nil if bullets.empty?
+      # Bilingual shape only — a legacy flat-array cache (pre-bilingual) is treated as
+      # absent, so it's discarded rather than shown monolingual.
+      bullets = data[:bullets]
+      return nil unless bullets.is_a?(Hash)
 
-      { bullets: bullets, source: data[:source], generated_at: safe_time(data[:generated_at]) }
+      en = Array(bullets[:en]).compact_blank
+      return nil if en.empty?
+
+      ga = Array(bullets[:ga]).compact_blank.presence || en
+      { bullets: { en: en, ga: ga }, source: data[:source],
+        facts_date: data[:facts_date], generated_at: safe_time(data[:generated_at]) }
     rescue JSON::ParserError, SystemCallError
       nil
     end
@@ -192,7 +231,7 @@ class TodaySummary
       tmp = STORE.sub_ext('.tmp')
       tmp.write(JSON.pretty_generate(data))
       tmp.rename(STORE.to_s) # atomic replace so a reader never sees a half-written file
-      { bullets: bullets, source: source, generated_at: safe_time(data[:generated_at]) }
+      { bullets: bullets, source: source, facts_date: facts[:date], generated_at: safe_time(data[:generated_at]) }
     end
 
     def safe_time(value)

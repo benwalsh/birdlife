@@ -132,10 +132,12 @@ RSpec.describe DailyFacts do
         ]
       }
       bullets = described_class.template_bullets(facts)
-      expect(bullets.first).to eq('3 species and 42 detections logged today.')
-      expect(bullets).to include('New for the station: Common Greenshank.')
-      expect(bullets).to include('First of the year: Common Swift.')
-      expect(bullets).to include('Most heard: House Sparrow.')
+      expect(bullets[:en].first).to eq('3 species and 42 detections logged today.')
+      expect(bullets[:en]).to include('New for the station: Common Greenshank.')
+      expect(bullets[:en]).to include('First of the year: Common Swift.')
+      expect(bullets[:en]).to include('Most heard: House Sparrow.')
+      # Irish scaffolding is present too (names fall back to English where no Irish exists).
+      expect(bullets[:ga].first).to eq('3 speiceas agus 42 brath logáilte inniu.')
     end
   end
 

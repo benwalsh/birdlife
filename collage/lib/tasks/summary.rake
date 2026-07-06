@@ -3,6 +3,9 @@ namespace :birdlife do
   task summary_refresh: :environment do
     result = TodaySummary.refresh
     puts "summary refreshed (#{result[:source]}):"
-    result[:bullets].each { |bullet| puts "  #{bullet}" }
+    result[:bullets].each do |lang, bullets|
+      puts "  [#{lang}]"
+      bullets.each { |bullet| puts "    #{bullet}" }
+    end
   end
 end

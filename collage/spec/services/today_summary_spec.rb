@@ -44,7 +44,17 @@ RSpec.describe TodaySummary do
     it 'synthesises the template when there is no cache' do
       result = described_class.current(facts: facts)
       expect(result[:source]).to eq('template')
-      expect(result[:bullets].first).to eq('3 species and 42 detections logged today.')
+      expect(result[:bullets][:en].first).to eq('3 species and 42 detections logged today.')
+      expect(result[:bullets][:ga].first).to eq('3 speiceas agus 42 brath logáilte inniu.')
+    end
+
+    it 'discards a cache left over from a previous day (so "today" is never stale)' do
+      allow(Bedrock).to receive(:disabled?).and_return(true)
+      travel_to(Time.zone.local(2026, 7, 3, 12)) { described_class.refresh } # cache dated 2026-07-03
+      newer = facts.merge(date: '2026-07-06', species_today: 9)
+      result = described_class.current(facts: newer)
+      expect(result[:source]).to eq('template') # not the stale cache
+      expect(result[:bullets][:en].first).to include('9 species')
     end
   end
 
@@ -52,13 +62,25 @@ RSpec.describe TodaySummary do
     before { allow(Bedrock).to receive(:disabled?).and_return(true) } # template path — no network
 
     it 'refreshes when there is no cache yet' do
-      expect { described_class.refresh_if_stale }.to change(file, :exist?).from(false).to(true)
+      travel_to(Time.zone.local(2026, 7, 3, 12)) do
+        expect { described_class.refresh_if_stale }.to change(file, :exist?).from(false).to(true)
+      end
     end
 
-    it 'skips the refresh when the cache is fresh' do
-      described_class.refresh
-      expect(described_class).not_to receive(:refresh)
-      described_class.refresh_if_stale
+    it 'skips the refresh when the cache is fresh (same day, recent)' do
+      travel_to(Time.zone.local(2026, 7, 3, 12)) do
+        described_class.refresh
+        expect(described_class).not_to receive(:refresh)
+        described_class.refresh_if_stale
+      end
+    end
+
+    it 'refreshes when the cache is from an earlier day' do
+      travel_to(Time.zone.local(2026, 7, 3, 12)) { described_class.refresh } # cache dated 2026-07-03
+      travel_to(Time.zone.local(2026, 7, 4, 9)) do
+        expect(described_class).to receive(:refresh)
+        described_class.refresh_if_stale
+      end
     end
   end
 
@@ -83,11 +105,12 @@ RSpec.describe TodaySummary do
         )
       end
 
-      it 'caches the narrated summary and reads it back' do
+      it 'caches the narrated bilingual summary and reads it back' do
         result = described_class.refresh
         expect(result[:source]).to eq('llm')
-        expect(result[:bullets].size).to eq(2)
-        expect(described_class.current[:bullets].first).to include('Greenshank')
+        expect(result[:bullets][:en].size).to eq(2)
+        expect(result[:bullets][:ga].size).to eq(2) # the Irish translation pass
+        expect(described_class.current[:bullets][:en].first).to include('Greenshank')
       end
     end
 
@@ -113,7 +136,7 @@ RSpec.describe TodaySummary do
         result = described_class.refresh
 
         expect(result[:source]).to eq('llm')
-        expect(result[:bullets]).to eq(['First good line.', 'Second good line.'])
+        expect(result[:bullets][:en]).to eq(['First good line.', 'Second good line.'])
       end
     end
   end

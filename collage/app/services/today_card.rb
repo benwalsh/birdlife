@@ -37,7 +37,8 @@ class TodayCard
       spark = Sparkline.paths(counts, coverage: coverage)
       {
         date_label: date_label(now),
-        summary:    emphasised_bullets(summary[:bullets], facts),
+        summary:    { en: emphasised_bullets(summary[:bullets][:en], facts),
+                      ga: emphasised_bullets(summary[:bullets][:ga], facts) },
         source:     summary[:source],
         total:      total,
         sparkline:  { path: spark.path, fill: spark.fill, ghost: spark.ghost, w: spark.w, h: spark.h },

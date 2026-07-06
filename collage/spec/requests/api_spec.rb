@@ -25,8 +25,9 @@ RSpec.describe 'API' do
       get '/api/overview'
       today = response.parsed_body['today']
       expect(today).to include('date_label', 'summary', 'source', 'total', 'sparkline', 'anchors', 'footer')
-      expect(today['summary']).to be_an(Array).and be_present
-      expect(today['summary'].size).to be <= 4 # the bullet cap
+      expect(today['summary']).to include('en', 'ga')  # bilingual bullets
+      expect(today['summary']['en'].size).to be <= 4   # the bullet cap
+      expect(today['summary']['ga'].size).to be <= 4
       expect(today['sparkline']).to include('path', 'fill', 'w', 'h')
       expect(today['footer'].first).to include('icon', 'en', 'ga')
     end
