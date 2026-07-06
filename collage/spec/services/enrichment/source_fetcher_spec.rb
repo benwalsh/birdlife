@@ -47,4 +47,32 @@ RSpec.describe Enrichment::SourceFetcher do
     end
   end
   # rubocop:enable RSpec/SubjectStub
+
+  # dúchas.ie and CELT answer a 301 before serving the page, so http_get MUST follow
+  # redirects — otherwise every Irish-folklore fetch reads as failed and the model falls
+  # back to Wikipedia. Real Net::HTTP response objects so the case/when class match holds.
+  describe '#http_get redirects' do
+    def redirect(location)
+      Net::HTTPFound.new('1.1', '302', 'Found').tap { |r| r['location'] = location }
+    end
+
+    def ok(body)
+      Net::HTTPOK.new('1.1', '200', 'OK').tap { |r| allow(r).to receive(:body).and_return(body) }
+    end
+
+    it 'follows a redirect to another trusted host and returns the final body' do
+      allow(Net::HTTP).to receive(:start).and_return(redirect('https://www.duchas.ie/final'), ok('<p>lore</p>'))
+      expect(fetcher.send(:http_get, 'https://duchas.ie/start')).to eq('<p>lore</p>')
+    end
+
+    it 'refuses to follow a redirect off the allowlist' do
+      allow(Net::HTTP).to receive(:start).and_return(redirect('https://evil.example.com/x'))
+      expect(fetcher.send(:http_get, 'https://celt.ucc.ie/x')).to be_nil
+    end
+
+    it 'gives up after MAX_REDIRECTS rather than looping' do
+      allow(Net::HTTP).to receive(:start).and_return(redirect('https://celt.ucc.ie/loop'))
+      expect(fetcher.send(:http_get, 'https://celt.ucc.ie/loop')).to be_nil
+    end
+  end
 end

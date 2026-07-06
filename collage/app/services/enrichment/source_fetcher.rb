@@ -21,6 +21,12 @@ module Enrichment
     ].freeze
     AFFILIATE = /\Abirdwatch[a-z]+\.(?:ie|org)\z/
     MAX_CHARS = 4000
+    USER_AGENT = 'birdlife/1.0 (Eist bird detector; enrichment)'.freeze
+    # The Irish heritage sources (dúchas.ie, CELT) answer with a 301 before serving the
+    # page, so we MUST follow redirects or they always read as "fetch failed" and the model
+    # falls back to Wikipedia. Bounded, and every hop is re-checked against the allowlist so
+    # a redirect can't smuggle the fetch off to an untrusted host.
+    MAX_REDIRECTS = 4
 
     def initialize(sci_name:, run_id:)
       @sci_name = sci_name
@@ -55,13 +61,30 @@ module Enrichment
       nil
     end
 
-    def http_get(url)
+    def http_get(url, redirects_left: MAX_REDIRECTS)
       uri = URI(url)
       res = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == 'https',
-                            open_timeout: 5, read_timeout: 8) do |http|
-        http.get(uri.request_uri, 'User-Agent' => 'birdlife/1.0 (Eist bird detector; enrichment)')
+                            open_timeout: 5, read_timeout: 12) do |http|
+        http.get(uri.request_uri, 'User-Agent' => USER_AGENT)
       end
-      res.is_a?(Net::HTTPSuccess) ? res.body : nil
+
+      case res
+      when Net::HTTPSuccess then res.body
+      when Net::HTTPRedirection then follow(res['location'], uri, redirects_left)
+      end
+    end
+
+    # Follow a redirect only to another TRUSTED host (a redirect must never be a way off
+    # the allowlist), resolving relative Location headers against the current URL.
+    def follow(location, base, redirects_left)
+      return nil if location.blank? || redirects_left <= 0
+
+      target = URI.join(base, location)
+      return nil unless trusted?(target.host&.downcase)
+
+      http_get(target.to_s, redirects_left: redirects_left - 1)
+    rescue URI::InvalidURIError
+      nil
     end
 
     def extract_text(html)
