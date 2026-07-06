@@ -13,7 +13,10 @@ module Enrichment
   # source_fetch_log). A fabricated citation is dropped; a block left with none is
   # dropped with it. "Ruby computes, Claude sources, and nothing unsourced ships."
   class Builder
-    MAX_ROUNDS = 8
+    # Navigating the dúchas search → story pages costs fetches, so the loop needs headroom
+    # to do that AND still secure a folklore block (falling back to Wikipedia) — 8 left it
+    # exhausting the budget on the archives and finalising with none.
+    MAX_ROUNDS = 12
     MAX_FETCH_CHARS = 6000
     # On a day with nothing notable, still source this many of the most interesting DUE
     # species — the floor that keeps a quiet/young station building a facts & folklore
@@ -22,7 +25,10 @@ module Enrichment
     # When research runs long, this forces the model to stop and answer from what it has
     # already fetched, so a thorough explorer still yields blocks instead of nothing.
     FINALISE = 'Stop searching now. Using ONLY the sources you have already fetched ' \
-               'successfully, output the JSON array of blocks and nothing else.'.freeze
+               'successfully, output the JSON array of blocks and nothing else. Include a ' \
+               'folklore block if any source you fetched supports one (e.g. a Wikipedia ' \
+               'mythology/folklore section) — do not omit folklore just because the Irish ' \
+               'archives were thin.'.freeze
 
     FETCH_TOOL = {
       tool_spec: {
