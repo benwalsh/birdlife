@@ -33,7 +33,7 @@ RSpec.describe 'Panel' do
       expect(response).to have_http_status(:success)
       expect(response.body).to include('<svg').and include('class="screen')
       expect(response.body).not_to include('id="eink"') # the filter is preview-only
-      expect(response.body).not_to include('Spectra 6')  # the frame/spec is preview-only
+      expect(response.body).not_to include('Spectra 6') # the frame/spec is preview-only
       expect(response.body).not_to include('stat-grid')
     end
 
@@ -51,6 +51,23 @@ RSpec.describe 'Panel' do
       get '/station'
       expect(response.body).to include('ag éisteacht')
       expect(response.body).not_to include('leads the morning')
+    end
+
+    # Device chrome (not bird content): a clock and a pointer to the full site.
+    it 'shows a clock and a wayfinding link to the site' do
+      get '/station'
+      expect(response.body).to include('class="clock"')
+      expect(response.body).to include(Station.url)
+      expect(response.body).to match(/class="wayfind-hint">.*ag/m) # Irish by default
+    end
+
+    # The panel speaks ONE language throughout — the admin-set one, never mixed.
+    it 'renders every string in the configured language' do
+      Station.language = :en
+      get '/station'
+      expect(response.body).to include('listening…')      # not "ag éisteacht…"
+      expect(response.body).to include('see more at')     # not "tuilleadh ag"
+      expect(response.body).not_to include('ag éisteacht')
     end
   end
 

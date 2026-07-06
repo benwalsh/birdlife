@@ -7,6 +7,16 @@ class AdminController < ApplicationController
   # The health panel — "is the box alive?" All figures come from AdminHealth.
   def index
     @health = AdminHealth.snapshot
+    @station_language = Station.language
+  end
+
+  # Change the wall's display language (the one setting that shouldn't need a redeploy).
+  # Anything invalid is ignored — the panel keeps its current language.
+  def update_station
+    Station.language = params.require(:station).fetch(:language)
+    redirect_to admin_path
+  rescue ArgumentError, ActionController::ParameterMissing, KeyError
+    redirect_to admin_path
   end
 
   private

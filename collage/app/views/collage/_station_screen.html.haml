@@ -4,19 +4,27 @@
 %main.screen.station
   %header.head
     %h1.wordmark Éist
-    %p.place= Station.place&.dig(:en)
+    .head-meta
+      - if (here = station_text(Station.place))
+        %p.place= here
+      %p.clock= Time.current.strftime('%H:%M')
   %hr.rule/
   %section.collage-area{ "aria-label": "Birds heard today" }
     = render partial: 'panel'
   - if @news
     %p.news= @news
   - else
-    %p.news.quiet ag éisteacht…
+    %p.news.quiet= station_text(en: 'listening…', ga: 'ag éisteacht…')
   -# The ambient almanac — the same weather / moon / sun / tide readings the home page's
-  -# row shows, as muted line-icon + label pairs (never emoji), Irish-first in the wall's
-  -# voice. A subset of the site's content, nothing of the panel's own.
+  -# row shows, as muted line-icon + label pairs (never emoji). A subset of the site's
+  -# content, in the panel's chosen language, nothing of its own.
   %footer.foot.today-almanac
     - Array(@almanac).each do |item|
       %span
         %i.ti{ class: item[:icon], "aria-hidden": "true" }
-        = item[:ga] || item[:en]
+        = station_text(item)
+  -# Wayfinding: the clock is above; this points a guest to the full site. Both are
+  -# device chrome, not bird content — the "same content, a subset" rule is about birds.
+  %p.wayfind
+    %span.wayfind-hint= station_text(en: 'see more at', ga: 'tuilleadh ag')
+    %span.wayfind-url= Station.url

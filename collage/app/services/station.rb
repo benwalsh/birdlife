@@ -4,7 +4,37 @@
 # component names a location literally: they all ask here, and get whatever this
 # instance is configured/resolved to be (or nothing, gracefully).
 class Station
+  # The panel speaks ONE language, consistently — an admin picks which at /admin (stored
+  # in Setting, so no redeploy). Irish-first is the default: the bilingual Irish name is
+  # the centrepiece and this is a Connemara wall. The website keeps its own live toggle;
+  # this is only the fixed panel's voice.
+  LANGUAGES = %i[ga en].freeze
+  LANGUAGE_NAMES = { ga: 'Gaeilge', en: 'English' }.freeze
+  LANGUAGE_SETTING = 'station_language'.freeze
+
   class << self
+    # The panel's current display language (:ga or :en). Setting wins, then a config
+    # default, then Irish; an unknown stored value falls back safely.
+    def language
+      value = Setting.get(LANGUAGE_SETTING, ENV.fetch('STATION_LANG', 'ga')).to_s.to_sym
+      LANGUAGES.include?(value) ? value : :ga
+    end
+
+    # Set by the admin surface. Rejects anything off the list, so a bad post can't wedge
+    # the wall into a language it can't render.
+    def language=(value)
+      value = value.to_s.to_sym
+      raise ArgumentError, "unknown station language #{value.inspect}" unless LANGUAGES.include?(value)
+
+      Setting.set(LANGUAGE_SETTING, value)
+    end
+
+    # Where a guest goes to see more — this instance's public site, shown as calm
+    # wayfinding on the panel. Config, never hard-coded (culfinbirds.net is instance #1).
+    def url
+      ENV.fetch('STATION_URL', 'culfinbirds.net')
+    end
+
     # A bilingual place label, or nil if nothing is configured or resolved. Config
     # wins (a fixed station), then the almanac's reverse-geocode; the word is never
     # in our code.

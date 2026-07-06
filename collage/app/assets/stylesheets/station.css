@@ -9,9 +9,13 @@
   padding: 30px 34px; display: flex; flex-direction: column;
   font-family: "Baskerville", "Hoefler Text", "EB Garamond", Georgia, serif;
 }
-.screen .head { flex: 0 0 auto; display: flex; align-items: baseline; justify-content: space-between; }
+.screen .head { flex: 0 0 auto; display: flex; align-items: flex-start; justify-content: space-between; }
 .screen .wordmark { margin: 0; font-size: 46px; font-weight: 500; line-height: 1; }
+.screen .head-meta { text-align: right; }
 .screen .place { margin: 0; font-style: italic; font-size: 19px; color: var(--ink-soft); }
+/* The clock — the one figure a guest glances at. The panel refreshes on the shooter's
+   cadence, so it's minute-true on screen and refresh-true on glass (see the tuning note). */
+.screen .clock { margin: 4px 0 0; font: 500 22px ui-monospace, Menlo, monospace; letter-spacing: 0.04em; color: var(--ink-2); }
 .screen .rule { border: 0; border-top: 1px solid var(--ink); margin: 12px 0 0; }
 
 /* The collage — the dominant element, filling the middle. */
@@ -31,3 +35,12 @@
 }
 .screen .foot span { display: inline-flex; align-items: center; gap: 7px; }
 .screen .foot .ti { font-size: 17px; color: var(--ink-soft); line-height: 1; }
+
+/* Wayfinding — a quiet line pointing guests to the full site. Set behind the content
+   like a printer's mark, never shouting. */
+.screen .wayfind {
+  flex: 0 0 auto; margin: 12px 0 0; text-align: center;
+  font: 12px ui-monospace, Menlo, monospace; letter-spacing: 0.06em; color: var(--ink-soft);
+}
+.screen .wayfind-hint { text-transform: uppercase; margin-right: 9px; }
+.screen .wayfind-url { color: var(--ink-2); }

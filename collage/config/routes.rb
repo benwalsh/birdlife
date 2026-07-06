@@ -38,6 +38,8 @@ Rails.application.routes.draw do
 
   # Admin-only health panel (User#admin?, fail-closed). Not linked publicly.
   get 'admin' => 'admin#index', as: :admin
+  # Change the station's runtime settings (its display language).
+  patch 'admin/station' => 'admin#update_station', as: :admin_station
 
   # The background-jobs dashboard (Solid Queue via Mission Control). Admin-gated by
   # JobsBaseController; cloud-only, so guarded — the gem isn't installed on the Pi.

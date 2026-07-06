@@ -102,10 +102,24 @@ class CollageController < ApplicationController
     event = Event.breaking.first
     return nil unless event
 
-    label = event.kind_label
     name = BirdName.lookup(event.sci_name)
-    "#{label[:ga] || label[:en]} · #{name.ga || name.en}"
+    "#{station_text(event.kind_label)} · #{name.public_send(station_lang) || name.en}"
   end
+
+  # The panel's one language (:ga or :en) — an admin sets it; every string on the screen
+  # follows it, so the wall never mixes languages the way it used to.
+  def station_lang
+    Station.language
+  end
+  helper_method :station_lang
+
+  # Pick the panel's language from a bilingual { en:, ga: } hash, English as the backstop.
+  def station_text(hash)
+    return nil if hash.nil?
+
+    hash[station_lang] || hash[:en]
+  end
+  helper_method :station_text
 
   # The card's featured bird: most recently heard, ties broken by call count.
   def station_feature(tally)
