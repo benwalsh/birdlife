@@ -88,6 +88,9 @@ class TodaySummary
   ARRIVAL_FLAGS = %w[all_time_first all_time_first_young year_first].freeze
   # Words that assert novelty — legitimate only when the facts actually flag an arrival.
   NOVELTY = /\b(first|arriv\w+|debut|maiden|newly)\b/i
+  # …but a NEGATED mention ("no new arrivals or firsts today") is not a claim — it's the
+  # correct thing to say on a quiet day, so it must not trip the guard.
+  NEGATION = /\b(no|not|n't|without|never|nothing|none|nor)\b/i
 
   class << self
     # The last-good summary for the page — bilingual { en: [...], ga: [...] }. Never
@@ -158,7 +161,8 @@ class TodaySummary
     def supported?(bullets, facts)
       return true if facts[:items].any? { |i| Array(i[:flags]).intersect?(ARRIVAL_FLAGS) }
 
-      bullets.none? { |b| b.match?(NOVELTY) }
+      # Reject only an ASSERTED first — a novelty word with no negation in the same bullet.
+      bullets.none? { |b| b.match?(NOVELTY) && !b.match?(NEGATION) }
     end
 
     # One model round-trip → validated bullets, or nil (unreachable model, or output that

@@ -146,6 +146,25 @@ RSpec.describe TodaySummary do
       end
     end
 
+    context 'when the model correctly reports NO firsts on a quiet day' do
+      let(:routine_facts) do
+        facts.merge(items: [{ common_name: 'House Sparrow', irish_name: 'Gealbhan binne',
+                              call_count: 30, importance: 5, flags: %w[routine most_common] }])
+      end
+
+      before do
+        allow(DailyFacts).to receive(:for).and_return(routine_facts)
+        allow(Bedrock).to receive_messages(
+          disabled?: false,
+          converse: "- A quiet day, the usual sparrows.\n- No new arrivals or firsts were detected today."
+        )
+      end
+
+      it 'keeps it — a negated mention of firsts is a true statement, not a false claim' do
+        expect(described_class.refresh[:source]).to eq('llm')
+      end
+    end
+
     context 'when generation fails but a good summary is already cached' do
       before { allow(Bedrock).to receive(:disabled?).and_return(false) }
 
