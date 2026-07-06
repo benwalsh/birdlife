@@ -19,6 +19,14 @@ RSpec.describe TodayCard do
     expect(last[:ga]).to eq(last[:en])
   end
 
+  it 'labels a no-data band with its real clock span and a compact duration, bilingual' do
+    start = now - 24.hours # 24 one-hour buckets
+    gaps = described_class.send(:gap_labels, [{ x0: 233.4, x1: 466.7, from: 8, to: 15 }], now, start)
+    expect(gaps.first).to include(x0: 233.4, x1: 466.7)
+    expect(gaps.first[:label]).to eq(en: 'No data · 20:00–04:00', ga: 'Gan sonraí · 20:00–04:00')
+    expect(gaps.first[:short]).to eq(en: 'No data · 8h', ga: 'Gan sonraí · 8h')
+  end
+
   it 'labels a multi-day window as dates, with the Irish month for ga' do
     card = described_class.build(now: now, window_hours: 168) # 7 days back → spans late June
     expect(card[:anchors].first[:en]).to match(/\d/)          # a date like '27 Jun'

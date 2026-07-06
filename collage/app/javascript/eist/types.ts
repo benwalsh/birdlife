@@ -72,7 +72,8 @@ export interface Almanac {
   weather: Weather | null; tide: Tide | null; sun: Sun | null; moon: Moon; coords: Coords
 }
 export interface Bilingual { en: string; ga: string }
-export interface SparkPaths { path: string; fill: string; ghost?: string | null; w: number; h: number }
+export interface SparkGap { x0: number; x1: number; label: Bilingual; short: Bilingual }
+export interface SparkPaths { path: string; fill: string; gaps?: SparkGap[]; w: number; h: number }
 export interface Anchor { x: number; en: string; ga: string }
 export interface FooterItem { icon: string; en: string; ga: string }
 export interface Today {

@@ -39,35 +39,38 @@ RSpec.describe Sparkline do
     end
   end
 
-  describe 'blind spots (coverage → ghost)' do
+  describe 'blind spots (coverage → data-availability bands)' do
     let(:busy) { Array.new(24, 5) }
 
-    it 'has no ghost, and one continuous curve, when every bucket was covered' do
+    it 'has no gaps, and one continuous curve, when every bucket was covered' do
       result = described_class.paths(busy, coverage: Array.new(24, true))
-      expect(result.ghost).to be_nil
+      expect(result.gaps).to eq([])
       expect(result.path.scan('M ').size).to eq(1)
     end
 
-    it 'ghosts a mic-down stretch on the baseline and breaks the curve around it' do
+    it 'bands a mic-down stretch (real x-span + bucket range) and breaks the curve around it' do
       coverage = Array.new(24, true)
       (8..15).each { |i| coverage[i] = false } # mic down mid-window
       result = described_class.paths(busy, coverage: coverage)
 
-      base = Sparkline::H - Sparkline::PAD
-      expect(result.ghost).to match(/\AM [\d.]+ #{base} L [\d.]+ #{base}\z/o) # a dotted baseline span
-      expect(result.path.scan('M ').size).to eq(2)                            # curve split into two runs
+      expect(result.gaps.size).to eq(1)
+      gap = result.gaps.first
+      expect(gap).to include(from: 8, to: 15)               # the uncovered bucket range
+      expect(gap[:x0]).to be < gap[:x1]                     # a real span, not a zero-width line
+      expect(gap[:x1]).to be <= Sparkline::W
+      expect(result.path.scan('M ').size).to eq(2)          # curve split into two runs, never joined
     end
 
-    it 'still marks a blind spot even when the covered part was silent' do
+    it 'still bands a blind spot even when the covered part was silent' do
       coverage = Array.new(24, true)
       (0..5).each { |i| coverage[i] = false }
       result = described_class.paths(Array.new(24, 0), coverage: coverage)
-      expect(result.ghost).to be_present # the resting line, but the outage is shown as unknown
+      expect(result.gaps.map { |g| [g[:from], g[:to]] }).to eq([[0, 5]])
     end
 
-    it 'assumes full coverage (no ghost) when there is no coverage signal at all' do
-      expect(described_class.paths(busy, coverage: nil).ghost).to be_nil
-      expect(described_class.paths(busy, coverage: Array.new(24, false)).ghost).to be_nil
+    it 'assumes full coverage (no gaps) when there is no coverage signal at all' do
+      expect(described_class.paths(busy, coverage: nil).gaps).to eq([])
+      expect(described_class.paths(busy, coverage: Array.new(24, false)).gaps).to eq([])
     end
   end
 end

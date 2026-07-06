@@ -3,10 +3,11 @@ import { useLang } from '../lang'
 import type { Bootstrap, Tab } from '../types'
 import { AccountMenu } from './AccountMenu'
 
-const TABS: { id: Tab; en: string; ga: string }[] = [
-  { id: 'birds', en: 'Birds', ga: 'Éin' },
-  { id: 'stats', en: 'Stats', ga: 'Sonraí' },
-  { id: 'directory', en: 'Directory', ga: 'Eolaí' },
+// icon = the phone fallback (the word is hidden below 560px; see editorial.css).
+const TABS: { id: Tab; en: string; ga: string; icon: string }[] = [
+  { id: 'birds', en: 'Birds', ga: 'Éin', icon: 'ti-feather' },
+  { id: 'stats', en: 'Stats', ga: 'Sonraí', icon: 'ti-chart-bar' },
+  { id: 'directory', en: 'Directory', ga: 'Eolaí', icon: 'ti-book-2' },
 ]
 
 interface MastheadProps {
@@ -35,16 +36,21 @@ export function Masthead({ bootstrap, tab, onTab }: MastheadProps) {
           <span className="ed-word">Éist</span>
         </button>
         <nav className="ed-nav" aria-label="Sections">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              className="ed-navitem"
-              aria-current={tab === t.id ? 'page' : undefined}
-              onClick={() => onTab(t.id)}
-            >
-              {lang === 'ga' ? t.ga : t.en}
-            </button>
-          ))}
+          {TABS.map((t) => {
+            const label = lang === 'ga' ? t.ga : t.en
+            return (
+              <button
+                key={t.id}
+                className="ed-navitem"
+                aria-current={tab === t.id ? 'page' : undefined}
+                aria-label={label}
+                onClick={() => onTab(t.id)}
+              >
+                <i className={`ti ${t.icon}`} aria-hidden="true" />
+                <span className="ed-navitem-label">{label}</span>
+              </button>
+            )
+          })}
           <div className="ed-lang" role="group" aria-label="Language">
             <button className={`ed-lang-opt${lang === 'en' ? ' is-on' : ''}`} onClick={() => setLang('en')}>EN</button>
             <button className={`ed-lang-opt${lang === 'ga' ? ' is-on' : ''}`} onClick={() => setLang('ga')}>GA</button>

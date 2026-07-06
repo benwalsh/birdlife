@@ -41,10 +41,31 @@ class TodayCard
                       ga: emphasised_bullets(summary[:bullets][:ga], facts) },
         source:     summary[:source],
         total:      total,
-        sparkline:  { path: spark.path, fill: spark.fill, ghost: spark.ghost, w: spark.w, h: spark.h },
+        sparkline:  { path: spark.path, fill: spark.fill,
+                      gaps: gap_labels(spark.gaps, now, start), w: spark.w, h: spark.h },
         anchors:    anchors(now, start),
         footer:     footer_items(now)
       }
+    end
+
+    # Turn each blind-spot band's bucket range into clock-time labels: a full
+    # "No data · 06:00–08:48" and a compact "No data · 3h" the phone view uses. Bilingual.
+    def gap_labels(gaps, now, start)
+      bucket = (now - start) / BUCKETS
+      Array(gaps).map do |g|
+        from = start + (g[:from] * bucket)
+        to   = start + ((g[:to] + 1) * bucket)
+        span = "#{from.strftime('%H:%M')}–#{to.strftime('%H:%M')}"
+        dur  = duration_label(to - from)
+        { x0: g[:x0], x1: g[:x1],
+          label: { en: "No data · #{span}", ga: "Gan sonraí · #{span}" },
+          short: { en: "No data · #{dur}", ga: "Gan sonraí · #{dur}" } }
+      end
+    end
+
+    # A compact duration: whole hours once past an hour, otherwise minutes.
+    def duration_label(seconds)
+      seconds >= 3600 ? "#{(seconds / 3600.0).round}h" : "#{(seconds / 60.0).round}m"
     end
 
     # Just the ambient almanac readings (weather / moon / sun / tide / place), the same

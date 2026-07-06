@@ -8,32 +8,33 @@ class Sparkline
   H = 88
   PAD = 6
 
-  Paths = Data.define(:path, :fill, :ghost, :w, :h)
+  Paths = Data.define(:path, :fill, :gaps, :w, :h)
 
   class << self
-    # counts: up to 24 hourly buckets (oldest first). Returns the stroke path (the
-    # curve) and the fill path (same curve closed down to the baseline). coverage: an
-    # optional boolean per bucket — false where the mic was down (missing data, not a
-    # zero). Uncovered stretches are dropped from the curve and returned separately as a
-    # `ghost` path (a faint dotted baseline the view draws), so a blind spot reads as
-    # unknown, never as a confident flat zero.
+    # counts: up to 24 hourly buckets (oldest first). Returns the stroke path (the curve),
+    # the fill path (the curve closed to the baseline), and `gaps`. coverage: an optional
+    # boolean per bucket — false where the mic was down (missing data, not a zero). Each
+    # uncovered stretch is dropped from the curve (the two green series never connect
+    # across it) and returned in `gaps` as a band the view draws: its x-span and the
+    # bucket indices it covers (the caller labels those with clock times). So a blind spot
+    # reads as an explicit "no data" state, distinct from a true flat-zero.
     def paths(counts, coverage: nil, width: W, height: H, pad: PAD)
       counts = Array(counts).map(&:to_f)
       n = counts.length
       return flat(width, height, pad) if n < 2
 
       coverage = normalize_coverage(coverage, n)
+      gaps = gaps_for(coverage, n, width, pad)
       # No live curve to draw (silent-but-covered, or nothing known) → the resting line,
-      # plus a ghost wherever the window is a genuine blind spot.
-      return flat(width, height, pad, ghost: ghost_path(coverage, n, width, height, pad)) \
-        if counts.sum.zero? || coverage.none?
+      # with a band over any genuine blind spot.
+      return flat(width, height, pad, gaps: gaps) if counts.sum.zero? || coverage.none?
 
       points = plot_points(smooth(counts), width, height, pad)
       # Each covered run becomes its own curve; runs of one point can't be splined.
       runs = covered_runs(coverage).map { |idxs| idxs.map { |i| points[i] } }.select { |run| run.length >= 2 }
       line = runs.map { |run| spline(run, width, height) }.join(' ')
       fill = runs.map { |run| fill_segment(run, width, height) }.join(' ')
-      Paths.new(path: line, fill: fill, ghost: ghost_path(coverage, n, width, height, pad), w: width, h: height)
+      Paths.new(path: line, fill: fill, gaps: gaps, w: width, h: height)
     end
 
     private
@@ -62,26 +63,29 @@ class Sparkline
       runs
     end
 
-    # A faint dotted line along the baseline across every uncovered stretch — "the mic
-    # was down here; activity unknown". nil when the window is fully covered.
-    def ghost_path(coverage, count, width, height, pad)
-      return nil if coverage.all?
+    # Each uncovered stretch as a band: `{ x0, x1, from, to }` — the x-span (reaching to
+    # the midpoints of the bracketing covered points so the band meets the resumed chart
+    # cleanly) and the bucket index range (which the caller maps to a clock-time label).
+    # Empty when the window is fully covered.
+    def gaps_for(coverage, count, width, pad)
+      return [] if coverage.all?
 
-      base = height - pad
-      step = count > 1 ? (width - (2 * pad)) / (count - 1) : 0
-      covered_runs(coverage.map(&:!)).filter_map do |idxs|
-        x0 = pad + (idxs.first * step)
-        x1 = pad + (idxs.last * step)
-        "M #{r(x0)} #{r(base)} L #{r(x1)} #{r(base)}"
-      end.join(' ').presence
+      step = count > 1 ? (width - (2 * pad)) / (count - 1.0) : 0.0
+      covered_runs(coverage.map(&:!)).map do |idxs|
+        a = idxs.first
+        b = idxs.last
+        x0 = a.zero? ? pad : pad + ((a - 0.5) * step)
+        x1 = b == count - 1 ? width - pad : pad + ((b + 0.5) * step)
+        { x0: r(x0), x1: r(x1), from: a, to: b }
+      end
     end
 
     # A gentle resting line low on the card — the honest picture of a quiet day.
-    def flat(width, height, pad, ghost: nil)
+    def flat(width, height, pad, gaps: [])
       y = height - pad - ((height - (2 * pad)) * 0.12)
       path = "M #{pad} #{r(y)} L #{width - pad} #{r(y)}"
       fill = "#{path} L #{width - pad} #{height} L #{pad} #{height} Z"
-      Paths.new(path: path, fill: fill, ghost: ghost, w: width, h: height)
+      Paths.new(path: path, fill: fill, gaps: gaps, w: width, h: height)
     end
 
     # One covered run's curve, closed down to the baseline for the gradient fill.
