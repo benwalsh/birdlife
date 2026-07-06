@@ -34,12 +34,14 @@ module Enrichment
       @run_id = run_id
     end
 
-    # { host:, url:, text: } on success, or { error: } — never raises.
+    # { host:, url:, text: } on success, or { error: } — never raises. For a dúchas story
+    # page we GET the clean open-data XML transcript, but keep the human-readable /en/ URL
+    # as the citation (and log) — so the block's source matches what the model cited.
     def fetch(url)
       host = host_of(url)
       return { error: "untrusted host: #{host}" } unless trusted?(host)
 
-      body = http_get(url)
+      body = http_get(duchas_xml_url(url))
       return { error: "fetch failed: #{url}" } unless body
 
       log!(host, url)
@@ -88,12 +90,32 @@ module Enrichment
       nil
     end
 
-    def extract_text(html, base_url)
-      doc = Nokogiri::HTML(html)
+    # A dúchas story page → its clean XML transcript endpoint (open data): the /en/ HTML
+    # story is chrome-heavy, the /xml/ one is just the transcribed text. Only story pages
+    # (a numeric id after /cbes/), never the search page (…/cbes?Search=…).
+    def duchas_xml_url(url)
+      return url unless url.match?(%r{\Ahttps?://(?:www\.)?duchas\.ie/en/cbes/\d})
+
+      url.sub('/en/cbes/', '/xml/cbes/')
+    end
+
+    def extract_text(body, base_url)
+      return extract_duchas_xml(body) if body.include?('<transcript')
+
+      doc = Nokogiri::HTML(body)
       doc.search('script, style, nav, header, footer').remove
       text = doc.text.gsub(/\s+/, ' ').strip.first(MAX_CHARS)
       links = onsite_links(doc, base_url)
       links.empty? ? text : "#{text}\n\nLINKS (fetch one to read the full entry):\n#{links.join("\n")}"
+    end
+
+    # The dúchas XML holds one or more <transcript> elements (a page can carry several
+    # stories); return them all, so the model can quote the one about the bird in full.
+    def extract_duchas_xml(xml)
+      Nokogiri::XML(xml).css('transcript').filter_map do |t|
+        text = t.text.gsub(/\s+/, ' ').strip
+        text unless text.empty?
+      end.join("\n\n").first(MAX_CHARS)
     end
 
     # Trusted, on-host links found in the content, absolutised and de-duped — so the model

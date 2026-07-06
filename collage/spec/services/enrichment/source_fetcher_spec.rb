@@ -52,6 +52,22 @@ RSpec.describe Enrichment::SourceFetcher do
       expect(result[:text]).not_to include('evil.example.com')
     end
 
+    # A dúchas STORY page is fetched via its clean open-data XML transcript, but cited by
+    # the human /en/ URL the model followed — so the block's source matches the fetch log.
+    it 'reads a dúchas story from the XML endpoint yet cites the /en/ page' do
+      xml = '<pPage><story><transcript>The magpie and the wren build nests with a roof.</transcript></story></pPage>'
+      expect(fetcher).to receive(:http_get).with('https://www.duchas.ie/xml/cbes/4758602/4757997').and_return(xml)
+      result = fetcher.fetch('https://www.duchas.ie/en/cbes/4758602/4757997')
+      expect(result[:text]).to eq('The magpie and the wren build nests with a roof.')
+      expect(result[:url]).to eq('https://www.duchas.ie/en/cbes/4758602/4757997')
+    end
+
+    it 'leaves the dúchas SEARCH page as HTML (only story pages go to XML)' do
+      expect(fetcher).to receive(:http_get).
+        with('https://www.duchas.ie/en/cbes?Search=magpie').and_return('<html><body>results</body></html>')
+      fetcher.fetch('https://www.duchas.ie/en/cbes?Search=magpie')
+    end
+
     it 'returns an error (no raise, no log) when the request fails' do
       allow(fetcher).to receive(:http_get).and_return(nil)
       result = fetcher.fetch('https://duchas.ie/x')

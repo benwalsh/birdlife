@@ -56,16 +56,16 @@ module Enrichment
       Choosing sources by block type:
         - FACT and REGIONAL_NOTE: Wikipedia (en.wikipedia.org) and BirdWatch Ireland are
           reliable and deep — use them freely.
-        - FOLKLORE: strongly PREFER the Irish archives over Wikipedia. Search the dúchas.ie
-          Schools' Collection — fetch https://www.duchas.ie/en/cbes?Search=TERM (try the
-          bird's English name AND its Irish name), then FOLLOW one of the result links to
-          read and cite the actual story; celt.ucc.ie holds older Irish texts worth trying
-          too. Every page you fetch ends with a "LINKS" list of the on-site URLs it
-          contains — use them to navigate from a search or index page through to the entry;
-          do not guess blind paths. If, after a genuine try, the Irish archives don't give
-          you a clear folk belief you can cite for THIS species, fall back to Wikipedia's
-          folklore/mythology for it rather than returning no folklore at all — a
-          Wikipedia-cited Irish folk belief (e.g. the crow-goddess Badb) still beats none.
+        - FOLKLORE: dúchas.ie is the FAVOURITE — clearly prefer it to Wikipedia. Search the
+          Schools' Collection ONCE: fetch https://www.duchas.ie/en/cbes?Search=TERM (use the
+          bird's Irish name, e.g. its name in the task, and/or English). The result ends
+          with a "LINKS" list; FOLLOW one promising /en/cbes/<id>/<id> story link — that
+          returns the clean transcribed text, and you may quote or closely retell a FULL
+          short story (folklore blocks can run long; that's wanted, not a snippet). Cite the
+          /en/cbes/ URL you fetched. celt.ucc.ie is a second Irish option. Be economical —
+          dúchas rate-limits, so one search and one or two story fetches, not a dozen. ONLY
+          if dúchas and CELT genuinely have nothing for this bird, fall back to Wikipedia's
+          folklore/mythology (e.g. the crow-goddess Badb) rather than returning none.
       A few good sources beat a long hunt. Fetch what you need, then return the blocks.
 
       Return up to 3 blocks as a JSON array and NOTHING else — no prose, no code fence.
