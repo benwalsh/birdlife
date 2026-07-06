@@ -106,7 +106,26 @@ up offsite. WAL is on (`database.yml`); `deploy/birdlife-litestream.service` +
 `deploy/litestream.yml` replicate the DB to object storage. `provision.sh` installs
 Litestream and enables the service automatically **once the `LITESTREAM_*` keys are
 set in `.env`** (bucket, region, access key/secret; `LITESTREAM_ENDPOINT` for B2).
-Restore after an SD-card death:
+
+### Crash / power-outage recovery (automatic)
+
+The box is built to come back on its own from a crash, power cut, or SD-card death:
+
+- **Services self-heal and restart on boot** — `birdlife-web`, `birdlife-listener` and
+  `birdlife-litestream` are `Restart=always`, `WantedBy=multi-user.target`, and set
+  `StartLimitIntervalSec=0` so they never permanently give up; the timers are
+  `Persistent=true` so a run missed during an outage fires on the next boot.
+- **The DB survives a power cut** — WAL + `synchronous=NORMAL` (`database.yml`) make
+  SQLite commits atomic, so a cut mid-write can lose the last transaction but not corrupt
+  the file.
+- **Restore-on-boot** — `birdlife-restore.service` runs `deploy/restore-if-needed.sh`
+  **before** the web app's `db:prepare`: if the DB is missing or fails
+  `PRAGMA integrity_check` it pulls it back from the Litestream offsite replica (a corrupt
+  file is moved aside to `birds.db.corrupt-<ts>` first). Without it, `db:prepare` would
+  create an *empty* DB and silently lose the history. It no-ops when the DB is healthy or
+  Litestream is unset, and always exits 0 so a hiccup degrades rather than bricks the box.
+
+Manual restore, if ever needed:
 
 ```bash
 litestream restore -config deploy/litestream.yml "$BIRD_DB"

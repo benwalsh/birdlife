@@ -24,7 +24,7 @@ $SUDO apt-get install -y --no-install-recommends \
   git build-essential ca-certificates curl xz-utils unzip \
   libsndfile1 portaudio19-dev \
   fonts-ebgaramond chromium \
-  libssl-dev libyaml-dev zlib1g-dev libffi-dev libreadline-dev libsqlite3-dev
+  libssl-dev libyaml-dev zlib1g-dev libffi-dev libreadline-dev libsqlite3-dev sqlite3
 
 # -------------------------------------------------- Pi hardware interfaces ---
 if [ "$IN_CONTAINER" != "1" ]; then
@@ -99,7 +99,10 @@ cd "$REPO"
 sed -i "s/\bpi\b/$USER/g; s#/home/pi#$HOME#g" deploy/birdlife-*.service
 $SUDO cp deploy/birdlife-*.service deploy/birdlife-*.timer /etc/systemd/system/
 $SUDO systemctl daemon-reload
-$SUDO systemctl enable --now birdlife-listener birdlife-web birdlife-frame.timer
+# birdlife-restore is a boot-time oneshot (recovers the DB from the offsite replica before
+# the web's db:prepare), ordered ahead of the web — enable it so a power cut or SD-card
+# death comes back with its history, not an empty database.
+$SUDO systemctl enable --now birdlife-restore birdlife-listener birdlife-web birdlife-frame.timer
 
 # Cloud mirror push (Pi -> culfinbirds.net) — only if the ingest keys are set.
 if [ -n "${CLOUD_INGEST_URL:-}" ]; then

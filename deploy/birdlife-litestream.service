@@ -6,6 +6,9 @@
 Description=Litestream replication of the bird DB to S3/B2
 After=birdlife-web.service
 Requires=birdlife-web.service
+# Keep the offsite backup trying forever — losing replication silently is the one thing
+# that would turn a later SD-card death into real data loss.
+StartLimitIntervalSec=0
 
 [Service]
 User=pi

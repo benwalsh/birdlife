@@ -4,8 +4,13 @@
 # screenshots). Adjust User= and the paths (DEPLOY.md has a sed for it), then:
 # sudo cp deploy/*.service deploy/*.timer /etc/systemd/system/
 Description=Connemara bird collage web app
-After=network-online.target
-Wants=network-online.target
+# birdlife-restore recovers the DB from the offsite replica before db:prepare runs, so a
+# dead/corrupt SD card comes back with its history instead of an empty database.
+After=network-online.target birdlife-restore.service
+Wants=network-online.target birdlife-restore.service
+# Never permanently give up restarting — an unattended cottage box should keep trying to
+# recover, not stay down after a burst of failures (systemd's default is 5-in-10s → failed).
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
