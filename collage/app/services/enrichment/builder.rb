@@ -15,6 +15,10 @@ module Enrichment
   class Builder
     MAX_ROUNDS = 8
     MAX_FETCH_CHARS = 6000
+    # On a day with nothing notable, still source this many of the most interesting DUE
+    # species — the floor that keeps a quiet/young station building a facts & folklore
+    # library instead of sourcing nothing. 0 restores the old notable-only behaviour.
+    DAILY_FLOOR = Integer(ENV.fetch('ENRICH_DAILY_FLOOR', 1))
     # When research runs long, this forces the model to stop and answer from what it has
     # already fetched, so a thorough explorer still yields blocks instead of nothing.
     FINALISE = 'Stop searching now. Using ONLY the sources you have already fetched ' \
@@ -100,12 +104,25 @@ module Enrichment
         return [build_one(date: date, **only.symbolize_keys)].compact if only
 
         facts = DailyFacts.for(date: date)
-        importance = facts.fetch(:items, []).to_h { |i| [i[:sci_name], i[:importance]] }
-        EnrichmentGate.species_for(facts).filter_map do |sp|
-          next unless Policy.due?(sp[:sci_name], importance[sp[:sci_name]].to_i, as_of: date)
+        due_species(facts, date).filter_map { |sp| build_one(date: date, **sp.symbolize_keys) }
+      end
 
-          build_one(date: date, **sp.symbolize_keys)
-        end
+      # Today's species to source: every notable one that's due under the backoff — or,
+      # when nothing notable is due, a small FLOOR of the day's most interesting species
+      # that still lack facts & folklore. Without the floor an ordinary (or young) station,
+      # where nothing clears the notable bar, would source nothing for ever; with it the
+      # station builds a library a bird at a time (durable + backoff mean each is sourced
+      # once, then left alone) and always has something to show.
+      def due_species(facts, date)
+        items = facts.fetch(:items, [])
+        importance = items.to_h { |i| [i[:sci_name], i[:importance]] }
+        due = ->(sci) { Policy.due?(sci, importance[sci].to_i, as_of: date) }
+
+        notable = EnrichmentGate.species_for(facts).select { |sp| due.call(sp[:sci_name]) }
+        return notable if notable.any?
+
+        items.select { |i| due.call(i[:sci_name]) }.
+          first(DAILY_FLOOR).map { |i| i.slice(:sci_name, :common_name, :irish_name) }
       end
 
       # One species → one stored bundle, or nil when nothing survived validation.

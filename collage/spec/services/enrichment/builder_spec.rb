@@ -60,4 +60,43 @@ RSpec.describe Enrichment::Builder do
     expect(described_class.build_one(date: date, sci_name: sci)).to be_nil
     expect(EnrichmentBundle.where(sci_name: sci)).to be_empty
   end
+
+  describe '.run daily floor (so a quiet station still builds a library)' do
+    let(:routine_facts) do
+      { items: [
+        { sci_name: 'Passer domesticus', common_name: 'House Sparrow', irish_name: 'Gealbhan binne',
+          importance: 5, flags: %w[routine most_common] },
+        { sci_name: 'Pica pica', common_name: 'Eurasian Magpie', irish_name: 'Snag breac',
+          importance: 5, flags: %w[routine] }
+      ] }
+    end
+
+    before do
+      allow(DailyFacts).to receive(:for).and_return(routine_facts)
+      allow(described_class).to receive(:build_one) { |**kw| instance_double(EnrichmentBundle, sci_name: kw[:sci_name]) }
+    end
+
+    it 'sources the day\'s top due bird even though nothing clears the notable bar' do
+      result = described_class.run(date: date)
+      expect(result.size).to eq(1) # DAILY_FLOOR
+      expect(described_class).to have_received(:build_one).once
+        .with(hash_including(sci_name: 'Passer domesticus'))
+    end
+
+    it 'moves the floor to the next bird once the first is already sourced' do
+      allow(Enrichment::Policy).to receive(:due?).and_return(false, true) # sparrow done, magpie due
+      described_class.run(date: date)
+      expect(described_class).to have_received(:build_one)
+        .with(hash_including(sci_name: 'Pica pica'))
+    end
+
+    it 'still prefers a genuinely notable species over the floor' do
+      allow(EnrichmentGate).to receive(:species_for).and_return(
+        [{ sci_name: 'Cuculus canorus', common_name: 'Common Cuckoo', irish_name: 'Cuach' }]
+      )
+      described_class.run(date: date)
+      expect(described_class).to have_received(:build_one).once
+        .with(hash_including(sci_name: 'Cuculus canorus'))
+    end
+  end
 end
