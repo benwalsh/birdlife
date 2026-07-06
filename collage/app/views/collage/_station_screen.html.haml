@@ -12,7 +12,11 @@
     %p.news= @news
   - else
     %p.news.quiet ag éisteacht…
-  %footer.foot
-    %span= Time.current.strftime('%-l:%M %P')
-    %span.moon #{@moon.emoji} #{@moon.name}
-    %span= "#{@species_today} species"
+  -# The ambient almanac — the same weather / moon / sun / tide readings the home page's
+  -# row shows, as muted line-icon + label pairs (never emoji), Irish-first in the wall's
+  -# voice. A subset of the site's content, nothing of the panel's own.
+  %footer.foot.today-almanac
+    - Array(@almanac).each do |item|
+      %span
+        %i.ti{ class: item[:icon], "aria-hidden": "true" }
+        = item[:ga] || item[:en]

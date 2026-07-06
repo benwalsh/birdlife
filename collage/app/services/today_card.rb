@@ -46,6 +46,14 @@ class TodayCard
       }
     end
 
+    # Just the ambient almanac readings (weather / moon / sun / tide / place), the same
+    # bilingual line-icon items the home page's row renders — no sparkline, no LLM
+    # narration. The station panel reads this so its footer is a subset of the home
+    # page's content, not a parallel one of its own.
+    def almanac(now: Time.current)
+      footer_items(now)
+    end
+
     private
 
     def date_label(now)

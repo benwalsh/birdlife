@@ -66,9 +66,11 @@ class CollageController < ApplicationController
     # with big birds, rather than a landscape band floating in whitespace.
     @collage = CollagePresenter.new(tally, width: 452, height: 600, top_inset: 4, bottom_inset: 4,
                                            margin: 6, x_bias: 0.82, y_bias: 1.0)
-    @species_today = Detection.tally_for.size
-    @moon = MoonPhase.for
     @news = station_news
+    # The footer is a subset of the home page's ambient almanac — the same bilingual
+    # line-icon readings — not a parallel set of the panel's own. Place already sits in
+    # the header, so drop that one item to avoid saying it twice.
+    @almanac = TodayCard.almanac.reject { |item| item[:icon] == 'ti-map-pin' }
   end
 
   def collage

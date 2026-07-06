@@ -21,10 +21,13 @@
 .screen .news { flex: 0 0 auto; margin: 0 0 16px; text-align: center; font-style: italic; font-size: 21px; line-height: 1.25; }
 .screen .news.quiet { color: var(--ink-soft); }
 
+/* The ambient almanac — the same line-icon + label readings as the home page's row,
+   centred across the foot of the panel. */
 .screen .foot {
   flex: 0 0 auto; border-top: 1px solid var(--ink); padding-top: 12px;
-  display: flex; justify-content: space-between; align-items: baseline;
-  font: 12px ui-monospace, Menlo, monospace; letter-spacing: 0.06em;
-  text-transform: uppercase; color: var(--ink-2);
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
+  gap: 8px 22px; font: 13px ui-monospace, Menlo, monospace; letter-spacing: 0.03em;
+  color: var(--ink-2);
 }
-.screen .foot .moon { font-family: "Baskerville", Georgia, serif; text-transform: none; letter-spacing: 0; font-size: 16px; }
+.screen .foot span { display: inline-flex; align-items: center; gap: 7px; }
+.screen .foot .ti { font-size: 17px; color: var(--ink-soft); line-height: 1; }
