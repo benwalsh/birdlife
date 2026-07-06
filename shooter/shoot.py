@@ -25,7 +25,7 @@ import os
 import sys
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageEnhance
 
 PANEL_W, PANEL_H = 480, 800
 
@@ -55,12 +55,19 @@ def screenshot(url: str, selector: str, timeout_ms: int = 30_000) -> bytes:
     return png
 
 
-def dither_spectra6(img: Image.Image) -> Image.Image:
+def dither_spectra6(img: Image.Image, saturation: float = 0.6) -> Image.Image:
+    img = img.convert("RGB")
+    # The panel muts colour by `saturation` on hardware (Inky.set_image), which tames
+    # the coloured-ink speckle a naive quantise sprays into near-neutral areas (dark
+    # birds especially). Mirror it here so the desktop preview isn't more garish than
+    # the real thing.
+    if saturation < 1.0:
+        img = ImageEnhance.Color(img).enhance(saturation)
     pal = Image.new("P", (1, 1))
     flat = [c for ink in SPECTRA6 for c in ink]
     flat += list(SPECTRA6[0]) * ((768 - len(flat)) // 3)
     pal.putpalette(flat[:768])
-    return img.convert("RGB").quantize(palette=pal, dither=Image.Dither.FLOYDSTEINBERG).convert("RGB")
+    return img.quantize(palette=pal, dither=Image.Dither.FLOYDSTEINBERG).convert("RGB")
 
 
 def push_inky(img: Image.Image, saturation: float, rotate: int) -> None:
@@ -110,8 +117,8 @@ def main() -> int:
     img = Image.open(io.BytesIO(png)).convert("RGB")
 
     if args.preview:
-        dither_spectra6(img).save(args.preview)
-        print(f"wrote preview {args.preview}")
+        dither_spectra6(img, args.saturation).save(args.preview)
+        print(f"wrote preview {args.preview} (saturation {args.saturation})")
         return 0
 
     digest = hashlib.sha256(png).hexdigest()[:16]
