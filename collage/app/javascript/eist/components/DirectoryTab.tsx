@@ -93,7 +93,7 @@ export function DirectoryTab({ onSelect }: { onSelect: (sci: string) => void }) 
                     <span className="dir-stats">
                       <span className="dir-stat"><b>{e.count.toLocaleString()}</b> {t('all', 'riamh')}</span>
                       <span className="dir-stat"><b>{e.today.toLocaleString()}</b> {t('today', 'inniu')}</span>
-                      {e.first_seen && <span className="dir-stat"><b>{elapsed(e.first_seen)}</b> {t('first', 'céad')}</span>}
+                      {e.first_seen && <span className="dir-stat"><b>{elapsed(e.first_seen, lang)}</b> {t('first', 'céad')}</span>}
                     </span>
                   ) : (
                     <span className="dir-stats dir-unseen-note">{t('not yet heard', 'gan chloisteáil fós')}</span>

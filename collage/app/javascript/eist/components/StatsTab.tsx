@@ -108,7 +108,7 @@ export function StatsTab({
                 <li key={e.sci}>
                   <button className="st-rrow st-rbtn" onClick={() => onSelect(e.sci)}>
                     {name(e.en, e.ga)}
-                    <span className="st-rdate">{shortDate(e.first_seen)}</span>
+                    <span className="st-rdate">{shortDate(e.first_seen, lang)}</span>
                   </button>
                 </li>
               ))}

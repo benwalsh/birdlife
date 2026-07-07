@@ -134,7 +134,7 @@ export function SpeciesModal({ sci, onClose }: { sci: string; onClose: () => voi
                 <div className="modal-stats">
                   <div><span className="n">{data.all_time.toLocaleString()}</span><span className="lbl">{t('all time', 'riamh')}</span></div>
                   <div><span className="n">{data.today.toLocaleString()}</span><span className="lbl">{t('today', 'inniu')}</span></div>
-                  <div><span className="n">{ago(data.first_seen)}</span><span className="lbl">{t('first heard', 'chéad chloiste')}</span></div>
+                  <div><span className="n">{ago(data.first_seen, lang)}</span><span className="lbl">{t('first heard', 'chéad chloiste')}</span></div>
                 </div>
                 {desc && <p className="desc">{desc}</p>}
                 {enr && enr.blocks.length > 0 ? (
@@ -176,7 +176,7 @@ export function SpeciesModal({ sci, onClose }: { sci: string; onClose: () => voi
               <ol>
                 {data.recent.map((r, i) => (
                   <li key={i}>
-                    <span className="rec-when">{ago(r.at)}<small>{stamp(r.at)}</small></span>
+                    <span className="rec-when">{ago(r.at, lang)}<small>{stamp(r.at, lang)}</small></span>
                     <span className="rec-conf">{Math.round(r.confidence * 100)}%</span>
                   </li>
                 ))}

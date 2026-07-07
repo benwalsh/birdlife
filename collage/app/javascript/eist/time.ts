@@ -1,40 +1,65 @@
+// Time/date formatting, bilingual. The relative words and month names take a language
+// so a date reads the same way in both — "16h ago · 6 Jul" in English, "16u ó shin ·
+// 6 Iúil" in Irish. Irish months are the full forms (matching the server's date labels);
+// the relative units are the terse single letters n/u/l (nóiméad / uair / lá).
+type Lang = 'en' | 'ga'
+
+const EN_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const GA_MONTHS = [
+  'Eanáir', 'Feabhra', 'Márta', 'Aibreán', 'Bealtaine', 'Meitheamh',
+  'Iúil', 'Lúnasa', 'Meán Fómhair', 'Deireadh Fómhair', 'Samhain', 'Nollaig',
+]
+
 // Detection timestamps arrive as "YYYY-MM-DD HH:MM:SS" (no zone) or ISO8601.
 function parse(value: string): number {
   return new Date(value.includes('T') ? value : value.replace(' ', 'T')).getTime()
 }
 
-// Compact relative time, matching the old server helper: "now", "8m ago", "3h ago".
-export function ago(value: string | null): string {
-  if (!value) return '—'
-  const secs = (Date.now() - parse(value)) / 1000
-  if (secs < 60) return 'now'
-  if (secs < 3600) return `${Math.floor(secs / 60)}m ago`
-  if (secs < 86_400) return `${Math.floor(secs / 3600)}h ago`
-  return `${Math.floor(secs / 86_400)}d ago`
-}
-
-// The bare elapsed magnitude, no "ago" — "now", "8m", "3h", "7d". For tight datelines
-// where a following label supplies the sense (e.g. "7d first" = first heard 7 days ago).
-export function elapsed(value: string | null): string {
-  if (!value) return '—'
-  const secs = (Date.now() - parse(value)) / 1000
-  if (secs < 60) return 'now'
-  if (secs < 3600) return `${Math.floor(secs / 60)}m`
-  if (secs < 86_400) return `${Math.floor(secs / 3600)}h`
-  return `${Math.floor(secs / 86_400)}d`
-}
-
-export function shortDate(value: string | null): string {
-  if (!value) return ''
+function at(value: string): Date {
   return new Date(value.includes('T') ? value : value.replace(' ', 'T'))
-    .toLocaleDateString('en-IE', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-// "2 Jul · 22:05" for the modal's recordings list.
-export function stamp(value: string | null): string {
+// Compact relative time: "now" / "8m ago" / "3h ago" — Irish "anois" / "8n ó shin" /
+// "3u ó shin" / "7l ó shin".
+export function ago(value: string | null, lang: Lang = 'en'): string {
+  if (!value) return '—'
+  const secs = (Date.now() - parse(value)) / 1000
+  const ga = lang === 'ga'
+  if (secs < 60) return ga ? 'anois' : 'now'
+  if (secs < 3600) return phrase(Math.floor(secs / 60), 'm', 'n', ga)
+  if (secs < 86_400) return phrase(Math.floor(secs / 3600), 'h', 'u', ga)
+  return phrase(Math.floor(secs / 86_400), 'd', 'l', ga)
+}
+
+function phrase(n: number, enUnit: string, gaUnit: string, ga: boolean): string {
+  return ga ? `${n}${gaUnit} ó shin` : `${n}${enUnit} ago`
+}
+
+// The bare elapsed magnitude, no "ago" — "now"/"8m"/"3h"/"7d" (Irish "anois"/"8n"/"3u"/
+// "7l"). For tight datelines where a following label supplies the sense ("7d first").
+export function elapsed(value: string | null, lang: Lang = 'en'): string {
+  if (!value) return '—'
+  const secs = (Date.now() - parse(value)) / 1000
+  const ga = lang === 'ga'
+  if (secs < 60) return ga ? 'anois' : 'now'
+  if (secs < 3600) return `${Math.floor(secs / 60)}${ga ? 'n' : 'm'}`
+  if (secs < 86_400) return `${Math.floor(secs / 3600)}${ga ? 'u' : 'h'}`
+  return `${Math.floor(secs / 86_400)}${ga ? 'l' : 'd'}`
+}
+
+// "6 Jul 2026" / "6 Iúil 2026".
+export function shortDate(value: string | null, lang: Lang = 'en'): string {
   if (!value) return ''
-  const d = new Date(value.includes('T') ? value : value.replace(' ', 'T'))
-  const date = d.toLocaleDateString('en-IE', { day: 'numeric', month: 'short' })
+  const d = at(value)
+  const months = lang === 'ga' ? GA_MONTHS : EN_MONTHS
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`
+}
+
+// "6 Jul · 22:05" / "6 Iúil · 22:05" for the modal's recordings list.
+export function stamp(value: string | null, lang: Lang = 'en'): string {
+  if (!value) return ''
+  const d = at(value)
+  const months = lang === 'ga' ? GA_MONTHS : EN_MONTHS
   const time = d.toLocaleTimeString('en-IE', { hour: '2-digit', minute: '2-digit', hour12: false })
-  return `${date} · ${time}`
+  return `${d.getDate()} ${months[d.getMonth()]} · ${time}`
 }
