@@ -25,45 +25,43 @@ RSpec.describe Almanac do
   end
 
   describe '.next_tide' do
-    let(:times) { (10..14).map { |h| "2026-07-03T#{h}:00" } }
-    let(:now) { Time.zone.parse('2026-07-03T10:30') }
-
-    it 'finds the next high (a future local maximum), bilingually' do
-      tide = described_class.next_tide(times, [1.0, 1.5, 2.0, 1.5, 1.0], now)
-      expect(tide).to include(type: 'high', time: '12:00', label: 'High tide 12:00', label_ga: 'Lán mara 12:00')
+    # ERDDAP times are UTC; the label renders in Europe/Dublin (so 10:00Z → 11:00 IST).
+    let(:extrema) do
+      [{ t: '2026-07-07T10:00:00Z', type: 'low' },
+       { t: '2026-07-07T16:45:00Z', type: 'high' }]
     end
 
-    it 'finds the next low (a future local minimum)' do
-      tide = described_class.next_tide(times, [2.0, 1.5, 1.0, 1.5, 2.0], now)
-      expect(tide).to include(type: 'low', label: 'Low tide 12:00', label_ga: 'Lag trá 12:00')
+    it 'returns the next upcoming turning point, in local time, bilingually' do
+      tide = described_class.next_tide(extrema, Time.zone.parse('2026-07-07T08:00'),
+                                       { en: 'Dublin Port', ga: 'Port Bhaile Átha Cliath' })
+      expect(tide).to include(type: 'low', time: '11:00', station: 'Dublin Port',
+                              label: 'Low tide 11:00 · Dublin Port',
+                              label_ga: 'Lag trá 11:00 · Port Bhaile Átha Cliath')
     end
 
-    it 'ignores turning points already in the past' do
-      # peak at 10:00 is before `now`; the next turning point is the 12:00 low
-      tide = described_class.next_tide(times, [2.0, 1.5, 1.0, 1.5, 2.0], Time.zone.parse('2026-07-03T09:30'))
-      expect(tide[:time]).to eq('12:00')
+    it 'skips a turning point already passed and takes the next' do
+      # read after the 11:00 low → the next is the 17:45 high
+      tide = described_class.next_tide(extrema, Time.zone.parse('2026-07-07T13:00'))
+      expect(tide).to include(type: 'high', time: '17:45')
     end
 
-    it 'names the nearest station in the label when one is given' do
-      station = { en: 'Killary Harbour', ga: 'An Caoláire Rua' }
-      tide = described_class.next_tide(times, [1.0, 1.5, 2.0, 1.5, 1.0], now, station)
-      expect(tide).to include(label: 'High tide 12:00 · Killary Harbour',
-                              label_ga: 'Lán mara 12:00 · An Caoláire Rua', station: 'Killary Harbour')
+    it 'is nil when nothing is upcoming' do
+      expect(described_class.next_tide(extrema, Time.zone.parse('2026-07-08T00:00'))).to be_nil
     end
   end
 
   describe '.nearest_tide_station' do
-    it 'picks the nearest west-coast harbour for the Connemara cottage' do
-      # ~Culfin / Tigh Bhreadáin
-      expect(described_class.nearest_tide_station(53.62, -9.90)[:en]).to eq('Ballynakill Harbour')
+    it 'picks Killary Harbour for the Connemara cottage' do
+      # ~Culfin / Tigh Bhreadáin — Killary is the closest Marine Institute station
+      expect(described_class.nearest_tide_station(53.62, -9.90)[:id]).to eq('Killary_Harbour')
     end
 
-    it 'picks Dublin North Wall for a Dublin position' do
-      expect(described_class.nearest_tide_station(53.34, -6.25)[:en]).to eq('Dublin North Wall')
+    it 'picks Dublin Port for a Dublin position' do
+      expect(described_class.nearest_tide_station(53.334, -6.227)[:id]).to eq('Dublin_Port')
     end
 
     it 'picks Galway for the inner bay' do
-      expect(described_class.nearest_tide_station(53.27, -9.05)[:en]).to eq('Galway')
+      expect(described_class.nearest_tide_station(53.27, -9.05)[:id]).to eq('Galway')
     end
   end
 
@@ -94,7 +92,7 @@ RSpec.describe Almanac do
     it 'returns a blank reading when the cache file is missing' do
       expect(file).not_to exist
       expect(described_class.current).to eq(coords: nil, weather: nil, sun: nil, tide: nil,
-                                            tide_series: nil, tide_station: nil, fetched_at: nil)
+                                            tide_extrema: nil, tide_station: nil, fetched_at: nil)
     end
 
     it 'reads back a cached reading and parses fetched_at' do
@@ -113,25 +111,25 @@ RSpec.describe Almanac do
     it 'survives a corrupt cache file' do
       file.write('{ not json')
       expect(described_class.current).to eq(coords: nil, weather: nil, sun: nil, tide: nil,
-                                            tide_series: nil, tide_station: nil, fetched_at: nil)
+                                            tide_extrema: nil, tide_station: nil, fetched_at: nil)
     end
 
-    it 'derives the next tide LIVE from the cached series, tracking the current time' do
-      # A low at 12:00, a high at 18:00. The tide read at 09:00 is the low; read at 14:00
-      # (past the low) it is the high — same cache, no re-fetch: the read is time-aware.
+    it 'derives the next tide LIVE from the cached predictions, tracking the current time' do
+      # Read at 09:00 the next water is the 11:00 low; read at 13:00 (past it) the 17:45
+      # high — same cache, no re-fetch: the read is time-aware. (ERDDAP times are UTC.)
       file.write({
         coords:       { lat: 53.35, lon: -6.25 },
-        tide_series:  { time:   (9..20).map { |h| "2026-07-03T#{format('%02d', h)}:00" },
-                        height: [2.0, 1.5, 1.2, 1.0, 1.2, 1.5, 2.0, 2.5, 2.8, 3.0, 2.8, 2.5] },
-        tide_station: { en: 'Dublin North Wall', ga: 'Baile Átha Cliath Port Thuaidh' },
-        fetched_at:   '2026-07-03T08:00:00Z'
+        tide_extrema: [{ t: '2026-07-07T10:00:00Z', type: 'low' },
+                       { t: '2026-07-07T16:45:00Z', type: 'high' }],
+        tide_station: { en: 'Dublin Port', ga: 'Port Bhaile Átha Cliath' },
+        fetched_at:   '2026-07-07T08:00:00Z'
       }.to_json)
 
-      morning = described_class.current(now: Time.zone.parse('2026-07-03T09:00'))
-      expect(morning[:tide]).to include(type: 'low', time: '12:00', station: 'Dublin North Wall')
+      morning = described_class.current(now: Time.zone.parse('2026-07-07T09:00'))
+      expect(morning[:tide]).to include(type: 'low', time: '11:00', station: 'Dublin Port')
 
-      afternoon = described_class.current(now: Time.zone.parse('2026-07-03T14:00'))
-      expect(afternoon[:tide]).to include(type: 'high', time: '18:00')
+      afternoon = described_class.current(now: Time.zone.parse('2026-07-07T13:00'))
+      expect(afternoon[:tide]).to include(type: 'high', time: '17:45')
     end
   end
 end
