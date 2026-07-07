@@ -1,12 +1,21 @@
 require 'net/http'
 require 'json'
 
-# Cached Wikipedia species descriptions for the detail panel. English prose is
-# keyed by scientific name (en.wikipedia resolves those); Irish prose by the
-# bird's Irish name (ga.wikipedia uses Irish titles, not scientific ones, and
-# only covers a fraction of species). Fetched once per species so the panel
-# doesn't hit Wikipedia on every open.
+# Cached Wikipedia species descriptions for the detail panel. English prose is keyed by
+# scientific name (en.wikipedia resolves those). Irish prose is a faithful TRANSLATION of
+# that English summary (Bedrock) — Irish Wikipedia covers only a fraction of species and is
+# usually sparse, so translating the richer English reads far better; the native ga.wikipedia
+# article is only a fallback when the model is unavailable (e.g. the offline Pi). Fetched
+# once per species so the panel doesn't hit the network/model on every open.
 class SpeciesInfo < ApplicationRecord
+  # A faithful Irish rendering of the English summary, using the established Irish bird name.
+  TRANSLATE_DESC = <<~PROMPT.freeze
+    Translate this bird's species description into natural, idiomatic Irish (Gaeilge), with
+    correct spelling and síntí fada. Where the text names the bird, use its established Irish
+    name%<name>s. A faithful translation — add nothing, drop nothing, no preamble or notes.
+    Return only the Irish prose.
+  PROMPT
+
   validates :sci_name, presence: true, uniqueness: true
 
   class << self
@@ -19,16 +28,15 @@ class SpeciesInfo < ApplicationRecord
       text
     end
 
-    # Irish article titles differ from the scientific name, so this fetches by
-    # the bird's Irish name. fetched_ga_at records the attempt — including a miss
-    # — so a species with no Irish article isn't re-fetched on every open.
+    # The bird's Irish description: a translation of the (richer) English summary, or the
+    # native Irish Wikipedia article when the model is unavailable. fetched_ga_at records the
+    # attempt — including a miss — so a species is only translated/fetched once.
     def irish_for(sci, ga_name)
-      return nil if ga_name.blank?
-
       info = find_or_initialize_by(sci_name: sci)
       return info.description_ga if info.fetched_ga_at.present?
 
-      text = fetch(ga_name, 'ga')
+      text = translate_to_irish(english_for(sci), ga_name)
+      text ||= fetch(ga_name, 'ga') if ga_name.present?
       info.update(description_ga: text, fetched_ga_at: Time.current)
       text
     end
@@ -46,6 +54,22 @@ class SpeciesInfo < ApplicationRecord
     end
 
     private
+
+    # English summary → a faithful Irish rendering via Bedrock (max_tokens raised for a
+    # multi-sentence description). nil when there's nothing to translate, the model is
+    # disabled (offline Pi), or the call fails — the caller then falls back to ga.wikipedia.
+    def translate_to_irish(english, ga_name)
+      return nil if english.blank? || Bedrock.disabled?
+
+      name = ga_name.present? ? " (#{ga_name})" : ''
+      # Translate with the stronger enrich model (Claude), not Nova Lite — idiomatic Irish
+      # with correct fadas is the centrepiece; the weaker model mangles it. Cached per species.
+      Bedrock.converse(system: format(TRANSLATE_DESC, name: name), user: english,
+                       model_id: Bedrock.enrich_model_id, max_tokens: 900).presence
+    rescue StandardError => e
+      Rails.logger.warn("SpeciesInfo: Irish translation failed (#{e.class}: #{e.message})")
+      nil
+    end
 
     # Two sources, most-trustworthy first: audio embedded in the species'
     # Wikipedia article, else a Commons search. nil if neither has a recording.
