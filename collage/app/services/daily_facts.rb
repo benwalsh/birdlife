@@ -45,14 +45,20 @@ class DailyFacts
   # The deterministic template's wording, per language. Irish scaffolding is a first
   # pass — worth a native check — but the counts and names it wraps are exact.
   TEMPLATE_PHRASES = {
-    en: { count:  '%<species>s species and %<detections>s detections logged today.',
-          firsts: 'New for the station: %<names>s.',
-          years:  'First of the year: %<names>s.',
-          common: 'Most heard: %<names>s.' },
-    ga: { count:  '%<species>s speiceas agus %<detections>s brath logáilte inniu.',
-          firsts: 'Nua ag an stáisiún: %<names>s.',
-          years:  'Céaduair i mbliana: %<names>s.',
-          common: 'Ba mhó a chualathas: %<names>s.' }
+    en: { count:    '%<species>s species and %<detections>s detections logged today.',
+          firsts:   'New for the station: %<names>s.',
+          years:    'First of the year: %<names>s.',
+          common:   'Most heard: %<names>s.',
+          peak:     'Busiest around %<hour>s.',
+          activity: { 'busier_than_typical'  => 'A busier day than usual.',
+                      'quieter_than_typical' => 'A quieter day than usual.' } },
+    ga: { count:    '%<species>s speiceas agus %<detections>s brath logáilte inniu.',
+          firsts:   'Nua ag an stáisiún: %<names>s.',
+          years:    'Céaduair i mbliana: %<names>s.',
+          common:   'Ba mhó a chualathas: %<names>s.',
+          peak:     'Ba ghnóthaí thart ar %<hour>s.',
+          activity: { 'busier_than_typical'  => 'Lá níos gnóthaí ná mar is gnách.',
+                      'quieter_than_typical' => 'Lá níos ciúine ná mar is gnách.' } }
   }.freeze
 
   class << self
@@ -87,8 +93,22 @@ class DailyFacts
       common = common_names(facts, lang)
       bullets << format(phrases[:firsts], names: lead_phrase(firsts, lang)) if firsts.any?
       bullets << format(phrases[:years], names: lead_phrase(years, lang)) if years.any?
-      bullets << format(phrases[:common], names: common.join(', ')) if common.any? && bullets.length < 4
+      bullets << format(phrases[:common], names: common.join(', ')) if common.any?
+      # Texture to round out a quiet day (no arrivals): the day's tempo vs its own baseline,
+      # and the busiest hour. Order after the news so firsts still lead; capped at four.
+      bullets << phrases[:activity][facts[:activity_note].to_s] if phrases[:activity].key?(facts[:activity_note].to_s)
+      peak = peak_hour(facts[:activity_curve_24h])
+      bullets << format(phrases[:peak], hour: peak) if peak
       bullets.first(4)
+    end
+
+    # The clock-hour with the most detections today (e.g. "08:00"), or nil on a silent day.
+    # activity_curve_24h is an array of { hour:, count: } buckets.
+    def peak_hour(curve)
+      curve = Array(curve)
+      return nil if curve.sum { |b| b[:count].to_i }.zero?
+
+      format('%<h>02d:00', h: curve.max_by { |b| b[:count].to_i }[:hour])
     end
 
     def names_with(facts, flag, lang = :en)
