@@ -54,6 +54,46 @@ class Almanac
   }.freeze
   # Tide turning point → [English, Irish] (Lán mara = high water, Lag trá = ebb).
   TIDE_LABELS = { high: ['High tide', 'Lán mara'], low: ['Low tide', 'Lag trá'] }.freeze
+  # Recognised Irish tidal ports (name + position), so the tide can say WHICH station it
+  # is near. The turning-point time itself is the modelled tide at the station's own
+  # coordinates (Open-Meteo); this table only supplies the nearest named harbour for the
+  # label — on the west coast that's within a few km, so the two agree closely. Bilingual
+  # where the port has an established Irish name, otherwise the same in both. Denser on the
+  # west (the cottage) and east (dev) coasts; a coarse coastal spread elsewhere.
+  TIDE_STATIONS = [
+    { en: 'Dublin North Wall', ga: 'Baile Átha Cliath', lat: 53.349, lon: -6.223 },
+    { en: 'Dún Laoghaire', ga: 'Dún Laoghaire', lat: 53.295, lon: -6.133 },
+    { en: 'Howth', ga: 'Binn Éadair', lat: 53.391, lon: -6.067 },
+    { en: 'Balbriggan', ga: 'Baile Brigín', lat: 53.609, lon: -6.182 },
+    { en: 'Wicklow', ga: 'Cill Mhantáin', lat: 52.980, lon: -6.033 },
+    { en: 'Arklow', ga: 'An tInbhear Mór', lat: 52.793, lon: -6.141 },
+    { en: 'Rosslare', ga: 'Ros Láir', lat: 52.254, lon: -6.339 },
+    { en: 'Dunmore East', ga: 'An Dún Mór Thoir', lat: 52.150, lon: -6.992 },
+    { en: 'Cobh', ga: 'An Cóbh', lat: 51.851, lon: -8.297 },
+    { en: 'Kinsale', ga: 'Cionn tSáile', lat: 51.706, lon: -8.523 },
+    { en: 'Bantry', ga: 'Beanntraí', lat: 51.681, lon: -9.454 },
+    { en: 'Castletownbere', ga: 'Baile Chaisleáin Bhéarra', lat: 51.649, lon: -9.907 },
+    { en: 'Dingle', ga: 'An Daingean', lat: 52.140, lon: -10.271 },
+    { en: 'Fenit', ga: 'An Fhianait', lat: 52.271, lon: -9.868 },
+    { en: 'Kilrush', ga: 'Cill Rois', lat: 52.638, lon: -9.485 },
+    { en: 'Galway', ga: 'Gaillimh', lat: 53.269, lon: -9.049 },
+    { en: 'Rossaveel', ga: 'Ros an Mhíl', lat: 53.267, lon: -9.560 },
+    { en: 'Roundstone', ga: 'Cloch na Rón', lat: 53.397, lon: -9.913 },
+    { en: 'Clifden', ga: 'An Clochán', lat: 53.488, lon: -10.020 },
+    { en: 'Ballynakill Harbour', ga: 'Cuan Bhaile na Cille', lat: 53.583, lon: -9.960 },
+    { en: 'Killary Harbour', ga: 'An Caoláire Rua', lat: 53.630, lon: -9.780 },
+    { en: 'Westport', ga: 'Cathair na Mart', lat: 53.800, lon: -9.516 },
+    { en: 'Clare Island', ga: 'Cliara', lat: 53.800, lon: -9.983 },
+    { en: 'Belmullet', ga: 'Béal an Mhuirthead', lat: 54.226, lon: -9.989 },
+    { en: 'Ballina', ga: 'Béal an Átha', lat: 54.213, lon: -9.219 },
+    { en: 'Sligo', ga: 'Sligeach', lat: 54.300, lon: -8.583 },
+    { en: 'Killybegs', ga: 'Na Cealla Beaga', lat: 54.635, lon: -8.446 },
+    { en: 'Burtonport', ga: 'Ailt an Chorráin', lat: 54.983, lon: -8.433 },
+    { en: 'Malin Head', ga: 'Cionn Mhálanna', lat: 55.372, lon: -7.339 },
+    { en: 'Portrush', ga: 'Port Rois', lat: 55.206, lon: -6.657 },
+    { en: 'Belfast', ga: 'Béal Feirste', lat: 54.601, lon: -5.917 },
+    { en: 'Larne', ga: 'Latharna', lat: 54.857, lon: -5.802 }
+  ].freeze
   DEFAULT_COORDS = { lat: 53.55, lon: -9.92, place: 'the station' }.freeze
   # OSM address keys, most-local first — the "best guess" for where we are.
   PLACE_KEYS = %w[hamlet village locality town suburb city municipality].freeze
@@ -108,8 +148,9 @@ class Almanac
     end
 
     # The next tide turning point after `now`, read off the hourly sea-level
-    # series as the first future local max (high) or min (low).
-    def next_tide(times, heights, now)
+    # series as the first future local max (high) or min (low). `station` (optional)
+    # names the nearest tidal port for the label.
+    def next_tide(times, heights, now, station = nil)
       points = times.zip(heights).filter_map { |t, v| [safe_time(t), v.to_f] if t && v }
       (1...(points.size - 1)).each do |i|
         time, height = points[i]
@@ -117,10 +158,17 @@ class Almanac
 
         prev_h = points[i - 1][1]
         next_h = points[i + 1][1]
-        return tide(:high, time) if height >= prev_h && height >= next_h
-        return tide(:low, time)  if height <= prev_h && height <= next_h
+        return tide(:high, time, station) if height >= prev_h && height >= next_h
+        return tide(:low, time, station)  if height <= prev_h && height <= next_h
       end
       nil
+    end
+
+    # The nearest tidal port to a position — flat-earth distance with longitude scaled
+    # for latitude (accurate enough at Ireland's scale). Used to name the tide's station.
+    def nearest_tide_station(lat, lon)
+      scale = Math.cos(lat * Math::PI / 180)
+      TIDE_STATIONS.min_by { |s| ((s[:lat] - lat)**2) + (((s[:lon] - lon) * scale)**2) }
     end
 
     # Best-guess place label from an OSM reverse-geocode address hash — the most
@@ -136,10 +184,16 @@ class Almanac
 
     def blank = { coords: nil, weather: nil, sun: nil, tide: nil, fetched_at: nil }
 
-    def tide(kind, time)
+    def tide(kind, time, station = nil)
       hhmm = time.strftime('%H:%M')
       en, ga = TIDE_LABELS.fetch(kind)
-      { type: kind.to_s, time: hhmm, label: "#{en} #{hhmm}", label_ga: "#{ga} #{hhmm}" }
+      label = "#{en} #{hhmm}"
+      label_ga = "#{ga} #{hhmm}"
+      if station
+        label = "#{label} · #{station[:en]}"
+        label_ga = "#{label_ga} · #{station[:ga] || station[:en]}"
+      end
+      { type: kind.to_s, time: hhmm, station: station&.fetch(:en, nil), label: label, label_ga: label_ga }
     end
 
     # Where are we? Configured coordinates win (the station is a fixed spot);
@@ -206,7 +260,8 @@ class Almanac
       hourly = json && json['hourly']
       return nil unless hourly && hourly['time'] && hourly['sea_level_height_msl']
 
-      next_tide(hourly['time'], hourly['sea_level_height_msl'], now)
+      station = nearest_tide_station(coords[:lat], coords[:lon])
+      next_tide(hourly['time'], hourly['sea_level_height_msl'], now, station)
     end
 
     def get_json(url)

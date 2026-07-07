@@ -43,6 +43,28 @@ RSpec.describe Almanac do
       tide = described_class.next_tide(times, [2.0, 1.5, 1.0, 1.5, 2.0], Time.zone.parse('2026-07-03T09:30'))
       expect(tide[:time]).to eq('12:00')
     end
+
+    it 'names the nearest station in the label when one is given' do
+      station = { en: 'Killary Harbour', ga: 'An Caoláire Rua' }
+      tide = described_class.next_tide(times, [1.0, 1.5, 2.0, 1.5, 1.0], now, station)
+      expect(tide).to include(label: 'High tide 12:00 · Killary Harbour',
+                              label_ga: 'Lán mara 12:00 · An Caoláire Rua', station: 'Killary Harbour')
+    end
+  end
+
+  describe '.nearest_tide_station' do
+    it 'picks the nearest west-coast harbour for the Connemara cottage' do
+      # ~Culfin / Tigh Bhreadáin, near the mouth of Killary
+      expect(described_class.nearest_tide_station(53.62, -9.90)[:en]).to eq('Ballynakill Harbour')
+    end
+
+    it 'picks Dublin North Wall for a Dublin position' do
+      expect(described_class.nearest_tide_station(53.34, -6.25)[:en]).to eq('Dublin North Wall')
+    end
+
+    it 'picks Galway for the inner bay' do
+      expect(described_class.nearest_tide_station(53.27, -9.05)[:en]).to eq('Galway')
+    end
   end
 
   describe '.place_from' do
