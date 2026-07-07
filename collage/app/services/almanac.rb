@@ -61,7 +61,7 @@ class Almanac
   # where the port has an established Irish name, otherwise the same in both. Denser on the
   # west (the cottage) and east (dev) coasts; a coarse coastal spread elsewhere.
   TIDE_STATIONS = [
-    { en: 'Dublin North Wall', ga: 'Baile Átha Cliath', lat: 53.349, lon: -6.223 },
+    { en: 'Dublin North Wall', ga: 'Baile Átha Cliath Port Thuaidh', lat: 53.349, lon: -6.223 },
     { en: 'Dún Laoghaire', ga: 'Dún Laoghaire', lat: 53.295, lon: -6.133 },
     { en: 'Howth', ga: 'Binn Éadair', lat: 53.391, lon: -6.067 },
     { en: 'Balbriggan', ga: 'Baile Brigín', lat: 53.609, lon: -6.182 },
@@ -99,11 +99,16 @@ class Almanac
   PLACE_KEYS = %w[hamlet village locality town suburb city municipality].freeze
 
   class << self
-    def current
+    def current(now: Time.current)
       return blank unless STORE.exist?
 
       data = JSON.parse(STORE.read, symbolize_names: true)
       data[:fetched_at] = safe_time(data[:fetched_at])
+      # The tide is computed FRESH on every read from the cached forecast series, so it
+      # always names the genuine NEXT turning point relative to now — never a value frozen
+      # at fetch time that goes stale (or past) as the hours pass. Pure computation, no
+      # network: the offline-first contract holds.
+      data[:tide] = live_tide(data, now)
       data
     rescue JSON::ParserError, SystemCallError
       blank
@@ -111,17 +116,22 @@ class Almanac
 
     def refresh(now: Time.current)
       coords = resolve_coords
-      prev = current
+      prev = current(now: now)
       forecast = fetch_forecast(coords)
+      series = fetch_tide_series(coords)
       data = {
-        coords:     coords,
-        weather:    forecast[:weather] || prev[:weather],
-        sun:        forecast[:sun] || prev[:sun],
-        tide:       fetch_tide(coords, now) || prev[:tide],
-        fetched_at: now.iso8601
+        coords:       coords,
+        weather:      forecast[:weather] || prev[:weather],
+        sun:          forecast[:sun] || prev[:sun],
+        # Store the whole ~48h sea-level series + the nearest named port, not a single
+        # turning point — `current` derives "the next tide" from it live on each read.
+        tide_series:  series || prev[:tide_series],
+        tide_station: (series && nearest_tide_station(coords[:lat], coords[:lon])&.slice(:en,
+                                                                                         :ga)) || prev[:tide_station],
+        fetched_at:   now.iso8601
       }
       write(data)
-      data
+      current(now: now)
     end
 
     # --- Pure helpers (no network; unit-tested) --------------------------------
@@ -147,9 +157,10 @@ class Almanac
       iso.to_s[/T(\d{2}:\d{2})/, 1]
     end
 
-    # The next tide turning point after `now`, read off the hourly sea-level
-    # series as the first future local max (high) or min (low). `station` (optional)
-    # names the nearest tidal port for the label.
+    # The next tide turning point after `now`, read off the hourly sea-level series as the
+    # first future local max (high) or min (low). `station` (optional) names the nearest
+    # tidal port for the label. The turn time is parabola-refined (see refine_extremum) so a
+    # coarse hourly series still resolves to the nearest few minutes, not snapped to the hour.
     def next_tide(times, heights, now, station = nil)
       points = times.zip(heights).filter_map { |t, v| [safe_time(t), v.to_f] if t && v }
       (1...(points.size - 1)).each do |i|
@@ -158,10 +169,39 @@ class Almanac
 
         prev_h = points[i - 1][1]
         next_h = points[i + 1][1]
-        return tide(:high, time, station) if height >= prev_h && height >= next_h
-        return tide(:low, time, station)  if height <= prev_h && height <= next_h
+        high = height >= prev_h && height >= next_h
+        low  = height <= prev_h && height <= next_h
+        next unless high || low
+
+        return tide(high ? :high : :low, refine_extremum(points, i), station)
       end
       nil
+    end
+
+    # Parabolic interpolation of the turning point through the three samples around index
+    # i, so an hourly series places the high/low to the nearest few minutes rather than the
+    # nearest hour. Returns the sample time unchanged at the ends or on a flat run.
+    def refine_extremum(points, idx)
+      time = points[idx][0]
+      return time if idx.zero? || idx >= points.size - 1
+
+      y0 = points[idx - 1][1]
+      y1 = points[idx][1]
+      y2 = points[idx + 1][1]
+      denom = y0 - (2 * y1) + y2
+      return time if denom.zero?
+
+      delta = (0.5 * (y0 - y2) / denom).clamp(-0.5, 0.5)
+      time + (delta * (points[idx + 1][0] - points[idx][0]))
+    end
+
+    # The next tide derived live from the cached forecast series (no network). Falls back to
+    # any legacy single-tide value in an older cache, else nil.
+    def live_tide(data, now = Time.current)
+      series = data[:tide_series]
+      return data[:tide] unless series.is_a?(Hash) && series[:time] && series[:height]
+
+      next_tide(series[:time], series[:height], now, data[:tide_station])
     end
 
     # The nearest tidal port to a position — flat-earth distance with longitude scaled
@@ -182,7 +222,7 @@ class Almanac
 
     private
 
-    def blank = { coords: nil, weather: nil, sun: nil, tide: nil, fetched_at: nil }
+    def blank = { coords: nil, weather: nil, sun: nil, tide: nil, tide_series: nil, tide_station: nil, fetched_at: nil }
 
     def tide(kind, time, station = nil)
       hhmm = time.strftime('%H:%M')
@@ -255,13 +295,14 @@ class Almanac
       { weather: weather, sun: sun_from(json['daily']) }.compact
     end
 
-    def fetch_tide(coords, now)
+    # The ~48h hourly sea-level (tide) forecast as { time:, height: } arrays, cached whole
+    # so `current` can pick the live next turning point on each read. Nil on a failed fetch.
+    def fetch_tide_series(coords)
       json = get_json("https://marine-api.open-meteo.com/v1/marine?latitude=#{coords[:lat]}&longitude=#{coords[:lon]}&hourly=sea_level_height_msl&timezone=auto&forecast_days=2")
       hourly = json && json['hourly']
       return nil unless hourly && hourly['time'] && hourly['sea_level_height_msl']
 
-      station = nearest_tide_station(coords[:lat], coords[:lon])
-      next_tide(hourly['time'], hourly['sea_level_height_msl'], now, station)
+      { time: hourly['time'], height: hourly['sea_level_height_msl'] }
     end
 
     def get_json(url)

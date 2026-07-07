@@ -54,7 +54,7 @@ RSpec.describe Almanac do
 
   describe '.nearest_tide_station' do
     it 'picks the nearest west-coast harbour for the Connemara cottage' do
-      # ~Culfin / Tigh Bhreadáin, near the mouth of Killary
+      # ~Culfin / Tigh Bhreadáin
       expect(described_class.nearest_tide_station(53.62, -9.90)[:en]).to eq('Ballynakill Harbour')
     end
 
@@ -93,7 +93,8 @@ RSpec.describe Almanac do
 
     it 'returns a blank reading when the cache file is missing' do
       expect(file).not_to exist
-      expect(described_class.current).to eq(coords: nil, weather: nil, sun: nil, tide: nil, fetched_at: nil)
+      expect(described_class.current).to eq(coords: nil, weather: nil, sun: nil, tide: nil,
+                                            tide_series: nil, tide_station: nil, fetched_at: nil)
     end
 
     it 'reads back a cached reading and parses fetched_at' do
@@ -111,7 +112,26 @@ RSpec.describe Almanac do
 
     it 'survives a corrupt cache file' do
       file.write('{ not json')
-      expect(described_class.current).to eq(coords: nil, weather: nil, sun: nil, tide: nil, fetched_at: nil)
+      expect(described_class.current).to eq(coords: nil, weather: nil, sun: nil, tide: nil,
+                                            tide_series: nil, tide_station: nil, fetched_at: nil)
+    end
+
+    it 'derives the next tide LIVE from the cached series, tracking the current time' do
+      # A low at 12:00, a high at 18:00. The tide read at 09:00 is the low; read at 14:00
+      # (past the low) it is the high — same cache, no re-fetch: the read is time-aware.
+      file.write({
+        coords:       { lat: 53.35, lon: -6.25 },
+        tide_series:  { time:   (9..20).map { |h| "2026-07-03T#{format('%02d', h)}:00" },
+                        height: [2.0, 1.5, 1.2, 1.0, 1.2, 1.5, 2.0, 2.5, 2.8, 3.0, 2.8, 2.5] },
+        tide_station: { en: 'Dublin North Wall', ga: 'Baile Átha Cliath Port Thuaidh' },
+        fetched_at:   '2026-07-03T08:00:00Z'
+      }.to_json)
+
+      morning = described_class.current(now: Time.zone.parse('2026-07-03T09:00'))
+      expect(morning[:tide]).to include(type: 'low', time: '12:00', station: 'Dublin North Wall')
+
+      afternoon = described_class.current(now: Time.zone.parse('2026-07-03T14:00'))
+      expect(afternoon[:tide]).to include(type: 'high', time: '18:00')
     end
   end
 end
