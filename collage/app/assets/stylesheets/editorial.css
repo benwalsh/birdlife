@@ -175,7 +175,14 @@ body.ed {
 /* The sparkline: its own quiet band between the collage and the TODAY text —
    full content width, with room above (off the collage) and the TODAY section's
    own top margin providing the gap below. */
-.today-spark { margin: 46px auto 0; }
+/* Locks and stacks under the hits strip on scroll (top set inline from the measured
+   strip heights); paper-backed with a hairline so the TODAY text scrolls cleanly under. */
+.today-spark {
+  margin: 46px auto 0;
+  position: sticky; z-index: 44;
+  background: var(--paper); padding-bottom: 10px;
+  box-shadow: 0 1px 0 var(--rule);
+}
 /* Chrome: the time-window control and its total, grouped together at the top-left as
    one unit (the total used to float off at the far right and read as detached). */
 .today-spark-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 8px; }
@@ -206,8 +213,10 @@ body.ed {
 /* The almanac — ambient weather/moon/sun/tide/place readings, its own row directly
    under the sparkline. Muted mono line-icon + label pairs, wrapping. Never emoji. */
 .today-almanac {
-  display: flex; flex-wrap: wrap; gap: 12px 32px; margin: 20px 0 0; padding: 0; list-style: none;
+  display: flex; flex-wrap: wrap; gap: 12px 32px; margin: 14px 0 0; padding: 12px 0; list-style: none;
   font: 12px var(--mono); letter-spacing: 0.02em; color: var(--ink-2);
+  position: sticky; z-index: 43;
+  background: var(--paper); box-shadow: 0 1px 0 var(--rule);
 }
 .today-almanac li { display: inline-flex; align-items: center; gap: 7px; }
 .today-almanac .ti { font-size: 16px; color: var(--ink-soft); line-height: 1; }
@@ -478,6 +487,10 @@ button.bird-card { width: 100%; background: transparent; cursor: pointer; font: 
   /* The almanac stacks — each reading on its own full row, complete and never
      clipped, the way the TODAY bird lines stack. */
   .today-almanac { flex-direction: column; gap: 11px; margin-top: 16px; }
+
+  /* No sticky-stacking on a phone: the strips (esp. the column almanac) would eat the
+     small screen. They just scroll normally here. */
+  .today-spark, .today-almanac { position: static; box-shadow: none; }
 
   /* Breaking stacks too: the tag on its own line, then one news item per row. */
   .breaking { flex-direction: column; gap: 12px; }

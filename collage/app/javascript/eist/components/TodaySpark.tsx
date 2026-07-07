@@ -12,11 +12,13 @@ export function TodaySpark({
   windows,
   value,
   onChange,
+  stickyTop,
 }: {
   today: Today
   windows: [string, number][]
   value: number
   onChange: (hours: number) => void
+  stickyTop?: number
 }) {
   const { lang } = useLang()
   if (!today?.sparkline) return null
@@ -26,7 +28,7 @@ export function TodaySpark({
   const shift = (x: number) => (x <= 0 ? '0' : x >= 1 ? '-100%' : '-50%')
 
   return (
-    <section className="today-spark">
+    <section className="today-spark" style={{ top: stickyTop }}>
       <div className="today-spark-head">
         <WindowPicker windows={windows} value={value} onChange={onChange} />
         <span className="today-spark-total">{today.total.toLocaleString()}</span>
