@@ -3,7 +3,7 @@
 -# `editorial` layout (React SPA); /kiosk, /station, /emulator, /panel render
 -# standalone (layout: false). This exists only as a sane default for any future
 -# server-rendered HTML action.
-%html{ lang: "en" }
+%html{ lang: ui_lang, data: { lang: ui_lang } }
   %head
     %title= content_for(:title) || "Éist"
     %meta{ name: "viewport", content: "width=device-width,initial-scale=1,viewport-fit=cover" }

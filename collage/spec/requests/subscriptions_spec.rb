@@ -32,7 +32,8 @@ RSpec.describe 'Subscriptions' do
     it 'renders the account page' do
       get '/account'
       expect(response).to have_http_status(:ok)
-      expect(response.body).to include('Your daily email', 'Breaking news', "Species you're following")
+      # bi() renders both languages; apostrophes are html-escaped, so assert on stable fragments.
+      expect(response.body).to include('The daily letter', 'Breaking news', 'Species you', 'Speicis a leanann tú')
     end
 
     it 'creates a species subscription' do

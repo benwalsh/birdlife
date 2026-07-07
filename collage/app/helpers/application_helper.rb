@@ -1,4 +1,17 @@
 module ApplicationHelper
+  # A bilingual inline string for server-rendered pages: both languages sit in the DOM and
+  # the [data-lang] CSS shows the active one, so the language toggle flips them live (the
+  # same mechanism the SPA uses). Irish UI wording here is a first pass — worth a native check.
+  def bi(en, ga)
+    safe_join([tag.span(en, class: 'lang-en'), tag.span(ga, class: 'lang-ga')])
+  end
+
+  # A single-language string for attribute contexts (a prompt, a value) where two spans
+  # can't go; picks server-side, so it updates on the next load rather than live.
+  def t2(en, ga)
+    ui_lang == 'ga' ? ga : en
+  end
+
   # Compact relative time like the parent's panel: "now", "8h ago", "36d ago".
   def heard_ago(time)
     return '—' unless time

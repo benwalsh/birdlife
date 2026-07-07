@@ -347,17 +347,33 @@ a.bird-card { text-decoration: none; color: inherit; }
 }
 
 /* ── Account / alerts page (server-rendered /account) ───────────────────── */
+/* A full-height scrolling document, but it shares the application layout with avian.css's
+   fixed wall shell (body overflow:hidden). Undo that — scoped to the page — so it scrolls.
+   It also carries the language switch, so its .lang-* spans need the same show/hide the
+   SPA gets from editorial.css. */
+body:has(.acct) { overflow-y: auto; overflow-x: hidden; height: auto; min-height: 100%; position: static; }
+[data-lang="en"] .acct .lang-ga { display: none; }
+[data-lang="ga"] .acct .lang-en { display: none; }
 .acct {
   max-width: 640px;
   margin: 0 auto;
   padding: 40px 24px 80px;
   color: var(--ink);
 }
+.acct-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .acct-home {
   font-size: 13px;
   color: var(--ink-soft);
   text-decoration: none;
 }
+/* Language switch — the same restrained EN | GA control as the site chrome. */
+.acct-lang { display: inline-flex; align-items: center; }
+.acct-lang-opt {
+  background: transparent; border: 0; cursor: pointer; padding: 2px 8px;
+  font: 11px var(--mono); letter-spacing: 0.1em; color: var(--ink-soft);
+}
+.acct-lang-opt + .acct-lang-opt { border-left: 1px solid var(--rule); }
+.acct-lang-opt.is-on { color: var(--ink); }
 .acct-h1 { font-size: 30px; margin: 14px 0 4px; }
 .acct-lead { color: var(--ink-2); margin: 0 0 8px; }
 .acct-sec { margin-top: 36px; }
@@ -427,15 +443,22 @@ a.bird-card { text-decoration: none; color: inherit; }
 .acct-remove { color: var(--ink-soft); }
 
 /* Delivery cadence — a quiet segmented control (Now / Digest / Off). */
-.acct-cadence { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
-.acct-seg {
-  border: 0; border-left: 1px solid var(--rule); background: var(--paper);
-  color: var(--ink-soft); font: 11px var(--mono); letter-spacing: 0.04em;
-  padding: 7px 13px; cursor: pointer;
+/* Delivery is a single checkbox now: ticked = on (in the daily letter / immediate),
+   unticked = off. A quiet inked box, in keeping with the ink-on-paper voice. */
+.acct-cadence { display: inline-flex; }
+.acct-check { display: inline-flex; align-items: center; cursor: pointer; }
+.acct-check-input { position: absolute; opacity: 0; width: 0; height: 0; }
+.acct-check-box {
+  width: 20px; height: 20px; border: 1.5px solid var(--rule); border-radius: 4px;
+  background: var(--paper); transition: background 140ms ease, border-color 140ms ease;
+  position: relative;
 }
-.acct-seg:first-child { border-left: 0; }
-.acct-seg:hover { color: var(--ink-2); }
-.acct-seg.is-on { background: var(--ink); color: var(--paper); }
+.acct-check-input:checked + .acct-check-box { background: var(--ink); border-color: var(--ink); }
+.acct-check-input:checked + .acct-check-box::after {
+  content: ""; position: absolute; left: 6px; top: 2px; width: 5px; height: 10px;
+  border: solid var(--paper); border-width: 0 2px 2px 0; transform: rotate(45deg);
+}
+.acct-check-input:focus-visible + .acct-check-box { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* Admin health panel — a plain instrument read-out in the same restrained voice. */
 .adm-lead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; color: var(--ink-2); margin: 0; }

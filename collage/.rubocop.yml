@@ -201,6 +201,8 @@ Naming/MethodParameterName:
     - tx
     - ty
     - id
+    - en  # ISO language codes (bilingual EN/GA helpers)
+    - ga
 
 Naming/PredicateMethod:
   Enabled: false
