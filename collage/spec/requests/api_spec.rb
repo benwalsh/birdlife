@@ -76,7 +76,7 @@ RSpec.describe 'API' do
       get '/api/directory'
       body = response.parsed_body
       expect(body['scope']).to eq('heard')
-      expect(body['species'].first).to include('sci', 'conservation')
+      expect(body['species'].first).to include('sci', 'conservation', 'count', 'today', 'first_seen')
       expect(body['species'].pluck('sci')).not_to include('Anas strepera')
     end
 

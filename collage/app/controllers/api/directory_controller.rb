@@ -8,7 +8,9 @@ module Api
     def show
       sort = SORTS.include?(params[:sort]) ? params[:sort] : 'count'
       scope = params[:scope] == 'all' ? 'all' : 'heard'
-      render json: { sort: sort, scope: scope, species: sorted(entries(scope), sort).map { |e| life_json(e) } }
+      today = Detection.tally_for(Time.zone.today).to_h { |t| [t.sci_name, t.count] }
+      species = sorted(entries(scope), sort).map { |e| life_json(e).merge(today: today[e.sci_name].to_i) }
+      render json: { sort: sort, scope: scope, species: species }
     end
 
     private

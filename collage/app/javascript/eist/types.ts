@@ -37,7 +37,7 @@ export interface Tally {
 }
 export interface LifeEntry {
   sci: string; en: string; ga: string | null
-  count: number; first_seen: string | null; last_seen: string | null
+  count: number; today: number; first_seen: string | null; last_seen: string | null
   conservation: Conservation
   image: string | null
 }
