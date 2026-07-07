@@ -453,10 +453,9 @@ button.bird-card { width: 100%; background: transparent; cursor: pointer; font: 
   .today-spark { margin-top: 30px; }
   .today-spark-svg { height: 64px; }
   .today-anchors { font-size: 9.5px; }
-  /* No-data band uses the compact "No data · 8h" label here, not the time range. */
-  .today-spark-gap-label { font-size: 10px; padding: 0 2px; }
-  .today-spark-gap-label .gap-full { display: none; }
-  .today-spark-gap-label .gap-short { display: inline; }
+  /* On a phone the band is too narrow for a legible label, so drop the "No data" text
+     entirely — the pale band alone still reads as a gap. */
+  .today-spark-gap-label { display: none; }
 
   /* The almanac stacks — each reading on its own full row, complete and never
      clipped, the way the TODAY bird lines stack. */
