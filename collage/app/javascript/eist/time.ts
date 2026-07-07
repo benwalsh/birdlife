@@ -13,6 +13,17 @@ export function ago(value: string | null): string {
   return `${Math.floor(secs / 86_400)}d ago`
 }
 
+// The bare elapsed magnitude, no "ago" — "now", "8m", "3h", "7d". For tight datelines
+// where a following label supplies the sense (e.g. "7d first" = first heard 7 days ago).
+export function elapsed(value: string | null): string {
+  if (!value) return '—'
+  const secs = (Date.now() - parse(value)) / 1000
+  if (secs < 60) return 'now'
+  if (secs < 3600) return `${Math.floor(secs / 60)}m`
+  if (secs < 86_400) return `${Math.floor(secs / 3600)}h`
+  return `${Math.floor(secs / 86_400)}d`
+}
+
 export function shortDate(value: string | null): string {
   if (!value) return ''
   return new Date(value.includes('T') ? value : value.replace(' ', 'T'))

@@ -45,6 +45,14 @@ class TodaySummary
       ONLY as co-occurrence ("heard near high tide"), never as cause.
     - Counts, species totals, and "first" claims come verbatim from the facts.
       Never estimate, round differently, or embellish a number.
+    - The items are listed in IMPORTANCE order, which is NOT the same as count order.
+      Only the single species named on the "Most detected today by count" line is the
+      most heard / most detected / most common — never attach those superlatives to any
+      other species, however high it sits in the list. For every other species, state its
+      actual number; do not turn a middling count into a "most" claim.
+    - A flag of unusual_volume_high means that species was heard MORE than its usual
+      daily amount; unusual_volume_low means FEWER. Never say a species was busier, more
+      active, or above normal when its flag is unusual_volume_low — that is backwards.
     - If unsure whether something is supported, leave it out.
     - ONLY when an item's facts line includes a "Background:" line may you add one
       detail about that species — and it must be drawn ONLY from that Background. Reach
@@ -92,6 +100,16 @@ class TodaySummary
   # correct thing to say on a quiet day, so it must not trip the guard.
   NEGATION = /\b(no|not|n't|without|never|nothing|none|nor)\b/i
 
+  # The front page's daily voice is the most-read, most-embarrassing-if-wrong text in the
+  # app, and it must hold a strict factual line (importance vs count, direction of a
+  # volume anomaly, no invented behaviour, correct Irish). Nova Lite proved too loose — it
+  # conflated the importance-led species with the loudest and mangled the Gaeilge — so the
+  # today summary narrates and translates with the stronger Claude model (the same one the
+  # enrichment sourcing pass uses). A handful of short calls an hour; the quality is worth
+  # it. A lambda so an ENRICH_MODEL_ID override is picked up at call time, not load time.
+  NARRATOR_MODEL = -> { Bedrock.enrich_model_id }
+  NARRATOR_TOKENS = 700
+
   class << self
     # The last-good summary for the page — bilingual { en: [...], ga: [...] }. Never
     # touches the model or blocks. The cache is only used when it's for the SAME day we're
@@ -133,7 +151,10 @@ class TodaySummary
     def user_message(facts)
       lines = ["Date: #{facts[:date]}. #{facts[:species_today]} species, " \
                "#{facts[:detections_today]} detections today."]
-      lines << 'Items (name, Irish, count, importance, flags):'
+      if (loudest = facts[:items].max_by { |i| i[:call_count] })
+        lines << "Most detected today by count: #{loudest[:common_name]} (#{loudest[:call_count]})."
+      end
+      lines << 'Items (name, Irish, count, importance, flags) — IMPORTANCE order, not count order:'
       facts[:items].first(MAX_ITEMS).each { |item| lines << item_line(item) }
       lines << "Activity: #{activity_phrase(facts[:activity_note])}." if facts[:activity_note]
       lines << spotlight_line(facts[:spotlight]) if facts[:spotlight]
@@ -168,7 +189,8 @@ class TodaySummary
     # One model round-trip → validated bullets, or nil (unreachable model, or output that
     # breaks a house rule). Isolated so an Irish-translation failure never sinks the English.
     def attempt(system, user)
-      bullets = parse(Bedrock.converse(system: system, user: user))
+      bullets = parse(Bedrock.converse(system: system, user: user,
+                                       model_id: NARRATOR_MODEL.call, max_tokens: NARRATOR_TOKENS))
       valid?(bullets) ? bullets : nil
     rescue StandardError => e
       Rails.logger.warn("TodaySummary: LLM call failed (#{e.class}: #{e.message})")

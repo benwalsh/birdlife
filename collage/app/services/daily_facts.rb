@@ -220,8 +220,10 @@ class DailyFacts
       score = [score, IMPORTANCE[:rare_local]].max
     end
 
-    if unusual_volume?(sci, tally.count)
-      flags << 'unusual_volume'
+    if (volume = volume_anomaly(sci, tally.count))
+      # Directional, so the narrator never guesses "above normal" on a species that was
+      # in fact unusually QUIET — the flag itself says which way it broke from baseline.
+      flags << "unusual_volume_#{volume}"
       score = [score, IMPORTANCE[:unusual_volume]].max
     end
 
@@ -258,14 +260,18 @@ class DailyFacts
     days_heard.positive? && days_heard <= RARE_MAX_DAYS
   end
 
-  # Today's count sits well outside this species' own recent daily average. Coarse
-  # and conservative: silent until there's enough history, and only fires on a
-  # clear departure from baseline.
-  def unusual_volume?(sci, count_today)
+  # Today's count sits well outside this species' own recent daily average, and WHICH
+  # way — :high (more than twice baseline) or :low (less than half), else nil. Coarse
+  # and conservative: silent until there's enough history, and only fires on a clear
+  # departure from baseline. The direction matters: the summary must not call a quiet
+  # day a busy one.
+  def volume_anomaly(sci, count_today)
     baseline = species_baseline(sci)
-    return false unless baseline
+    return nil unless baseline
+    return :high if count_today > baseline * 2
+    return :low if count_today < baseline * 0.5
 
-    count_today > baseline * 2 || count_today < baseline * 0.5
+    nil
   end
 
   # Mean daily count on the days this species was heard in the trailing window

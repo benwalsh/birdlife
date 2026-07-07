@@ -1,18 +1,19 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useDirectory } from '../api'
 import { useLang } from '../lang'
-import { ago } from '../time'
+import { elapsed } from '../time'
 import { FollowButton } from './FollowButton'
 import type { Sort, Scope, Conservation } from '../types'
 
 // The species directory (Eolaí) — the illustrated guide. Each plate echoes the detail
 // card: a follow mark, the conservation status above the name, the binomial, and the
 // all-time / today / first-heard figures.
-// BoCCI status → its display name + a tooltip gloss (matches the detail card's wording).
+// BoCCI list → its display name + a tooltip gloss (the BirdWatch Ireland wording). The
+// display reads "Red/Amber/Green list" (the list's proper name), not a bare colour.
 const CONS: Record<'red' | 'amber' | 'green', { name: string; note: string }> = {
-  red: { name: 'Red', note: 'High conservation concern in Ireland' },
-  amber: { name: 'Amber', note: 'Moderate conservation concern in Ireland' },
-  green: { name: 'Green', note: 'Least conservation concern in Ireland' },
+  red: { name: 'Red list', note: 'BoCCI Red list — high conservation concern in Ireland' },
+  amber: { name: 'Amber list', note: 'BoCCI Amber list — moderate conservation concern in Ireland' },
+  green: { name: 'Green list', note: 'BoCCI Green list — least conservation concern in Ireland' },
 }
 const consOf = (c: Conservation) => (c ? CONS[c] : null)
 
@@ -34,6 +35,18 @@ export function DirectoryTab({ onSelect }: { onSelect: (sci: string) => void }) 
 
   const primary = (en: string, ga: string | null) => (lang === 'ga' && ga ? ga : en)
   const gloss = (en: string, ga: string | null) => (lang === 'ga' ? en : ga)
+
+  // Alpha sort follows the primary (displayed) language, so a→z matches the name the
+  // reader sees — English names in English, Irish (with fadas collated correctly) in
+  // Irish. Done here rather than server-side so it re-sorts live on the language toggle
+  // without another round-trip (and without splitting the cache by language).
+  const species = useMemo(() => {
+    if (!data) return []
+    if (sort !== 'alpha') return data.species
+    const collator = new Intl.Collator(lang === 'ga' ? 'ga' : 'en', { sensitivity: 'base' })
+    return [...data.species].sort((a, b) => collator.compare(primary(a.en, a.ga), primary(b.en, b.ga)))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, sort, lang])
 
   return (
     <section className="dir">
@@ -60,7 +73,7 @@ export function DirectoryTab({ onSelect }: { onSelect: (sci: string) => void }) 
         <p className="dir-loading">…</p>
       ) : (
         <div className="dir-grid">
-          {data.species.map((e) => {
+          {species.map((e) => {
             const seen = e.count > 0
             const c = consOf(e.conservation)
             return (
@@ -78,9 +91,9 @@ export function DirectoryTab({ onSelect }: { onSelect: (sci: string) => void }) 
                   <span className="dir-sci">{e.sci}</span>
                   {seen ? (
                     <span className="dir-stats">
-                      <span><b>{e.count.toLocaleString()}</b> {t('all time', 'riamh')}</span>
-                      <span><b>{e.today.toLocaleString()}</b> {t('today', 'inniu')}</span>
-                      {e.first_seen && <span><b>{ago(e.first_seen)}</b> {t('first', 'céad')}</span>}
+                      <span className="dir-stat"><b>{e.count.toLocaleString()}</b> {t('all', 'riamh')}</span>
+                      <span className="dir-stat"><b>{e.today.toLocaleString()}</b> {t('today', 'inniu')}</span>
+                      {e.first_seen && <span className="dir-stat"><b>{elapsed(e.first_seen)}</b> {t('first', 'céad')}</span>}
                     </span>
                   ) : (
                     <span className="dir-stats dir-unseen-note">{t('not yet heard', 'gan chloisteáil fós')}</span>

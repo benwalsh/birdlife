@@ -35,8 +35,8 @@ RSpec.describe AlertEngine do
         to change { Event.where(event_type: 'seasonal', sci_name: 'Cuculus canorus').count }.by(1)
     end
 
-    it 'ignores texture flags (most_common / unusual_volume / routine)' do
-      stub_facts(item('Passer domesticus', 'most_common', 'unusual_volume', 'routine'))
+    it 'ignores texture flags (most_common / unusual_volume_low / routine)' do
+      stub_facts(item('Passer domesticus', 'most_common', 'unusual_volume_low', 'routine'))
       expect { described_class.scan }.not_to(change(Event, :count))
     end
   end

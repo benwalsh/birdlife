@@ -362,7 +362,12 @@ button.bird-card { width: 100%; background: transparent; cursor: pointer; font: 
   display: flex; flex-direction: column; align-items: flex-start;
   background: transparent; border: 0; padding: 0; cursor: pointer; text-align: left;
   color: inherit; font: inherit; /* buttons don't inherit the page serif otherwise */
+  -webkit-tap-highlight-color: transparent; /* no grey box flash on click/tap */
 }
+/* No box on click/hover — the plate is a picture on paper, not a control chrome.
+   Keep a quiet ring for keyboard focus only (accessibility), never for the mouse. */
+.dir-item:focus { outline: none; }
+.dir-item:focus-visible { outline: 1.5px solid var(--rule); outline-offset: 4px; }
 .dir-plate {
   width: 100%; height: 132px; margin-bottom: 14px;
   display: flex; align-items: flex-end; justify-content: center;
@@ -379,11 +384,14 @@ button.bird-card { width: 100%; background: transparent; cursor: pointer; font: 
 .dir-item:hover .dir-name { text-decoration: underline; text-underline-offset: 3px; }
 .dir-gloss { display: block; font-style: italic; font-size: 13.5px; color: var(--ink-soft); margin-top: 2px; }
 .dir-sci { display: block; font-style: italic; font-size: 12px; color: var(--ink-soft); margin-top: 3px; }
-/* All-time / today / first-heard — the same broadsheet dateline as the detail card. */
+/* All-time / today / first-heard on ONE tight line, pipe-separated:
+   "1,838 all | 16 today | 7d first". Mono, tabular figures, no wrap. */
 .dir-stats {
-  display: flex; flex-wrap: wrap; gap: 3px 14px; margin-top: 9px;
-  font: 11px var(--mono); letter-spacing: 0.03em; color: var(--ink-soft);
+  display: flex; flex-wrap: nowrap; align-items: baseline; margin-top: 9px;
+  font: 10.5px var(--mono); letter-spacing: 0; color: var(--ink-soft); white-space: nowrap;
 }
+.dir-stat { display: inline-flex; gap: 4px; }
+.dir-stat + .dir-stat::before { content: "|"; color: var(--rule); margin: 0 7px; }
 .dir-stats b { color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
 /* BoCCI conservation status — a small functional data mark. */
 .dir-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex: none; }

@@ -37,7 +37,21 @@ module Api
     # The home page's "TODAY" card, shaped entirely in Ruby (bullets, sparkline
     # paths, anchors, footer) so the view only iterates and prints. See TodayCard.
     def today_json
+      warm_today_summary
       TodayCard.build(window_hours: current_window)
+    end
+
+    # Keep the daily summary warm on page load. A genuinely stale box — a new day, or
+    # a cache hours old — regenerates the rich Bedrock narration here, so the page is
+    # never left showing only the bare template (which the card hides). A warm cache
+    # (the Pi's 20-min summary timer, or a recent load) returns immediately and never
+    # blocks; any Bedrock/network failure is swallowed and we serve whatever is cached.
+    # The 6-hour window is deliberately loose: fine-grained freshness is the timer's job,
+    # this only catches the empty-box cases the timer-less cloud/dev would otherwise show.
+    def warm_today_summary
+      TodaySummary.refresh_if_stale(max_age: 6.hours)
+    rescue StandardError => e
+      Rails.logger.warn("today_json: summary refresh skipped (#{e.class}: #{e.message})")
     end
 
     # The breaking strip: the last couple of days' newsworthy events (rarity /
