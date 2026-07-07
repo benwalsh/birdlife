@@ -1,9 +1,9 @@
 [Unit]
-Description=Refresh the Éist "today" summary every 20 minutes
+Description=Refresh the Éist "today" summary every 30 minutes
 
 [Timer]
 OnBootSec=90
-OnUnitActiveSec=20min
+OnUnitActiveSec=30min
 AccuracySec=30s
 Persistent=true
 

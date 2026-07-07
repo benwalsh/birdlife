@@ -46,10 +46,12 @@ module Api
     # never left showing only the bare template (which the card hides). A warm cache
     # (the Pi's 20-min summary timer, or a recent load) returns immediately and never
     # blocks; any Bedrock/network failure is swallowed and we serve whatever is cached.
-    # The 6-hour window is deliberately loose: fine-grained freshness is the timer's job,
-    # this only catches the empty-box cases the timer-less cloud/dev would otherwise show.
+    # Half an hour: the note is cached and only re-stitched when it's that stale (or a
+    # new day). A warm cache — the Pi's summary timer, or a load within the window —
+    # returns at once and never blocks; the stitch is a single model call over already
+    # stored facts, so even a cold refresh is cheap.
     def warm_today_summary
-      TodaySummary.refresh_if_stale(max_age: 6.hours)
+      TodaySummary.refresh_if_stale(max_age: 30.minutes)
     rescue StandardError => e
       Rails.logger.warn("today_json: summary refresh skipped (#{e.class}: #{e.message})")
     end

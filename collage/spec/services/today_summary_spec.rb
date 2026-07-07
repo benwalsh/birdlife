@@ -11,10 +11,10 @@ RSpec.describe TodaySummary do
     {
       date: '2026-07-03', species_today: 3, detections_today: 42,
       items: [
-        { common_name: 'Common Greenshank', irish_name: 'Laidhrín glas', call_count: 1,
-          importance: 100, flags: %w[all_time_first] },
-        { common_name: 'House Sparrow', irish_name: 'Gealbhan binne', call_count: 30,
-          importance: 5, flags: %w[routine most_common] }
+        { sci_name: 'Tringa nebularia', common_name: 'Common Greenshank', irish_name: 'Laidhrín glas',
+          call_count: 1, importance: 100, flags: %w[all_time_first] },
+        { sci_name: 'Passer domesticus', common_name: 'House Sparrow', irish_name: 'Gealbhan binne',
+          call_count: 30, importance: 5, flags: %w[routine most_common] }
       ],
       spotlight: { common_name: 'Common Greenshank', irish_name: 'Laidhrín glas',
                    rarity_context: 'first record at the station', blurb: 'A wading bird.' },
@@ -37,6 +37,34 @@ RSpec.describe TodaySummary do
       expect(msg).to include('Activity: quieter than typical.')
       expect(msg).to include('Spotlight: Common Greenshank — first record at the station.')
       expect(msg).to include('Background: A wading bird.')
+    end
+
+    it 'appends the stored bird-lore as an "About the birds" section' do
+      lore = [{ common_name: 'House Sparrow', irish_name: 'Gealbhan binne',
+                blocks: [{ type: 'folklore', text: 'Old lore tied the sparrow to the hearth.' }] }]
+      msg = described_class.user_message(facts, lore)
+      expect(msg).to include('About the birds')
+      expect(msg).to include('House Sparrow (Gealbhan binne):')
+      expect(msg).to include('[folklore] Old lore tied the sparrow to the hearth.')
+    end
+  end
+
+  describe '.enrichment_for' do
+    it 'pulls the latest stored bundle for the day\'s prominent species (incl. the loudest)' do
+      EnrichmentBundle.create!(
+        sci_name: 'Passer domesticus', date: '2026-07-01',
+        common_name: 'House Sparrow', irish_name: 'Gealbhan binne',
+        blocks: [{ 'type' => 'fact', 'id' => 'chirpy', 'text' => 'Chirps from the eaves.',
+                   'text_ga' => nil, 'gated' => false,
+                   'sources' => [{ 'host' => 'en.wikipedia.org', 'url' => 'https://en.wikipedia.org/wiki/x' }] }]
+      )
+      lore = described_class.send(:enrichment_for, facts)
+      sparrow = lore.find { |b| b[:common_name] == 'House Sparrow' }
+      expect(sparrow[:blocks].first[:text]).to eq('Chirps from the eaves.')
+    end
+
+    it 'is empty when no prominent species has a stored bundle' do
+      expect(described_class.send(:enrichment_for, facts)).to eq([])
     end
   end
 
@@ -135,7 +163,7 @@ RSpec.describe TodaySummary do
         allow(DailyFacts).to receive(:for).and_return(routine_facts)
         allow(Bedrock).to receive_messages(
           disabled?: false,
-          converse: "- First detection today of the Graylag Goose.\n- A quiet day otherwise."
+          converse:  "- First detection today of the Graylag Goose.\n- A quiet day otherwise."
         )
       end
 
@@ -156,7 +184,7 @@ RSpec.describe TodaySummary do
         allow(DailyFacts).to receive(:for).and_return(routine_facts)
         allow(Bedrock).to receive_messages(
           disabled?: false,
-          converse: "- A quiet day, the usual sparrows.\n- No new arrivals or firsts were detected today."
+          converse:  "- A quiet day, the usual sparrows.\n- No new arrivals or firsts were detected today."
         )
       end
 

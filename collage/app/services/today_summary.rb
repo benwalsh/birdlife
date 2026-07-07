@@ -1,14 +1,17 @@
 require 'json'
 
-# The home page's daily "today" summary — 2–4 warm-but-factual bullets. Ruby has
-# already done all the reasoning (see DailyFacts); this only asks Nova Lite to turn
-# a correct facts object into readable prose, then caches the result to disk.
+# The home page's daily "today" note — 2–4 warm, factual bullets that read like a
+# naturalist's diary entry, not a stats readout. Ruby does all the reasoning (DailyFacts
+# for the day's shape; EnrichmentBundle for each prominent bird's already-sourced facts &
+# folklore); this layer only asks the model to STITCH that material — the day woven around
+# a striking thing or two about the birds heard — then caches the result to disk. No live
+# dúchas/Wikipedia lookup happens here: the sourcing already ran in the enrichment pass, so
+# a refresh is a single cheap model call.
 #
-# The page never blocks on the model: it always reads the last-good cache
-# (`current`). A scheduled `refresh` regenerates. If the model is unreachable the
-# last-good summary stays; only when there is no cache at all do we fall through to
-# the deterministic, always-correct template. So warmth never costs accuracy or
-# availability.
+# The page never blocks on the model: it always reads the last-good cache (`current`). A
+# scheduled/lazy `refresh` regenerates (~30-min cache). If the model is unreachable the
+# last-good summary stays; only when there is no cache at all do we fall through to the
+# deterministic, always-correct template. So warmth never costs accuracy or availability.
 class TodaySummary
   STORE = Rails.root.join('storage/today_summary.json')
 
@@ -16,66 +19,73 @@ class TodaySummary
   # summary layer is only trustworthy because these travel with the request. The
   # location is not hard-coded: `%<where>s` is filled from Station (config/API).
   SYSTEM = <<~PROMPT.freeze
-    You write a short daily summary for a bird-listening station%<where>s. It
-    detects birds by sound and logs them.
+    You write the daily "today" note for a bird-listening station%<where>s. It detects
+    birds by sound and logs them. Your note is a short naturalist's diary entry — warm,
+    specific, and about the BIRDS themselves, not a statistics readout.
 
-    Write 2 to 4 bullet points summarising today, based ONLY on the facts you are
-    given. Lead with the most important items (highest importance score). New
-    arrivals are the news — an all-time first or a year-first is what a reader
-    most wants to know. Never return more than four bullets. If more than two
-    species are flagged as firsts today, feature the two most important and fold the
-    remaining firsts into one line (e.g. "with first records also of X, Y and Z").
+    Write 2 to 4 short bullets. The SUBSTANCE of the note is what is interesting about the
+    day's birds: a vivid fact or a piece of folklore about one or two of the day's
+    prominent species, drawn ONLY from the "About the birds" material below. The day's
+    numbers (totals, the most-detected species, quieter/busier) are texture you weave
+    AROUND those facts — never the headline, and never a bare "N species and N detections
+    logged today, most heard X, Y, Z" recap. That flat recap is exactly what NOT to write;
+    a note that is only counts has failed.
 
-    A species is a "first" ONLY if its facts line carries an all_time_first or
-    year_first flag. If NOTHING today carries such a flag, do NOT call any bird a
-    first, a new arrival, or newly detected — those words would be untrue. Just report
-    the day plainly: the totals, and the most-heard species as texture.
+    Lead with genuine news when there is any: an all-time first or a year-first is what a
+    reader most wants to know, so feature it (with the Irish name in parentheses). On an
+    ordinary day with no arrivals, lead instead with the most characterful bird of the day
+    and something true and striking about it, then let the rest of the day follow.
 
-    TONE: warm but understated. This is a quiet rural station, not a nature
-    documentary. A little character is welcome in how you connect facts. Restraint
+    USING THE "About the birds" MATERIAL:
+    - It is the ONLY source of characterising detail you may state about a species. Never
+      add a fact from your own knowledge — it may be wrong.
+    - Reach for the one surprising, repeatable thing (a remarkable habit, a voice, an
+      extreme). Put it in your own plain words; do not copy a source sentence. Skip the
+      dull — taxonomy, size, what it resembles.
+    - A [folklore] item is LORE, not fact — frame it as such ("in Irish tradition…", "old
+      lore held…"), never as something the bird actually does.
+    - Connect a fact to the day where it reads naturally ("the herring gull led the day at
+      203 — a bird that will …"), but don't force every bird to carry one.
+
+    TONE: warm but understated. A quiet rural station, not a nature documentary. Restraint
     over enthusiasm.
 
     FACTUAL RULES — these are absolute:
-    - State ONLY what is in the facts. Every clause must trace to a given field.
-    - Do NOT invent or imply bird behaviour, migration, motivation, origin, or
-      destination. You do not know why a bird was heard or where it came from.
-    - Do NOT link birds to weather, wind, temperature, or sky. The station cannot
-      observe that a bird "arrived on" any weather. Never write such a link.
-    - Tide may be mentioned ONLY for an item that carries a tide phase field, and
-      ONLY as co-occurrence ("heard near high tide"), never as cause.
-    - Counts, species totals, and "first" claims come verbatim from the facts.
-      Never estimate, round differently, or embellish a number.
-    - The items are listed in IMPORTANCE order, which is NOT the same as count order.
-      Only the single species named on the "Most detected today by count" line is the
-      most heard / most detected / most common — never attach those superlatives to any
-      other species, however high it sits in the list. For every other species, state its
-      actual number; do not turn a middling count into a "most" claim.
-    - A flag of unusual_volume_high means that species was heard MORE than its usual
-      daily amount; unusual_volume_low means FEWER. Never say a species was busier, more
-      active, or above normal when its flag is unusual_volume_low — that is backwards.
+    - State ONLY what is given — the facts, or the About-the-birds material. Every clause
+      traces to something given.
+    - Do NOT invent or imply bird behaviour, migration, motivation, origin, or destination
+      beyond what the material states. Do NOT link birds to weather, wind, temperature, or
+      sky. The station cannot observe why a bird was heard.
+    - Tide may be mentioned ONLY for an item carrying a tide phase field, ONLY as
+      co-occurrence, never as cause.
+    - Counts, species totals, and "first" claims come verbatim from the facts. Never
+      estimate, round differently, or embellish a number.
+    - The items are listed in IMPORTANCE order, which is NOT count order. Only the single
+      species on the "Most detected today by count" line is the most heard / most detected;
+      never attach that superlative to any other species. Give every other species its
+      actual number.
+    - unusual_volume_high means that species was heard MORE than its usual daily amount;
+      unusual_volume_low means FEWER. Never say a bird was busier or above normal when its
+      flag is unusual_volume_low — that is backwards.
+    - A species is a "first" ONLY if its line carries an all_time_first or year_first flag.
+      If nothing is flagged, call nothing a first or new arrival.
     - If unsure whether something is supported, leave it out.
-    - ONLY when an item's facts line includes a "Background:" line may you add one
-      detail about that species — and it must be drawn ONLY from that Background. Reach
-      for the one striking or surprising thing in it (a remarkable habit or behaviour, an
-      extreme — something a reader would repeat), in your own plain words, a single
-      clause. If the striking fact is further down the Background, use it rather than the
-      opening sentence. Skip the dull: taxonomy or classification, and size or
-      resemblance to another bird. If an item has NO Background line, add NO detail about
-      it — name it plainly. NEVER add a fact from your own knowledge (it may be wrong),
-      never copy a source sentence, never contradict the detection data.
 
     STYLE:
     - Sentence case. No exclamation marks. No headings.
-    - You may name a bird in English; include the Irish name in parentheses only
-      for a flagged arrival (first / year-first), not for routine mentions.
-    - Routine common species may be mentioned once as texture (e.g. "the usual
-      sparrows and magpies"), never as a headline.
+    - Name a bird in English; add the Irish name in parentheses for a flagged arrival, and
+      you may add it once for the bird a folklore line is about.
     - Return ONLY the bullets, one per line, each starting with "- ". No preamble.
   PROMPT
 
   # How many items to hand the model — ordered importance-first, so the tail of
   # routine tallies is bounded without hiding anything that matters.
   MAX_ITEMS = 10
+  # How many of the day's most prominent species to pull stored facts & folklore for.
+  # These are the birds the note can characterise; the summariser weaves one or two of
+  # their striking blocks in. A pure DB read (EnrichmentBundle) — no dúchas/Wikipedia
+  # lookup at summary time; the sourcing already happened in the enrichment pass.
+  LORE_SPECIES = 5
   ACTIVITY_PHRASES = {
     'quieter_than_typical' => 'quieter than typical',
     'typical'              => 'typical',
@@ -123,12 +133,15 @@ class TodaySummary
     end
 
     # Regenerate and cache. Best-effort: on model failure keep the last-good cache,
-    # and only synthesise a template when there is nothing cached at all.
+    # and only synthesise a template when there is nothing cached at all. The facts are
+    # a pure DB read (no spotlight_blurb → no Wikipedia hop); the bird-character material
+    # comes from the stored enrichment bundles, so a refresh does no live sourcing —
+    # just one model call to stitch already-gathered facts & folklore into the day.
     def refresh(now: Time.current)
-      facts = DailyFacts.for(now: now, spotlight_blurb: true)
+      facts = DailyFacts.for(now: now)
       return store(DailyFacts.template_bullets(facts), 'template', facts) if Bedrock.disabled?
 
-      bullets = generate(facts)
+      bullets = generate(facts, enrichment_for(facts))
       return store(bullets, 'llm', facts) if bullets
       return current(facts: facts) if valid_cache_for?(facts)
 
@@ -136,8 +149,9 @@ class TodaySummary
     end
 
     # Regenerate when the cache is missing, older than max_age, OR for a previous day
-    # (a new day is always stale). Cheap to call on every ingest.
-    def refresh_if_stale(max_age: 15.minutes, now: Time.current)
+    # (a new day is always stale). Cheap to call on every ingest. Half an hour keeps the
+    # note fresh without re-stitching on every load — the stored facts change slowly.
+    def refresh_if_stale(max_age: 30.minutes, now: Time.current)
       cached = read_cache
       fresh = cached && cached[:generated_at] && cached[:generated_at] > max_age.ago &&
               cached[:facts_date].to_s == now.to_date.to_s
@@ -146,9 +160,10 @@ class TodaySummary
       refresh(now: now)
     end
 
-    # Serialise the facts object into the user message. Public so a spec (or a human)
-    # can eyeball exactly what the model is asked.
-    def user_message(facts)
+    # Serialise the facts object + stored bird-lore into the user message. Public so a
+    # spec (or a human) can eyeball exactly what the model is asked. `lore` is the shape
+    # returned by enrichment_for: an array of { common_name:, irish_name:, blocks: }.
+    def user_message(facts, lore = [])
       lines = ["Date: #{facts[:date]}. #{facts[:species_today]} species, " \
                "#{facts[:detections_today]} detections today."]
       if (loudest = facts[:items].max_by { |i| i[:call_count] })
@@ -158,22 +173,59 @@ class TodaySummary
       facts[:items].first(MAX_ITEMS).each { |item| lines << item_line(item) }
       lines << "Activity: #{activity_phrase(facts[:activity_note])}." if facts[:activity_note]
       lines << spotlight_line(facts[:spotlight]) if facts[:spotlight]
+      lines.concat(lore_lines(lore))
       lines.join("\n")
     end
 
     private
 
-    # Bilingual bullets { en:, ga: } or nil. English is generated from the facts; Irish is
-    # a translation of that English, falling back to the deterministic Irish template if
-    # the translation is unavailable or malformed — so a good English summary is never lost
-    # to a shaky translation.
-    def generate(facts)
-      en = attempt(format(SYSTEM, where: station_context), user_message(facts))
+    # Bilingual bullets { en:, ga: } or nil. English is generated from the facts + the
+    # stored bird-lore; Irish is a translation of that English, falling back to the
+    # deterministic Irish template if the translation is unavailable or malformed — so a
+    # good English summary is never lost to a shaky translation.
+    def generate(facts, lore = [])
+      en = attempt(format(SYSTEM, where: station_context), user_message(facts, lore))
       return nil unless en && supported?(en, facts)
 
       ga = attempt(TRANSLATE, en.map { |b| "- #{b}" }.join("\n"))
       ga = DailyFacts.template_bullets(facts)[:ga] unless ga && ga.size == en.size
       { en: en, ga: ga }
+    end
+
+    # The stored facts & folklore for the day's most prominent species — the material the
+    # note characterises the day with. A pure DB read of the latest EnrichmentBundle per
+    # species (durable across days), so nothing is fetched here. Empty when no prominent
+    # bird has been enriched yet (the note then leans on the day's shape alone).
+    def enrichment_for(facts)
+      items = Array(facts[:items])
+      # The prominent birds: the top few by importance PLUS the single loudest — the
+      # most-detected bird can sit low in importance order (a common resident heard all
+      # day), yet it's the one the note most wants something to say about.
+      prominent = (items.first(LORE_SPECIES) + [items.max_by { |i| i[:call_count] }]).
+                  compact.uniq { |i| i[:sci_name] }
+      bundles = EnrichmentBundle.current_for(prominent.pluck(:sci_name)).index_by(&:sci_name)
+      prominent.filter_map do |item|
+        display = bundles[item[:sci_name]]&.to_display
+        next unless display
+
+        { common_name: item[:common_name], irish_name: item[:irish_name], blocks: display[:blocks] }
+      end
+    end
+
+    # Render the stored lore into the prompt: each prominent bird, then its typed blocks.
+    # The [type] tag lets the writer treat [folklore] as lore and [fact]/[regional_note]
+    # as fact, per the prompt's rules.
+    def lore_lines(lore)
+      return [] if lore.blank?
+
+      lines = ['About the birds (the ONLY characterising detail you may state — weave one ' \
+               'or two striking things in; [folklore] is lore, not fact):']
+      lore.each do |bird|
+        irish = bird[:irish_name].present? ? " (#{bird[:irish_name]})" : ''
+        lines << "#{bird[:common_name]}#{irish}:"
+        bird[:blocks].each { |block| lines << "  - [#{block[:type]}] #{block[:text]}" }
+      end
+      lines
     end
 
     # A last-ditch factuality gate the model can't argue with: if nothing today is a first,

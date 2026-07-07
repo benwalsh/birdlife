@@ -70,7 +70,7 @@ module Enrichment
           folklore/mythology (e.g. the crow-goddess Badb) rather than returning none.
       A few good sources beat a long hunt. Fetch what you need, then return the blocks.
 
-      Return up to 3 blocks as a JSON array and NOTHING else — no prose, no code fence.
+      Return up to 12 blocks as a JSON array and NOTHING else — no prose, no code fence.
       Each block is an object:
         { "type": "fact" | "regional_note" | "folklore",
           "id": "short-kebab-id",
@@ -79,11 +79,18 @@ module Enrichment
           "sources": [ { "host": "en.wikipedia.org", "url": "https://..." } ],
           "gated": false }
 
-      Aim for ONE of each type when the sources support it:
-        fact          — the most vivid, memorable thing about the species: a striking
-                        behaviour, its voice, how it feeds or nests, a naming quirk. Reach for
-                        what would make a listener look up, NOT its length and weight. Skip
-                        bare measurements.
+      Build a small LIBRARY for this species — enough that a writer stitching a note has
+      variety to draw on across many days, never the same line twice. Aim, where the
+      sources support it, for roughly: SEVERAL facts (say 6–8, each a DISTINCT thing —
+      don't restate one fact five ways), ONE or TWO regional notes, and ONE or TWO
+      folklore pieces. A Wikipedia article alone usually yields several good facts from a
+      single fetch. Quality still gates quantity: a vivid, solid block beats a dull or
+      shaky one, and it's fine to return fewer if that's all the sources truly support.
+        fact          — a vivid, memorable thing about the species: a striking behaviour,
+                        its voice, how it feeds or nests, migration, longevity, a naming
+                        quirk, an extreme. Reach for what would make a listener look up, NOT
+                        its length and weight. Skip bare measurements. Each fact block must
+                        stand on its own — a different idea from the others.
         regional_note — its connection to %<place>s and Ireland specifically: local status or
                         distribution, where near here it turns up, or the meaning of its Irish
                         name. This is the local hook — source it from BirdWatch Ireland (incl.
