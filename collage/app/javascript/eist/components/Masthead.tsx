@@ -22,7 +22,10 @@ export function Masthead({ bootstrap, tab, onTab }: MastheadProps) {
   // stay to hand without the full-height header eating the viewport.
   const [scrolled, setScrolled] = useState(false)
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 16)
+    // Hysteresis: condensing shortens the header, which nudges scrollY back across a single
+    // threshold and oscillates (flicker). A dead-band — condense past 56, expand only under
+    // 8 — means the crossing can't feed back on itself.
+    const onScroll = () => setScrolled((prev) => (prev ? window.scrollY > 8 : window.scrollY > 56))
     window.addEventListener('scroll', onScroll, { passive: true })
     onScroll()
     return () => window.removeEventListener('scroll', onScroll)
