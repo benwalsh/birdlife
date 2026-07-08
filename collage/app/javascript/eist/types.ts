@@ -109,6 +109,8 @@ export interface JournalDay {
   summary: { en: string[]; ga: string[] }
   source: 'llm' | 'facts' | 'template' | null
   sources: { host: string; url: string }[]
+  // The day's 24h activity curve, rendered stilled (greyscale) — the finished day's shape.
+  sparkline: SparkPaths | null
   notable: NotableGroups
   poem: { text: string; attribution: string; sci: string; en: string; ga: string | null } | null
   available: { first: string | null; last: string }

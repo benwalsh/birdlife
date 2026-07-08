@@ -4,6 +4,7 @@ import { useLang } from '../lang'
 import { CalendarPicker } from './CalendarPicker'
 import { SourceCitations } from './SourceCitations'
 import { NotableBlock } from './NotableBlock'
+import { Sparkline } from './Sparkline'
 
 // The Journal: the warm, past-tense story of a completed midnight-to-midnight day. A calendar
 // walks back through days (default yesterday, the last finished one); each entry is the day's
@@ -49,6 +50,16 @@ export function JournalTab({ onSelect }: { onSelect: (sci: string) => void }) {
                 </li>
               )}
             </ul>
+
+            {/* The day's shape — a stilled, greyscale curve (this day is finished, not live). */}
+            {data.sparkline?.path && (
+              <div className="journal-spark">
+                <Sparkline paths={data.sparkline} muted />
+                <div className="journal-spark-axis">
+                  <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span>
+                </div>
+              </div>
+            )}
 
             {bullets.length && data.source !== 'template' ? (
               // A bird name in the prose carries data-sci — delegate clicks to open its card.

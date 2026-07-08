@@ -7,14 +7,16 @@ import type { SparkPaths } from '../types'
 // data-availability state, never a false flat-zero. The band is an SVG rect (scales
 // with the stretched viewBox); its label is an HTML overlay so the non-uniform scale
 // can't distort the type.
-export function Sparkline({ paths }: { paths: SparkPaths }) {
+// `muted` renders the curve stilled and greyscale (no fill) — the Journal's finished-day
+// twin of Live's living green line.
+export function Sparkline({ paths, muted = false }: { paths: SparkPaths; muted?: boolean }) {
   const { lang } = useLang()
   const { path, fill, gaps, w, h } = paths
   const pick = (a: { en: string; ga: string }) => (lang === 'ga' ? a.ga : a.en)
   const pct = (x: number) => `${(x / w) * 100}%`
 
   return (
-    <div className="today-spark-plot">
+    <div className={`today-spark-plot${muted ? ' is-muted' : ''}`}>
       <svg className="today-spark-svg" viewBox={`0 0 ${w} ${h}`} width={w} height={h}
            preserveAspectRatio="none" aria-hidden="true">
         <defs>
@@ -27,7 +29,7 @@ export function Sparkline({ paths }: { paths: SparkPaths }) {
         {gaps?.map((g, i) => (
           <rect key={i} className="today-spark-gap" x={g.x0} y="0" width={g.x1 - g.x0} height={h} />
         ))}
-        <path d={fill} fill="url(#spark-fill)" stroke="none" />
+        <path d={fill} className="today-spark-fill" fill="url(#spark-fill)" stroke="none" />
         <path d={path} fill="none" className="today-spark-line" />
       </svg>
       {gaps?.map((g, i) => (

@@ -19,6 +19,7 @@ module Api
                       ga: TodayCard.emphasised_bullets(entry_bullets(entry, 'ga'), facts, :ga) },
         source:     entry&.source,
         sources:    entry_sources(entry),
+        sparkline:  day_sparkline(facts),
         notable:    notable_json(as_of: date, days: 1),
         poem:       nil, # Phase 4b — a closing Irish poem for one of the day's birds
         available:  available_bounds
@@ -44,6 +45,15 @@ module Api
         busiest:    loudest && { sci: loudest[:sci_name], en: loudest[:common_name],
                                  ga: loudest[:irish_name], count: loudest[:call_count] }
       }
+    end
+
+    # The completed day's 24h activity curve as ready SVG paths — the *stilled* twin of Live's
+    # living sparkline (rendered greyscale on the Journal). The whole day is treated as covered
+    # (no live "mic down" bands on a finished day), so it's a clean curve.
+    def day_sparkline(facts)
+      counts = Array(facts[:activity_curve_24h]).pluck(:count)
+      spark = Sparkline.paths(counts)
+      { path: spark.path, fill: spark.fill, gaps: [], w: spark.w, h: spark.h }
     end
 
     def available_bounds
@@ -72,7 +82,7 @@ module Api
     # renders (an "ag éisteacht…" state) rather than erroring.
     def unavailable
       { date: nil, date_label: { en: '', ga: '' }, figures: { species: 0, detections: 0, busiest: nil },
-        summary: { en: [], ga: [] }, source: nil, sources: [], notable: notable_json(days: 1),
+        summary: { en: [], ga: [] }, source: nil, sources: [], sparkline: nil, notable: notable_json(days: 1),
         poem: nil, available: { first: nil, last: Date.yesterday.iso8601 } }
     end
   end

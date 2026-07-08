@@ -219,6 +219,13 @@ body.ed {
   text-decoration: underline; text-underline-offset: 2px; text-decoration-color: var(--rule);
 }
 .journal-fig-bird:hover { text-decoration-color: var(--ink-soft); }
+/* The stilled day-shape curve + its simple hour ticks. */
+.journal-spark { margin: 4px 0 26px; }
+.journal-spark .today-spark-svg { height: 72px; }
+.journal-spark-axis {
+  display: flex; justify-content: space-between; margin-top: 5px;
+  font: 10px var(--mono); letter-spacing: 0.02em; color: var(--ink-soft);
+}
 
 /* The sparkline: its own quiet band between the collage and the TODAY text —
    full content width, with room above (off the collage) and the TODAY section's
@@ -239,6 +246,10 @@ body.ed {
 .today-spark-svg { display: block; width: 100%; height: 104px; }
 /* A thin green stroke — the only green on the page. */
 .today-spark-line { stroke: var(--green); stroke-width: 1.75; vector-effect: non-scaling-stroke; }
+/* Stilled (Journal): the finished day's shape in muted ink, no fill — the historical twin of
+   Live's living green line. */
+.today-spark-plot.is-muted .today-spark-line { stroke: var(--ink-soft); }
+.today-spark-plot.is-muted .today-spark-fill { display: none; }
 
 /* A blind spot (mic down): an explicit data-availability state, NOT a zero. A pale
    neutral band over the real duration, with a centred "No data · 06:00–08:48" label
