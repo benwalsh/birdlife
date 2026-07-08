@@ -46,7 +46,7 @@ module Enrichment
       return { error: "fetch failed: #{url}" } unless body
 
       log!(host, url)
-      { host: host, url: url, text: extract_text(body, url) }
+      { host: host, url: utf8(url), text: extract_text(body, url) }
     rescue StandardError => e
       { error: "#{e.class}: #{e.message}" }
     end
@@ -65,15 +65,27 @@ module Enrichment
       url.to_s[%r{\Ahttps?://([^/?#]+)}i, 1]&.downcase
     end
 
+    # A URI to fetch, even when the URL carries non-ASCII (a fada in a Vicipéid title, e.g.
+    # ga.wikipedia.org/wiki/Cág_cosdearg) — try it raw, then percent-encode just the
+    # non-ASCII bytes and retry. Only those bytes are touched, so an already-encoded URL is
+    # never double-encoded. (Distinct from safe_uri, which is parse-or-nil for link scraping.)
+    def request_uri(url)
+      URI(url)
+    rescue URI::InvalidURIError
+      URI(url.to_s.gsub(/[^\x00-\x7F]/) { |c| c.bytes.map { |b| format('%%%02X', b) }.join })
+    end
+
     def http_get(url, redirects_left: MAX_REDIRECTS)
-      uri = URI(url)
+      uri = request_uri(url)
       res = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == 'https',
                             open_timeout: 5, read_timeout: 12) do |http|
         http.get(uri.request_uri, 'User-Agent' => USER_AGENT)
       end
 
       case res
-      when Net::HTTPSuccess then res.body
+      # Net::HTTP hands back ASCII-8BIT; the trusted hosts serve UTF-8 (Irish fadas on
+      # Vicipéid/dúchas), so tag it UTF-8 or the text breaks on the way into the DB.
+      when Net::HTTPSuccess then res.body&.dup&.force_encoding(Encoding::UTF_8)
       when Net::HTTPRedirection then follow(res['location'], uri, redirects_left)
       end
     end
@@ -158,8 +170,14 @@ module Enrichment
     end
 
     def log!(host, url)
-      SourceFetchLog.create!(host: host, url: url, sci_name: @sci_name,
+      # A seeded Vicipéid URL can arrive tagged ASCII-8BIT (its fada bytes); normalise to
+      # UTF-8 so the insert doesn't blow up on the citation string.
+      SourceFetchLog.create!(host: host, url: utf8(url), sci_name: @sci_name,
                              fetched_at: Time.current, run_id: @run_id)
+    end
+
+    def utf8(str)
+      str.to_s.dup.force_encoding(Encoding::UTF_8)
     end
   end
 end

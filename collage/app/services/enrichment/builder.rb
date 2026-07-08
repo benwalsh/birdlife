@@ -56,13 +56,14 @@ module Enrichment
       Choosing sources by block type:
         - FACT: Wikipedia (en.wikipedia.org) is reliable and deep — use it freely for the
           general behaviour/voice/habit facts.
-        - REGIONAL_NOTE: prefer the IRISH birding sources — BirdWatch Ireland
-          (birdwatchireland.ie and its county branches), irishbirding.com, the Irish Rare
-          Birds Committee (irbc.ie), the Irish Wildlife Trust (iwt.ie), the National
-          Biodiversity Data Centre (biodiversityireland.ie). This is the LOCAL angle (its
-          status in Ireland, where near here it turns up, an Irish-name meaning); an Irish
-          source is worth far more than a generic Wikipedia line. For a scarce bird or a
-          vagrant especially, irishbirding.com / irbc.ie carry the Irish records.
+        - REGIONAL_NOTE: this is the LOCAL/Irish angle (its status in Ireland, where near here
+          it turns up, the meaning of its Irish name) and it should come from an IRISH source,
+          not a generic Wikipedia line. FETCH the seeded Vicipéid (ga.wikipedia.org) article
+          first — it's the Irish-language page, titled with the bird's Irish name, and carries
+          the name variants + Irish distribution. The National Biodiversity Data Centre
+          (biodiversityireland.ie) has Irish distribution, and the Irish Rare Birds Committee
+          (irbc.ie) has the records for a scarce bird or vagrant. NOTE: do NOT waste fetches on
+          birdwatchireland.ie — it blocks automated access (you'll get an error).
         - FOLKLORE: dúchas.ie is the FAVOURITE — clearly prefer it to Wikipedia. Search the
           Schools' Collection ONCE: fetch https://www.duchas.ie/en/cbes?Search=TERM (use the
           bird's Irish name, e.g. its name in the task, and/or English). The result ends
@@ -192,7 +193,7 @@ module Enrichment
 
       def converse_loop(sci_name:, common_name:, fetcher:)
         system = format(SYSTEM, place: station_place)
-        messages = [{ role: 'user', content: [{ text: "Species: #{common_name} (#{sci_name})." }] }]
+        messages = [{ role: 'user', content: [{ text: task_message(sci_name, common_name) }] }]
 
         MAX_ROUNDS.times do
           resp = Bedrock.converse_tools(system: system, messages: messages, tools: [FETCH_TOOL])
@@ -209,6 +210,20 @@ module Enrichment
         messages << { role: 'user', content: [{ text: FINALISE }] }
         resp = Bedrock.converse_tools(system: system, messages: messages, tools: [FETCH_TOOL])
         text_of(resp.output.message.content)
+      end
+
+      # The opening task: the species (with its Irish name) and the Irish-language sources to
+      # fetch for the local angle — seeded so the model reaches Irish material instead of
+      # defaulting to English Wikipedia (see IrishSources).
+      def task_message(sci_name, common_name)
+        irish = BirdName.lookup(sci_name).ga
+        seeds = IrishSources.for(sci_name, irish)
+        named = irish.present? ? "#{common_name} / #{irish}" : common_name
+        msg = "Species: #{named} (#{sci_name})."
+        return msg if seeds.empty?
+
+        "#{msg}\nIrish-language sources to fetch for the Irish name meaning and local status: " \
+          "#{seeds.join(', ')}."
       end
 
       # Re-shape response content structs back into request-shape content hashes so the
