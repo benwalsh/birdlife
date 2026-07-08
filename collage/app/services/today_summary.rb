@@ -119,9 +119,20 @@ class TodaySummary
   # it. A lambda so an ENRICH_MODEL_ID override is picked up at call time, not load time.
   NARRATOR_MODEL = -> { Bedrock.enrich_model_id }
   NARRATOR_TOKENS = 700
-  # A plain identification/size note — the dull kind the sourcing prompt avoids but that
-  # still slips into a bundle; the no-model fallback skips these when leading with a fact.
-  DULL_FACT = /\b(identif|recognis\w+ by|resembl|distinguish|tell.{0,12}apart|similar to|smaller|larger)\b/i
+  # The dry, encyclopedic kind of fact — identification, plumage, size, range, taxonomy —
+  # that reads as filler. The no-model fallback skips these in favour of a behaviour/voice/
+  # habit fact, or folklore, so the bird-character it shows is the interesting stuff. Single
+  # stems only (no literal spaces — the /x flag would swallow them), no trailing boundary so
+  # "distribut" catches "distributed", "measur" catches "measures", etc.
+  DULL_FACT = /\b(identif|resembl|distinguish|plumage|juvenile|eyes?|feather|widely|
+                  distribut|inhabit|habitat|taxonom|subspecies|measur|weigh|wingspan|centimet)/ix
+  # Flags the no-model fallback treats as genuine news (a real first). all_time_first_young
+  # is deliberately excluded — in a young station everything is a "first", so it's damped.
+  NEWS_FLAGS = %w[all_time_first year_first].freeze
+  NEWS_LABEL = {
+    en: { all_time_first: 'New for the station', year_first: 'First of the year' },
+    ga: { all_time_first: 'Nua ag an stáisiún', year_first: 'Céaduair i mbliana' }
+  }.freeze
 
   class << self
     # The last-good summary for the page — bilingual { en: [...], ga: [...] }. Never
@@ -217,30 +228,58 @@ class TodaySummary
       end
     end
 
-    # The no-LLM fallback — returned as [bullets, source]. Never the bare bones: it leads
-    # with a stored fact and a piece of folklore about the day's most prominent enriched
-    # bird (verbatim from the vetted bundles — already clean, cited sentences), then the
-    # day's shape. Rich and honest without a model, so the page shows it ('facts'); only if
-    # nothing is enriched yet does it fall back to the plain template ('template', which the
-    # card hides). This is what keeps the TODAY box from ever going empty when Bedrock is
-    # unreachable (a new day before the timer runs, an SSO lapse, an outage).
+    # The no-LLM fallback — returned as [bullets, source]. This is what shows whenever
+    # Bedrock can't be reached (a new day before the timer runs, a lapsed SSO session, an
+    # outage), which locally is most of the time — so it must NOT be the bare tally. It is
+    # deliberately BIRD CHARACTER, not a recap: the day's genuine news (an all-time / year
+    # first, named) followed by a striking fact or piece of folklore about each of the day's
+    # most prominent enriched birds — verbatim from the vetted bundles. The counts, the
+    # "most heard" line, the activity note — the lines that read as dumbed-down — are
+    # deliberately left OUT. Shown as 'facts'. Only when there is genuinely nothing to say
+    # (no news, nothing enriched) does it fall to the bare template ('template', hidden).
     def fallback(facts, lore)
-      base = DailyFacts.template_bullets(facts)
-      bird = Array(lore).find { |b| Array(b[:blocks]).any? }
-      picks = bird ? [vivid_fact(bird[:blocks]), folklore(bird[:blocks])].compact : []
-      return [base, 'template'] if picks.empty?
+      news = news_bullets(facts)
+      character = character_bullets(lore)
+      en = (news[:en] + character[:en]).first(4)
+      ga = (news[:ga] + character[:ga]).first(4)
+      return [{ en: en, ga: ga }, 'facts'] if en.any?
 
-      en = picks.pluck(:text) + base[:en]
-      ga = picks.map { |b| b[:text_ga].presence || b[:text] } + base[:ga]
-      [{ en: en.first(4), ga: ga.first(4) }, 'facts']
+      [DailyFacts.template_bullets(facts), 'template']
     end
 
-    # A fact worth leading with — the first that isn't a plain identification/size note
-    # (the dull kind the sourcing prompt tries to avoid but that still slips in), else the
-    # first fact of any kind.
+    # Today's genuine news as bilingual bullets — an all-time or year first, named. NOT the
+    # counts and NOT "most heard": those bare-recap lines are exactly what we keep out.
+    def news_bullets(facts)
+      arrivals = Array(facts[:items]).select { |i| Array(i[:flags]).intersect?(NEWS_FLAGS) }.first(2)
+      { en: arrivals.map { |i| news_line(i, :en) }, ga: arrivals.map { |i| news_line(i, :ga) } }
+    end
+
+    def news_line(item, lang)
+      kind = Array(item[:flags]).include?('year_first') ? :year_first : :all_time_first
+      name = lang == :ga ? item[:irish_name].presence || item[:common_name] : item[:common_name]
+      "#{NEWS_LABEL[lang][kind]}: #{name}."
+    end
+
+    # A genuinely interesting thing about the day's birds — a behaviour/habit fact or a
+    # piece of folklore — scanning ALL the prominent enriched birds and taking the best
+    # three. A bird whose bundle holds only dry identification/range facts is SKIPPED, not
+    # padded in: better two lines that sing than four with filler.
+    def character_bullets(lore)
+      picked = Array(lore).filter_map { |bird| interesting_block(bird[:blocks]) }.first(3)
+      { en: picked.pluck(:text), ga: picked.map { |b| b[:text_ga].presence || b[:text] } }
+    end
+
+    # The interesting block for a bird — a non-dry fact, else folklore. Nil when the bird
+    # only has dry facts (so it's left out rather than dragging the note down).
+    def interesting_block(blocks)
+      vivid_fact(blocks) || folklore(blocks)
+    end
+
+    # A fact worth leading with — the first behaviour/habit/voice fact, i.e. not one of the
+    # dry identification/size notes. Nil when the bird only has dry facts (so the caller can
+    # reach for folklore instead).
     def vivid_fact(blocks)
-      facts = blocks.select { |b| b[:type] == 'fact' }
-      facts.find { |b| !b[:text].to_s.match?(DULL_FACT) } || facts.first
+      blocks.find { |b| b[:type] == 'fact' && !b[:text].to_s.match?(DULL_FACT) }
     end
 
     def folklore(blocks)

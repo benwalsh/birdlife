@@ -69,11 +69,11 @@ RSpec.describe TodaySummary do
   end
 
   describe '.current' do
-    it 'synthesises the template when there is no cache' do
+    it 'synthesises from facts when there is no cache (the day\'s news, not a tally)' do
       result = described_class.current(facts: facts)
-      expect(result[:source]).to eq('template')
-      expect(result[:bullets][:en].first).to eq('3 species and 42 detections logged today.')
-      expect(result[:bullets][:ga].first).to eq('3 speiceas agus 42 brath logáilte inniu.')
+      expect(result[:source]).to eq('facts') # the fixture carries an all-time first
+      expect(result[:bullets][:en]).to include('New for the station: Common Greenshank.')
+      expect(result[:bullets][:en].join).not_to include('detections logged today')
     end
 
     it 'discards a cache left over from a previous day (so "today" is never stale)' do
@@ -81,8 +81,7 @@ RSpec.describe TodaySummary do
       travel_to(Time.zone.local(2026, 7, 3, 12)) { described_class.refresh } # cache dated 2026-07-03
       newer = facts.merge(date: '2026-07-06', species_today: 9)
       result = described_class.current(facts: newer)
-      expect(result[:source]).to eq('template') # not the stale cache
-      expect(result[:bullets][:en].first).to include('9 species')
+      expect(result[:facts_date]).to eq('2026-07-06') # recomputed for today, not the 07-03 cache
     end
   end
 
@@ -116,14 +115,16 @@ RSpec.describe TodaySummary do
     context 'when the LLM is disabled' do
       before { allow(Bedrock).to receive(:disabled?).and_return(true) }
 
-      it 'writes the deterministic template when nothing is enriched' do
+      it 'writes the bare template (hidden) only when there is no news and nothing enriched' do
+        routine = facts.merge(items: [{ sci_name: 'Passer domesticus', common_name: 'House Sparrow',
+                                        irish_name: 'Gealbhan binne', call_count: 30, importance: 5,
+                                        flags: %w[routine most_common] }])
+        allow(DailyFacts).to receive(:for).and_return(routine)
         result = described_class.refresh
         expect(result[:source]).to eq('template')
-        expect(file).to exist
-        expect(described_class.current[:source]).to eq('template')
       end
 
-      it 'writes a RICH facts fallback (not the bare template) when a prominent bird is enriched' do
+      it 'writes bird CHARACTER — news + a fact — not the "N species / most heard" recap' do
         EnrichmentBundle.create!(
           sci_name: 'Passer domesticus', date: '2026-07-01',
           common_name: 'House Sparrow', irish_name: 'Gealbhan binne',
@@ -133,9 +134,12 @@ RSpec.describe TodaySummary do
         )
         result = described_class.refresh
         expect(result[:source]).to eq('facts') # shown, not hidden
-        expect(result[:bullets][:en].first).to eq('House sparrows roost communally in winter.')
-        expect(result[:bullets][:en]).to include('3 species and 42 detections logged today.')
-        expect(result[:bullets][:ga].first).to eq('Fanann gealbhain le chéile sa gheimhreadh.')
+        # the genuine news (the all-time first), then the stored fact
+        expect(result[:bullets][:en]).to include('New for the station: Common Greenshank.')
+        expect(result[:bullets][:en]).to include('House sparrows roost communally in winter.')
+        expect(result[:bullets][:ga]).to include('Fanann gealbhain le chéile sa gheimhreadh.')
+        # the dumbed-down recap lines are gone
+        expect(result[:bullets][:en].join).not_to match(/detections logged today|Most heard/)
       end
     end
 
@@ -163,8 +167,10 @@ RSpec.describe TodaySummary do
                                            converse:  '- A busy, thriving day for birdlife!')
       end
 
-      it 'rejects it and falls through to the template (no cache yet)' do
-        expect(described_class.refresh[:source]).to eq('template')
+      it 'rejects it and falls through to the deterministic fallback (never the model line)' do
+        result = described_class.refresh
+        expect(result[:source]).to eq('facts') # rejected the LLM; the fixture's first becomes news
+        expect(result[:bullets][:en].join).not_to include('thriving')
       end
     end
 
