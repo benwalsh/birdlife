@@ -7,6 +7,7 @@ import { HitsStrip } from './HitsStrip'
 import { TodaySpark } from './TodaySpark'
 import { AlmanacRow } from './AlmanacRow'
 import { NotableBlock } from './NotableBlock'
+import { LiveLists } from './LiveLists'
 import type { NotableItem } from '../types'
 
 // The condensed masthead's height — the hits strip pins just under it (see .ed-hits
@@ -92,6 +93,7 @@ export function LiveTab({
                       stickyTop={stack.spark} />
           <AlmanacRow today={data.today} stickyTop={stack.almanac} />
           <NotableBlock groups={data.notable} favourites={favourites} status={data.status} onSelect={onSelect} />
+          <LiveLists recent={data.recent} firstSeen={data.first_seen} onSelect={onSelect} />
         </>
       ) : (
         <p className="ed-empty">{t('Ag éisteacht… nothing heard yet.', 'Ag éisteacht… faic cloiste fós.')}</p>

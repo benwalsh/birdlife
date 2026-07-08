@@ -13,8 +13,11 @@ module Api
         },
         # Most common in the window (the tally is already loudest-first).
         top:        tally.first(6).map { |t| tally_json(t) },
+        # Most recently heard, freshest first — Live's present-tense list (same sort the
+        # kiosk's "recent" uses). The collage shows *which* birds; this shows *when*.
+        recent:     tally.sort_by { |t| t.last_time.to_s }.last(8).reverse.map { |t| tally_json(t) },
         periods:    periods_json,
-        first_seen: Detection.first_detections(4).map { |e| life_json(e) },
+        first_seen: Detection.first_detections(8).map { |e| life_json(e) },
         almanac:    almanac_json,
         today:      today_json,
         notable:    notable_json,

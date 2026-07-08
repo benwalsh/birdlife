@@ -104,6 +104,7 @@ export interface Overview {
     species_today: number; detections_today: number; detections_all_time: number
   }
   top: Tally[]
+  recent: Tally[]
   periods: Period[]
   first_seen: LifeEntry[]
   almanac: Almanac
