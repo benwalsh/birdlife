@@ -27,7 +27,19 @@ RSpec.describe 'API journal' do
       expect(body['summary']['en'].first).to include('data-sci="Erithacus rubecula"').and include('>European Robin</strong>')
       expect(body['notable'].keys).to contain_exactly('rarity', 'first_ever', 'seasonal')
       expect(body['available']).to eq('first' => '2026-07-07', 'last' => '2026-07-07')
-      expect(body['poem']).to be_nil
+      # 7 July carries a curated féilire feast; the robin has no curated poem/tale.
+      expect(body['day_lore']['title']['en']).to eq('Feast of St Máel Ruain')
+      expect(body['lore']).to be_nil
+    end
+
+    it 'closes with a curated bird poem/tale when one of the day\'s birds has one' do
+      create(:detection, Sci_Name: 'Streptopelia decaocto', Com_Name: 'Eurasian Collared-Dove',
+                         Confidence: 0.9, Date: '2026-07-07')
+      get '/api/journal'
+      lore = response.parsed_body['lore']
+      expect(lore).to include('kind' => 'tale', 'sci' => 'Streptopelia decaocto')
+      expect(lore['text']).to include('deca octo')
+      expect(lore['attribution']).to include('Stephanides')
     end
 
     it 'clamps a future/out-of-range date back into the available window' do

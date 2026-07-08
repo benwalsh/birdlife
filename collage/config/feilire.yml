@@ -1,0 +1,37 @@
+# The day's Irish character — a curated calendar of NOTABLE Irish saints' feasts and the
+# Celtic quarter-days. Facts only (dates, names): the model never guesses these; a day with no
+# entry falls back to its Celtic season (see Feilire). Deliberately selective, not a liturgical
+# calendar — only days that carry genuine Irish weight. Keyed by MM-DD.
+
+"02-01":
+  title: { en: "St Brigid's Day", ga: "Lá Fhéile Bríde" }
+  kind: quarter_day
+  gloss: { en: "Imbolc — the first day of spring in the old Irish reckoning", ga: "Imbolc — an chéad lá den earrach" }
+"03-17":
+  title: { en: "St Patrick's Day", ga: "Lá Fhéile Pádraig" }
+  kind: saint
+  gloss: { en: "the feast of Ireland's patron", ga: "féile éarlamh na hÉireann" }
+"05-01":
+  title: { en: "Bealtaine", ga: "Lá Bealtaine" }
+  kind: quarter_day
+  gloss: { en: "the first day of summer, when the cattle went to the hills", ga: "an chéad lá den samhradh" }
+"06-09":
+  title: { en: "St Colmcille's Day", ga: "Lá Fhéile Choilm Cille" }
+  kind: saint
+  gloss: { en: "founder of Iona, one of Ireland's three patron saints", ga: "bunaitheoir Í, duine de thrí éarlamh na hÉireann" }
+"07-07":
+  title: { en: "Feast of St Máel Ruain", ga: "Lá Fhéile Mháel Ruain" }
+  kind: saint
+  gloss: { en: "founder of the monastery of Tallaght and the Céli Dé reform", ga: "bunaitheoir mhainistir Thamhlachta" }
+"07-08":
+  title: { en: "Feast of St Cillian", ga: "Lá Fhéile Chillian" }
+  kind: saint
+  gloss: { en: "an Irish missionary, martyred at Würzburg", ga: "misinéir Éireannach, mairtíreach in Würzburg" }
+"08-01":
+  title: { en: "Lúnasa", ga: "Lá Lúnasa" }
+  kind: quarter_day
+  gloss: { en: "the start of the harvest, the festival of Lugh", ga: "tús an fhómhair, féile Lugh" }
+"11-01":
+  title: { en: "Samhain", ga: "Lá Samhna" }
+  kind: quarter_day
+  gloss: { en: "the beginning of winter and the old Celtic new year", ga: "tús an gheimhridh agus na sean-athbhliana" }

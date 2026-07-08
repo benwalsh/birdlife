@@ -111,8 +111,11 @@ export interface JournalDay {
   sources: { host: string; url: string }[]
   // The day's 24h activity curve, rendered stilled (greyscale) — the finished day's shape.
   sparkline: SparkPaths | null
+  // The day in Irish tradition — a curated feast/quarter-day or the Celtic season.
+  day_lore: { title: Bilingual; gloss: Bilingual; kind: string } | null
   notable: NotableGroups
-  poem: { text: string; attribution: string; sci: string; en: string; ga: string | null } | null
+  // A closing piece of literary lore (a poem or tale) for one of the day's birds.
+  lore: { kind: 'poem' | 'tale'; text: string; attribution: string; sci: string; en: string; ga: string | null } | null
   available: { first: string | null; last: string }
 }
 

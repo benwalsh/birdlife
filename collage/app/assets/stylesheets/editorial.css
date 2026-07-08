@@ -219,6 +219,23 @@ body.ed {
   text-decoration: underline; text-underline-offset: 2px; text-decoration-color: var(--rule);
 }
 .journal-fig-bird:hover { text-decoration-color: var(--ink-soft); }
+/* The day in Irish tradition — a quiet serif line under the dateline (curated feast / season). */
+.journal-daylore { margin: 0 0 20px; font: 14.5px var(--serif); font-style: italic; }
+.journal-daylore-title { color: var(--ink); }
+.journal-daylore-gloss { color: var(--ink-soft); }
+
+/* The closing lore — a poem or tale for one of the day's birds, set apart as a quiet quotation
+   with a left rule; the credit (and a link to the bird's card) in muted mono beneath. */
+.journal-lore { margin: 34px 0 4px; padding-left: 20px; border-left: 2px solid var(--rule); max-width: 640px; }
+.journal-lore-text { margin: 0; font: 16px/1.72 var(--serif); color: var(--ink); white-space: pre-line; }
+.journal-lore.is-poem .journal-lore-text { font-style: italic; }
+.journal-lore-credit { margin-top: 12px; font: 11px var(--mono); letter-spacing: 0.02em; color: var(--ink-soft); }
+.journal-lore-bird {
+  background: none; border: 0; padding: 0; cursor: pointer; font: inherit; color: var(--ink-2);
+  text-decoration: underline; text-underline-offset: 2px; text-decoration-color: var(--rule);
+}
+.journal-lore-bird:hover { color: var(--ink); }
+
 /* The stilled day-shape curve + its simple hour ticks. */
 .journal-spark { margin: 4px 0 26px; }
 .journal-spark .today-spark-svg { height: 72px; }

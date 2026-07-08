@@ -37,6 +37,13 @@ export function JournalTab({ onSelect }: { onSelect: (sci: string) => void }) {
             </header>
             <hr className="today-rule" />
 
+            {data.day_lore && (
+              <p className="journal-daylore">
+                <span className="journal-daylore-title">{pick(data.day_lore.title)}</span>
+                <span className="journal-daylore-gloss"> — {pick(data.day_lore.gloss)}</span>
+              </p>
+            )}
+
             <ul className="journal-figures">
               <li><b>{f.species.toLocaleString()}</b> {t('species', 'speiceas')}</li>
               <li><b>{f.detections.toLocaleString()}</b> {t('detections', 'aimsithe')}</li>
@@ -79,6 +86,19 @@ export function JournalTab({ onSelect }: { onSelect: (sci: string) => void }) {
             )}
 
             <SourceCitations sources={data.sources} />
+
+            {data.lore && (
+              <figure className={`journal-lore is-${data.lore.kind}`}>
+                <blockquote className="journal-lore-text">{data.lore.text}</blockquote>
+                <figcaption className="journal-lore-credit">
+                  {data.lore.attribution}
+                  {' · '}
+                  <button type="button" className="journal-lore-bird" onClick={() => onSelect(data.lore!.sci)}>
+                    {lang === 'ga' && data.lore.ga ? data.lore.ga : data.lore.en}
+                  </button>
+                </figcaption>
+              </figure>
+            )}
           </article>
 
           <NotableBlock groups={data.notable} onSelect={onSelect} />

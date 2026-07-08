@@ -20,8 +20,9 @@ module Api
         source:     entry&.source,
         sources:    entry_sources(entry),
         sparkline:  day_sparkline(facts),
+        day_lore:   day_lore_json(date),
         notable:    notable_json(as_of: date, days: 1),
-        poem:       nil, # Phase 4b — a closing Irish poem for one of the day's birds
+        lore:       closing_lore(facts),
         available:  available_bounds
       }
     end
@@ -56,6 +57,32 @@ module Api
       { path: spark.path, fill: spark.fill, gaps: [], w: spark.w, h: spark.h }
     end
 
+    # The day's Irish character (curated feast/quarter-day, else the Celtic season) as a bilingual
+    # line + gloss. Factual — from the féilire reference, never narrated.
+    def day_lore_json(date)
+      entry = Feilire.for(date)
+      { title: bilingual(entry['title']), gloss: bilingual(entry['gloss']), kind: entry['kind'] }
+    end
+
+    # A closing piece of literary lore for one of the day's birds: the most important species
+    # (else the loudest) that has a curated poem/tale. nil when none of the day's birds has one.
+    def closing_lore(facts)
+      items = Array(facts[:items]).sort_by { |i| -i[:importance].to_i }
+      items.each do |item|
+        lore = BirdLore.for(item[:sci_name])
+        next unless lore
+
+        name = BirdName.lookup(item[:sci_name])
+        return { kind: lore['kind'], text: lore['text'].to_s.strip, attribution: lore['attribution'],
+                 sci: item[:sci_name], en: name.en, ga: name.ga }
+      end
+      nil
+    end
+
+    def bilingual(hash)
+      { en: hash['en'], ga: hash['ga'] }
+    end
+
     def available_bounds
       { first: first_detection_date&.iso8601, last: Date.yesterday.iso8601 }
     end
@@ -82,8 +109,8 @@ module Api
     # renders (an "ag éisteacht…" state) rather than erroring.
     def unavailable
       { date: nil, date_label: { en: '', ga: '' }, figures: { species: 0, detections: 0, busiest: nil },
-        summary: { en: [], ga: [] }, source: nil, sources: [], sparkline: nil, notable: notable_json(days: 1),
-        poem: nil, available: { first: nil, last: Date.yesterday.iso8601 } }
+        summary: { en: [], ga: [] }, source: nil, sources: [], sparkline: nil, day_lore: nil,
+        notable: notable_json(days: 1), lore: nil, available: { first: nil, last: Date.yesterday.iso8601 } }
     end
   end
 end
