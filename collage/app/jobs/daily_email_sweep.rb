@@ -14,6 +14,18 @@ class DailyEmailSweep < ApplicationJob
   def perform(date = Date.yesterday)
     date = Date.parse(date) if date.is_a?(String)
     Enrichment::Builder.run(date: date)
+    freeze_journal(date)
     DailyDigest.deliver_all(date: date)
+  end
+
+  private
+
+  # Freeze the completed day's Journal entry now that its lore is sourced — so the page reads
+  # a frozen entry, not a build-on-view. Best-effort: a narration hiccup must not block the
+  # digest, and build-on-view remains the backstop.
+  def freeze_journal(date)
+    JournalEntry.for(date)
+  rescue StandardError => e
+    Rails.logger.warn("DailyEmailSweep: journal freeze for #{date} failed (#{e.class}: #{e.message})")
   end
 end

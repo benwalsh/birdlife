@@ -6,6 +6,7 @@ import { FollowProvider } from './favourites'
 import { Masthead } from './components/Masthead'
 import { Footer } from './components/Footer'
 import { LiveTab } from './components/LiveTab'
+import { JournalTab } from './components/JournalTab'
 import { StatsTab } from './components/StatsTab'
 import { DirectoryTab } from './components/DirectoryTab'
 import { SpeciesModal } from './components/SpeciesModal'
@@ -14,7 +15,7 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false, retry: 1 } },
 })
 
-const TABS: Tab[] = ['live', 'stats', 'directory']
+const TABS: Tab[] = ['live', 'journal', 'stats', 'directory']
 
 function initialTab(): Tab {
   const t = new URLSearchParams(window.location.search).get('tab')
@@ -42,6 +43,7 @@ export function App({ bootstrap }: { bootstrap: Bootstrap }) {
             {tab === 'live' && (
               <LiveTab onSelect={setSelected} windowHours={win} onWindow={setWin} windows={bootstrap.windows} />
             )}
+            {tab === 'journal' && <JournalTab onSelect={setSelected} />}
             {tab === 'stats' && (
               <StatsTab onSelect={setSelected} windowHours={win} onWindow={setWin} windows={bootstrap.windows} />
             )}

@@ -52,6 +52,7 @@ Rails.application.routes.draw do
   # JSON API for the React SPA (and, later, api.culfinbirds.net). Read-only GETs.
   namespace :api do
     get 'overview' => 'overview#show'
+    get 'journal' => 'journal#show'
     get 'stats' => 'stats#show'
     get 'directory' => 'directory#show'
     get 'species/:sci' => 'species#show', constraints: { sci: %r{[^/]+} }

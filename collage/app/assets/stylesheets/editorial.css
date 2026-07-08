@@ -186,6 +186,37 @@ body.ed {
 }
 .today-sources a:hover { color: var(--ink); border-bottom-color: var(--ink-soft); }
 
+/* Journal — the diary of completed days. A calendar walks day to day; each entry reuses the
+   .today-card idiom (a completed day's note) followed by that day's new & notable. */
+.journal { margin: 0; }
+.cal { display: flex; align-items: center; gap: 14px; margin: 8px 0 0; }
+.cal-arrow {
+  background: transparent; border: 0; cursor: pointer; color: var(--ink-soft);
+  display: inline-flex; padding: 4px; transition: color 140ms ease;
+}
+.cal-arrow:hover:not(:disabled) { color: var(--ink); }
+.cal-arrow:disabled { opacity: 0.3; cursor: default; }
+.cal-arrow .ti { font-size: 20px; }
+.cal-date {
+  background: transparent; border: 0; border-bottom: 1px solid var(--rule);
+  padding: 3px 2px; color: var(--ink); font: 12px var(--mono); letter-spacing: 0.04em;
+}
+.cal-date:focus { outline: none; border-bottom-color: var(--ink); }
+.journal .today-card { margin-top: 20px; }
+
+/* The day's final figures — a quiet mono data line above the narration (mono = data, like
+   the almanac). The busiest bird links to its card. */
+.journal-figures {
+  display: flex; flex-wrap: wrap; gap: 8px 28px; margin: 0 0 22px; padding: 0; list-style: none;
+  font: 12px var(--mono); letter-spacing: 0.02em; color: var(--ink-2);
+}
+.journal-figures b { color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+.journal-fig-bird {
+  background: none; border: 0; padding: 0; cursor: pointer; font: inherit; color: var(--ink);
+  text-decoration: underline; text-underline-offset: 2px; text-decoration-color: var(--rule);
+}
+.journal-fig-bird:hover { text-decoration-color: var(--ink-soft); }
+
 /* The sparkline: its own quiet band between the collage and the TODAY text —
    full content width, with room above (off the collage) and the TODAY section's
    own top margin providing the gap below. */

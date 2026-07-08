@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import type { Overview, SpeciesDetail, Stats, Directory, Sort, Scope } from './types'
+import type { Overview, JournalDay, SpeciesDetail, Stats, Directory, Sort, Scope } from './types'
 
 async function fetchJson<T>(url: string): Promise<T> {
   const res = await fetch(url, { headers: { Accept: 'application/json' } })
@@ -11,6 +11,13 @@ export const useOverview = (h?: number) =>
   useQuery<Overview>({
     queryKey: ['overview', h ?? 24],
     queryFn: () => fetchJson(`/api/overview${h ? `?h=${h}` : ''}`),
+  })
+
+// The Journal: a completed day's frozen entry. `date` null → yesterday (the default).
+export const useJournal = (date: string | null) =>
+  useQuery<JournalDay>({
+    queryKey: ['journal', date ?? 'yesterday'],
+    queryFn: () => fetchJson(`/api/journal${date ? `?date=${date}` : ''}`),
   })
 
 export const useStats = (h?: number) =>

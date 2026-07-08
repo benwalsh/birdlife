@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_05_190000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_08_120000) do
   create_table "detections", force: :cascade do |t|
     t.string "Com_Name", null: false
     t.float "Confidence"
@@ -58,6 +58,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_05_190000) do
     t.string "source"
     t.index ["at"], name: "index_heartbeats_on_at"
     t.index ["dedupe_key"], name: "index_heartbeats_on_dedupe_key", unique: true
+  end
+
+  create_table "journal_entries", force: :cascade do |t|
+    t.json "bullets", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.date "date", null: false
+    t.string "source"
+    t.json "sources", default: [], null: false
+    t.datetime "updated_at", null: false
+    t.index ["date"], name: "index_journal_entries_on_date", unique: true
   end
 
   create_table "settings", force: :cascade do |t|

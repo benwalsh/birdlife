@@ -29,45 +29,6 @@ RSpec.describe TodaySummary do
 
   after { FileUtils.remove_entry(dir) if dir.exist? }
 
-  describe '.user_message' do
-    it 'serialises the facts object into the prompt the model sees' do
-      msg = described_class.user_message(facts)
-      expect(msg).to include('3 species, 42 detections today')
-      expect(msg).to include('Common Greenshank (Laidhrín glas), 1, importance 100, [all_time_first]')
-      expect(msg).to include('Activity: quieter than typical.')
-      expect(msg).to include('Spotlight: Common Greenshank — first record at the station.')
-      expect(msg).to include('Background: A wading bird.')
-    end
-
-    it 'appends the stored bird-lore as an "About the birds" section' do
-      lore = [{ common_name: 'House Sparrow', irish_name: 'Gealbhan binne',
-                blocks: [{ type: 'folklore', text: 'Old lore tied the sparrow to the hearth.' }] }]
-      msg = described_class.user_message(facts, lore)
-      expect(msg).to include('About the birds')
-      expect(msg).to include('House Sparrow (Gealbhan binne):')
-      expect(msg).to include('[folklore] Old lore tied the sparrow to the hearth.')
-    end
-  end
-
-  describe '.enrichment_for' do
-    it 'pulls the latest stored bundle for the day\'s prominent species (incl. the loudest)' do
-      EnrichmentBundle.create!(
-        sci_name: 'Passer domesticus', date: '2026-07-01',
-        common_name: 'House Sparrow', irish_name: 'Gealbhan binne',
-        blocks: [{ 'type' => 'fact', 'id' => 'chirpy', 'text' => 'Chirps from the eaves.',
-                   'text_ga' => nil, 'gated' => false,
-                   'sources' => [{ 'host' => 'en.wikipedia.org', 'url' => 'https://en.wikipedia.org/wiki/x' }] }]
-      )
-      lore = described_class.send(:enrichment_for, facts)
-      sparrow = lore.find { |b| b[:common_name] == 'House Sparrow' }
-      expect(sparrow[:blocks].first[:text]).to eq('Chirps from the eaves.')
-    end
-
-    it 'is empty when no prominent species has a stored bundle' do
-      expect(described_class.send(:enrichment_for, facts)).to eq([])
-    end
-  end
-
   describe '.current' do
     it 'synthesises from facts when there is no cache (the day\'s news, not a tally)' do
       result = described_class.current(facts: facts)

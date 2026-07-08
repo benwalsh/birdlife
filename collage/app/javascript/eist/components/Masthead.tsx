@@ -6,6 +6,7 @@ import { AccountMenu } from './AccountMenu'
 // icon = the phone fallback (the word is hidden below 560px; see editorial.css).
 const TABS: { id: Tab; en: string; ga: string; icon: string }[] = [
   { id: 'live', en: 'Live', ga: 'Beo', icon: 'ti-feather' },
+  { id: 'journal', en: 'Journal', ga: 'Dialann', icon: 'ti-notebook' },
   { id: 'stats', en: 'Stats', ga: 'Sonraí', icon: 'ti-chart-bar' },
   { id: 'directory', en: 'Directory', ga: 'Eolaí', icon: 'ti-book-2' },
 ]

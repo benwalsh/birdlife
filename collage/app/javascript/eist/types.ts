@@ -97,6 +97,23 @@ export type NotableKind = 'rarity' | 'first_ever' | 'seasonal'
 export interface NotableItem { sci: string; en: string; ga: string | null }
 export interface NotableGroups { rarity: NotableItem[]; first_ever: NotableItem[]; seasonal: NotableItem[] }
 
+// A completed day's frozen diary entry (the Journal tab). Figures + notable are recomputed
+// from the immutable detections; the narration is frozen once. `poem` arrives in a later phase.
+export interface JournalDay {
+  date: string | null
+  date_label: Bilingual
+  figures: {
+    species: number; detections: number
+    busiest: { sci: string; en: string; ga: string | null; count: number } | null
+  }
+  summary: { en: string[]; ga: string[] }
+  source: 'llm' | 'facts' | 'template' | null
+  sources: { host: string; url: string }[]
+  notable: NotableGroups
+  poem: { text: string; attribution: string; sci: string; en: string; ga: string | null } | null
+  available: { first: string | null; last: string }
+}
+
 export interface Overview {
   window: number
   collage: CollageData

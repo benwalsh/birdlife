@@ -77,8 +77,8 @@ class TodayCard
       footer_items(now)
     end
 
-    private
-
+    # A bilingual "Wednesday, 8 July" label for a day. Public — the Journal reuses it for a
+    # completed date (pass that date as a Time).
     def date_label(now)
       { en: now.strftime('%A, %-d %B'),
         ga: "#{GA_DAYS[now.wday]}, #{now.day} #{GA_MONTHS[now.month]}" }
@@ -92,8 +92,10 @@ class TodayCard
     def emphasised_bullets(bullets, facts, kind)
       en_names = facts[:items].filter_map { |i| i[:common_name].presence }.uniq
       ga_names = facts[:items].filter_map { |i| i[:irish_name].presence }.uniq
-      bullets.first(4).map { |bullet| emphasise(bullet, en_names, ga_names, kind) }
+      Array(bullets).first(4).map { |bullet| emphasise(bullet, en_names, ga_names, kind) }
     end
+
+    private
 
     # Locate names, stamp each as a null-delimited placeholder (so one can't be wrapped
     # inside another), then swap the placeholders for tags. A **marked** name is Irish when
