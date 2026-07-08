@@ -37,8 +37,8 @@ class TodayCard
       spark = Sparkline.paths(counts, coverage: coverage)
       {
         date_label: date_label(now),
-        summary:    { en: emphasised_bullets(summary[:bullets][:en], facts),
-                      ga: emphasised_bullets(summary[:bullets][:ga], facts) },
+        summary:    { en: emphasised_bullets(summary[:bullets][:en], facts, :en),
+                      ga: emphasised_bullets(summary[:bullets][:ga], facts, :ga) },
         source:     summary[:source],
         total:      total,
         sparkline:  { path: spark.path, fill: spark.fill,
@@ -83,32 +83,47 @@ class TodayCard
         ga: "#{GA_DAYS[now.wday]}, #{now.day} #{GA_MONTHS[now.month]}" }
     end
 
-    # Bullets with species names marked up, HTML escaped, capped at four. English
-    # common names go weight-500 (<strong>); Irish names take the serif voice-italic.
-    # The view prints these as trusted, pre-shaped HTML.
-    def emphasised_bullets(bullets, facts)
-      marks = facts[:items].flat_map { |i| [[i[:common_name], :en], [i[:irish_name], :ga]] }.
-              select { |name, _| name.present? }.uniq
-      bullets.first(4).map { |bullet| emphasise(bullet, marks) }
+    # Bullets with species names emphasised, HTML-escaped, capped at four. English common
+    # names go weight-500 (<strong>); Irish names take the serif voice-italic. `kind` is the
+    # bullet's own language. Names are found two ways so this holds up whatever case or
+    # inflection the model uses: the model wraps each name in **double asterisks**, and as a
+    # fallback we also match the canonical English/Irish names case-insensitively.
+    def emphasised_bullets(bullets, facts, kind)
+      en_names = facts[:items].filter_map { |i| i[:common_name].presence }.uniq
+      ga_names = facts[:items].filter_map { |i| i[:irish_name].presence }.uniq
+      bullets.first(4).map { |bullet| emphasise(bullet, en_names, ga_names, kind) }
     end
 
-    # Longest names first, via a null-delimited placeholder so a name that is a
-    # substring of another can't be double-wrapped.
-    def emphasise(text, marks)
+    # Locate names, stamp each as a null-delimited placeholder (so one can't be wrapped
+    # inside another), then swap the placeholders for tags. A **marked** name is Irish when
+    # it matches a canonical Irish name or the bullet itself is Irish, else English; the
+    # canonical fallback tags by which list matched. The wrapped text keeps the model's own
+    # spelling/case, not the canonical form.
+    def emphasise(text, en_names, ga_names, kind)
       safe = ERB::Util.html_escape(text)
-      ordered = marks.sort_by { |name, _| -name.length }
-      # Two passes, deliberately: stamp all placeholders first, then swap in tags —
-      # so a short name can't match inside a longer name already turned into markup.
-      # rubocop:disable Style/CombinableLoops
-      ordered.each_with_index { |(name, _), i| safe = safe.gsub(ERB::Util.html_escape(name), "#{MARK}#{i}#{MARK}") }
-      ordered.each_with_index { |(name, kind), i| safe = safe.gsub("#{MARK}#{i}#{MARK}", tag_for(name, kind)) }
-      # rubocop:enable Style/CombinableLoops
-      safe
+      slots = []
+      stamp = ->(str, tag_kind) {
+        slots << [str, tag_kind]
+        "#{MARK}#{slots.size - 1}#{MARK}"
+      }
+
+      safe = safe.gsub(/\*\*(.+?)\*\*/) do
+        name = ::Regexp.last_match(1)
+        irish = kind == :ga || ga_names.any? { |n| ERB::Util.html_escape(n).casecmp?(name) }
+        stamp.call(name, irish ? :ga : :en)
+      end
+      (ga_names.map { |n| [n, :ga] } + en_names.map { |n| [n, :en] }).sort_by { |n, _| -n.length }.each do |name, k|
+        safe = safe.gsub(/#{Regexp.escape(ERB::Util.html_escape(name))}/i) { |match| stamp.call(match, k) }
+      end
+      swapped = safe.gsub(/#{Regexp.escape(MARK)}(\d+)#{Regexp.escape(MARK)}/o) do
+        tag_for(*slots[::Regexp.last_match(1).to_i])
+      end
+      swapped.gsub('**', '') # drop any stray unpaired marker so it never renders literally
     end
 
+    # The text is already HTML-escaped by the time it reaches here.
     def tag_for(name, kind)
-      esc = ERB::Util.html_escape(name)
-      kind == :ga ? %(<em class="voice">#{esc}</em>) : "<strong>#{esc}</strong>"
+      kind == :ga ? %(<em class="voice">#{name}</em>) : "<strong>#{name}</strong>"
     end
 
     # Detections bucketed across the chosen span (oldest-first), the total in that

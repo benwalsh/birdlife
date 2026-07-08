@@ -75,6 +75,8 @@ class TodaySummary
     - Sentence case. No exclamation marks. No headings.
     - Name a bird in English; add the Irish name in parentheses for a flagged arrival, and
       you may add it once for the bird a folklore line is about.
+    - Wrap EVERY bird name in **double asterisks** each time it appears — English or Irish,
+      e.g. **house sparrow**, **cág cosdearg** — so the page can set the species name apart.
     - Return ONLY the bullets, one per line, each starting with "- ". No preamble.
   PROMPT
 
@@ -98,8 +100,9 @@ class TodaySummary
   TRANSLATE = <<~PROMPT.freeze
     Translate these bird-station summary bullets into Irish (Gaeilge). Use the correct,
     established Irish name for each bird. Keep every number and every "first" claim exactly.
-    Sentence case, no exclamation marks, no preamble. Return the SAME number of bullets, one
-    per line, each starting with "- ".
+    Keep the **double asterisks** around every bird name, wrapping the IRISH name in them
+    (e.g. **house sparrow** becomes **gealbhán binne**). Sentence case, no exclamation marks,
+    no preamble. Return the SAME number of bullets, one per line, each starting with "- ".
   PROMPT
 
   # The flags that make "first"/"arrival" language truthful.
