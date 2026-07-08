@@ -116,11 +116,26 @@ RSpec.describe TodaySummary do
     context 'when the LLM is disabled' do
       before { allow(Bedrock).to receive(:disabled?).and_return(true) }
 
-      it 'writes the deterministic template to the cache' do
+      it 'writes the deterministic template when nothing is enriched' do
         result = described_class.refresh
         expect(result[:source]).to eq('template')
         expect(file).to exist
         expect(described_class.current[:source]).to eq('template')
+      end
+
+      it 'writes a RICH facts fallback (not the bare template) when a prominent bird is enriched' do
+        EnrichmentBundle.create!(
+          sci_name: 'Passer domesticus', date: '2026-07-01',
+          common_name: 'House Sparrow', irish_name: 'Gealbhan binne',
+          blocks: [{ 'type' => 'fact', 'id' => 'roost', 'text' => 'House sparrows roost communally in winter.',
+                     'text_ga' => 'Fanann gealbhain le chéile sa gheimhreadh.', 'gated' => false,
+                     'sources' => [{ 'host' => 'en.wikipedia.org', 'url' => 'https://en.wikipedia.org/wiki/x' }] }]
+        )
+        result = described_class.refresh
+        expect(result[:source]).to eq('facts') # shown, not hidden
+        expect(result[:bullets][:en].first).to eq('House sparrows roost communally in winter.')
+        expect(result[:bullets][:en]).to include('3 species and 42 detections logged today.')
+        expect(result[:bullets][:ga].first).to eq('Fanann gealbhain le chéile sa gheimhreadh.')
       end
     end
 

@@ -119,6 +119,9 @@ class TodaySummary
   # it. A lambda so an ENRICH_MODEL_ID override is picked up at call time, not load time.
   NARRATOR_MODEL = -> { Bedrock.enrich_model_id }
   NARRATOR_TOKENS = 700
+  # A plain identification/size note — the dull kind the sourcing prompt avoids but that
+  # still slips into a bundle; the no-model fallback skips these when leading with a fact.
+  DULL_FACT = /\b(identif|recognis\w+ by|resembl|distinguish|tell.{0,12}apart|similar to|smaller|larger)\b/i
 
   class << self
     # The last-good summary for the page — bilingual { en: [...], ga: [...] }. Never
@@ -129,7 +132,8 @@ class TodaySummary
       cached = read_cache
       return cached if cached && cached[:facts_date].to_s == facts[:date].to_s
 
-      { bullets: DailyFacts.template_bullets(facts), source: 'template', facts_date: facts[:date], generated_at: nil }
+      bullets, source = fallback(facts, enrichment_for(facts))
+      { bullets: bullets, source: source, facts_date: facts[:date], generated_at: nil }
     end
 
     # Regenerate and cache. Best-effort: on model failure keep the last-good cache,
@@ -139,13 +143,14 @@ class TodaySummary
     # just one model call to stitch already-gathered facts & folklore into the day.
     def refresh(now: Time.current)
       facts = DailyFacts.for(now: now)
-      return store(DailyFacts.template_bullets(facts), 'template', facts) if Bedrock.disabled?
+      lore = enrichment_for(facts)
+      return store(*fallback(facts, lore), facts) if Bedrock.disabled?
 
-      bullets = generate(facts, enrichment_for(facts))
+      bullets = generate(facts, lore)
       return store(bullets, 'llm', facts) if bullets
       return current(facts: facts) if valid_cache_for?(facts)
 
-      store(DailyFacts.template_bullets(facts), 'template', facts)
+      store(*fallback(facts, lore), facts)
     end
 
     # Regenerate when the cache is missing, older than max_age, OR for a previous day
@@ -210,6 +215,36 @@ class TodaySummary
 
         { common_name: item[:common_name], irish_name: item[:irish_name], blocks: display[:blocks] }
       end
+    end
+
+    # The no-LLM fallback — returned as [bullets, source]. Never the bare bones: it leads
+    # with a stored fact and a piece of folklore about the day's most prominent enriched
+    # bird (verbatim from the vetted bundles — already clean, cited sentences), then the
+    # day's shape. Rich and honest without a model, so the page shows it ('facts'); only if
+    # nothing is enriched yet does it fall back to the plain template ('template', which the
+    # card hides). This is what keeps the TODAY box from ever going empty when Bedrock is
+    # unreachable (a new day before the timer runs, an SSO lapse, an outage).
+    def fallback(facts, lore)
+      base = DailyFacts.template_bullets(facts)
+      bird = Array(lore).find { |b| Array(b[:blocks]).any? }
+      picks = bird ? [vivid_fact(bird[:blocks]), folklore(bird[:blocks])].compact : []
+      return [base, 'template'] if picks.empty?
+
+      en = picks.pluck(:text) + base[:en]
+      ga = picks.map { |b| b[:text_ga].presence || b[:text] } + base[:ga]
+      [{ en: en.first(4), ga: ga.first(4) }, 'facts']
+    end
+
+    # A fact worth leading with — the first that isn't a plain identification/size note
+    # (the dull kind the sourcing prompt tries to avoid but that still slips in), else the
+    # first fact of any kind.
+    def vivid_fact(blocks)
+      facts = blocks.select { |b| b[:type] == 'fact' }
+      facts.find { |b| !b[:text].to_s.match?(DULL_FACT) } || facts.first
+    end
+
+    def folklore(blocks)
+      blocks.find { |b| b[:type] == 'folklore' }
     end
 
     # Render the stored lore into the prompt: each prominent bird, then its typed blocks.

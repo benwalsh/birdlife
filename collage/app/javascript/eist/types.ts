@@ -80,7 +80,9 @@ export interface Today {
   date_label: Bilingual
   // Pre-shaped, HTML-safe bullet strings (species names already wrapped in <strong>).
   summary: { en: string[]; ga: string[] }
-  source: 'llm' | 'template'
+  // 'llm' = model prose; 'facts' = a rich no-model fallback (stored facts/folklore + the
+  // day's shape) — both shown; 'template' = the bare deterministic bones, hidden by the card.
+  source: 'llm' | 'facts' | 'template'
   total: number
   sparkline: SparkPaths
   anchors: Anchor[]
