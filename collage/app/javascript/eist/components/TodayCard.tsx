@@ -19,11 +19,22 @@ const HOST_LABEL: Record<string, string> = {
 }
 const label = (host: string) => HOST_LABEL[host] ?? host.replace(/^www\./, '')
 
-// One link per distinct source (collapsing www/non-www to one label), keeping the first URL.
+// A readable name for one citation: a Wikipedia/dúchas article's own title (…/wiki/Crop_milk
+// → "Crop milk"), else the source's host label.
+function sourceName(url: string, host: string): string {
+  const wiki = url.match(/\/wiki\/([^?#]+)/)
+  if (wiki) return decodeURIComponent(wiki[1]).replace(/_/g, ' ')
+  const story = url.match(/\/cbes\/\d+\/\d+/) // a dúchas story
+  if (story) return 'dúchas story'
+  return label(host)
+}
+
+// One link per distinct source PAGE (not collapsed to one host), so every bird/topic the
+// note draws on is traceable. Capped so the line stays a quiet citation, not a wall.
 function distinctSources(sources: { host: string; url: string }[]) {
-  const seen = new Map<string, string>()
-  for (const s of sources) if (!seen.has(label(s.host))) seen.set(label(s.host), s.url)
-  return [...seen].map(([name, url]) => ({ name, url }))
+  const seen = new Map<string, { name: string; url: string }>()
+  for (const s of sources) if (!seen.has(s.url)) seen.set(s.url, { name: sourceName(s.url, s.host), url: s.url })
+  return [...seen.values()].slice(0, 8)
 }
 
 // The home page's TODAY block — the daily voice (bullets), then the sources the day's bird
