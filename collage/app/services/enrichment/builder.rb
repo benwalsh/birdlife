@@ -61,18 +61,16 @@ module Enrichment
           Irish-language source for the content: in particular do NOT fetch Irish Wikipedia
           (ga.wikipedia.org / Vicipéid), it is too sparse to source from. Get the rich English
           text and translate it.
-        - FOLKLORE: dúchas.ie is the FAVOURITE — clearly prefer it to Wikipedia. Search the
-          Schools' Collection ONCE: fetch https://www.duchas.ie/en/cbes?Search=TERM (use the
-          bird's Irish name, e.g. its name in the task, and/or English). The result ends
-          with a "LINKS" list; FOLLOW one promising /en/cbes/<id>/<id> story link — that
-          returns the clean transcribed text, and you may quote or closely retell a FULL
-          short story (folklore blocks can run long; that's wanted, not a snippet). A story
-          can carry over pages — a page fetch ends with an "ENTRIES" list, so fetch the entry
-          (story) URL for the whole story rather than a page fragment. Cite the /en/cbes/ URL
-          you fetched. celt.ucc.ie is a second Irish option. Be economical —
-          dúchas rate-limits, so one search and one or two story fetches, not a dozen. ONLY
-          if dúchas and CELT genuinely have nothing for this bird, fall back to Wikipedia's
-          folklore/mythology (e.g. the crow-goddess Badb) rather than returning none.
+        - FOLKLORE: dúchas.ie (the Schools' Collection) is the FAVOURITE — clearly prefer it to
+          Wikipedia. Fetch https://www.duchas.ie/en/cbes?Search=TERM — try the bird's ENGLISH
+          name (the Collection is mostly English) and its Irish name. This returns the matching
+          stories, EACH already with its full transcript text AND its dúchas URL, so you do NOT
+          need to fetch a story separately — the text is right there. Many matches are FALSE
+          (e.g. "chough" also matches "whooping cough", or a sheep-call "chough, chough") — pick
+          the story GENUINELY about the bird, quote or closely retell it (folklore blocks can
+          run long; that's wanted), and cite its dúchas URL exactly as given. celt.ucc.ie is a
+          second Irish option. ONLY if dúchas and CELT genuinely have nothing for this bird,
+          fall back to Wikipedia's folklore/mythology (e.g. the crow-goddess Badb).
       A few good sources beat a long hunt. Fetch what you need, then return the blocks.
 
       Return up to 12 blocks as a JSON array and NOTHING else — no prose, no code fence.

@@ -42,12 +42,12 @@ RSpec.describe Enrichment::SourceFetcher do
     # Stripping hrefs was why dúchas/CELT searches dead-ended: the model saw result titles
     # but no URL to follow. Trusted on-site links are now appended (relative → absolute),
     # off-allowlist ones excluded, so a search page can be navigated to the actual entry.
-    it 'appends trusted on-site links so a search/index page can be navigated' do
-      html = '<html><body><p>Results for crow.</p>' \
+    it 'appends trusted on-site links so an index page can be navigated' do
+      html = '<html><body><p>Stories about crows.</p>' \
              '<a href="/en/cbes/4602668">A story mentioning crows</a>' \
              '<a href="https://evil.example.com/x">off-site</a></body></html>'
       allow(fetcher).to receive(:http_get).and_return(html)
-      result = fetcher.fetch('https://www.duchas.ie/en/cbes?Search=crow')
+      result = fetcher.fetch('https://www.duchas.ie/en/cbes/browse')
       expect(result[:text]).to include('LINKS').and include('https://www.duchas.ie/en/cbes/4602668')
       expect(result[:text]).not_to include('evil.example.com')
     end
@@ -65,10 +65,20 @@ RSpec.describe Enrichment::SourceFetcher do
       expect(result[:url]).to eq('https://www.duchas.ie/en/cbes/4758602/4757997')
     end
 
-    it 'leaves the dúchas SEARCH page as HTML (only story pages go to XML)' do
+    # dúchas's on-site search is a dead JS app server-side, so a SEARCH goes through the JSON
+    # API instead: each hit's transcript text + a citable /en/cbes/…/…/… URL (logged so the
+    # model may cite the story it retells).
+    it 'runs a dúchas SEARCH through the JSON API, returning story text + citable URLs' do
+      json = { entries: [{ id: 4955154, chapterID: 4758602, pageID: 4757997, title: 'The Magpie',
+                           text: 'The <span class="exact">magpie</span> and the wren build a domed nest.' }] }.to_json
       expect(fetcher).to receive(:http_get).
-        with('https://www.duchas.ie/en/cbes?Search=magpie').and_return('<html><body>results</body></html>')
-      fetcher.fetch('https://www.duchas.ie/en/cbes?Search=magpie')
+        with(a_string_starting_with('https://beta.duchas.ie/api/en/cbes/transcripts?SearchText=magpie')).
+        and_return(json)
+      result = fetcher.fetch('https://www.duchas.ie/en/cbes?Search=magpie')
+      expect(result[:text]).to include('The magpie and the wren build a domed nest.')
+      expect(result[:text]).to include('https://www.duchas.ie/en/cbes/4758602/4757997/4955154')
+      expect(SourceFetchLog.where(host: 'duchas.ie').pluck(:url)).
+        to include('https://www.duchas.ie/en/cbes/4758602/4757997/4955154')
     end
 
     it 'returns an error (no raise, no log) when the request fails' do

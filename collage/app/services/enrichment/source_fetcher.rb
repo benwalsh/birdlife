@@ -1,4 +1,7 @@
 require 'net/http'
+require 'json'
+require 'cgi'
+require 'erb'
 
 module Enrichment
   # The fetch tool Stage 1 (Claude, via Bedrock tool-use) calls to source from trusted
@@ -22,6 +25,12 @@ module Enrichment
     AFFILIATE = /\Abirdwatch[a-z]+\.(?:ie|org)\z/
     MAX_CHARS = 4000
     MAX_LINKS = 30 # on-site links appended so the model can navigate a search/index page
+    # dúchas's on-site Schools'-Collection search is a client-side JS app that returns nothing
+    # to a server fetch (the /en/cbes?Search= route just redirects to the schools list). Its
+    # REAL full-text search is this JSON API — hit it directly. We call it from this hardcoded
+    # constant (never a model-supplied URL), so beta.duchas.ie stays off the trusted allowlist.
+    DUCHAS_SEARCH_API = 'https://beta.duchas.ie/api/en/cbes/transcripts'.freeze
+    DUCHAS_RESULTS = 10 # transcripts to return per search (the model picks the on-topic ones)
     USER_AGENT = 'birdlife/1.0 (Eist bird detector; enrichment)'.freeze
     # The Irish heritage sources (dúchas.ie, CELT) answer with a 301 before serving the
     # page, so we MUST follow redirects or they always read as "fetch failed" and the model
@@ -40,6 +49,9 @@ module Enrichment
     def fetch(url)
       host = host_of(url)
       return { error: "untrusted host: #{host}" } unless trusted?(host)
+
+      term = duchas_search_term(url)
+      return duchas_results(url, host, term) if term
 
       body = http_get(duchas_xml_url(url))
       return { error: "fetch failed: #{url}" } unless body
@@ -100,6 +112,40 @@ module Enrichment
       http_get(target.to_s, redirects_left: redirects_left - 1)
     rescue URI::InvalidURIError
       nil
+    end
+
+    # The search term if this is a dúchas Schools'-Collection search (…/cbes?Search=… or
+    # ?SearchText=…), else nil — the trigger to go via the JSON API instead of the dead HTML.
+    def duchas_search_term(url)
+      return nil unless host_of(url).to_s.include?('duchas.ie') && url.match?(/[?&]search(?:text)?=/i)
+
+      CGI.unescape(url[/[?&]search(?:text)?=([^&]+)/i, 1].to_s).strip.presence
+    end
+
+    # Run the dúchas full-text search through the JSON API and return each matching story's
+    # text with a citable dúchas URL. Every story URL is logged, so the model may cite the
+    # one it retells (many matches are false — "chough" also hits "whooping cough" — so the
+    # model must pick the story genuinely about the bird). Errors leave folklore to fall back.
+    def duchas_results(search_url, host, term)
+      body = http_get("#{DUCHAS_SEARCH_API}?SearchText=#{ERB::Util.url_encode(term)}&Page=1&PerPage=#{DUCHAS_RESULTS}")
+      entries = body ? Array(JSON.parse(body)['entries']) : []
+      log!(host, search_url)
+      return { error: "no dúchas stories for '#{term}'" } if entries.empty?
+
+      text = entries.map { |entry| duchas_entry(entry) }.join("\n\n").first(MAX_CHARS * 2)
+      { host: host, url: utf8(search_url), text: text }
+    rescue JSON::ParserError
+      { error: 'dúchas search API returned unreadable JSON' }
+    end
+
+    # One search hit → its title, citable dúchas story URL, and transcript text (match
+    # highlighting stripped). The URL — /en/cbes/<chapter>/<page>/<transcript> — is logged so
+    # the model can cite it after quoting the story.
+    def duchas_entry(entry)
+      story_url = "https://www.duchas.ie/en/cbes/#{entry['chapterID']}/#{entry['pageID']}/#{entry['id']}"
+      log!('duchas.ie', story_url)
+      snippet = entry['text'].to_s.gsub(%r{</?span[^>]*>}i, '').gsub(/\s+/, ' ').strip.first(700)
+      "#{entry['title']} — #{story_url}\n#{snippet}"
     end
 
     # A dúchas story page → its clean XML transcript endpoint (open data): the /en/ HTML
