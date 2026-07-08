@@ -14,11 +14,10 @@ module Enrichment
     # (discovered dynamically — e.g. birdwatchgalway.org — not hardcoded one by one).
     TRUSTED_HOSTS = %w[
       birdwatchireland.ie www.birdwatchireland.ie
-      irishbirding.com www.irishbirding.com
       biodiversityireland.ie maps.biodiversityireland.ie
       irbc.ie iwt.ie
       duchas.ie www.duchas.ie celt.ucc.ie irishheritagenews.ie
-      en.wikipedia.org ga.wikipedia.org
+      en.wikipedia.org
     ].freeze
     AFFILIATE = /\Abirdwatch[a-z]+\.(?:ie|org)\z/
     MAX_CHARS = 4000

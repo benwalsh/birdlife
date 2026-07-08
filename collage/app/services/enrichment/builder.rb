@@ -54,16 +54,13 @@ module Enrichment
       knowledge of your own that you are allowed to state.
 
       Choosing sources by block type:
-        - FACT: Wikipedia (en.wikipedia.org) is reliable and deep — use it freely for the
-          general behaviour/voice/habit facts.
-        - REGIONAL_NOTE: this is the LOCAL/Irish angle (its status in Ireland, where near here
-          it turns up, the meaning of its Irish name) and it should come from an IRISH source,
-          not a generic Wikipedia line. FETCH the seeded Vicipéid (ga.wikipedia.org) article
-          first — it's the Irish-language page, titled with the bird's Irish name, and carries
-          the name variants + Irish distribution. The National Biodiversity Data Centre
-          (biodiversityireland.ie) has Irish distribution, and the Irish Rare Birds Committee
-          (irbc.ie) has the records for a scarce bird or vagrant. NOTE: do NOT waste fetches on
-          birdwatchireland.ie — it blocks automated access (you'll get an error).
+        - FACT and REGIONAL_NOTE: use English Wikipedia (en.wikipedia.org). It is deep and
+          reliable, and it already carries the species' status and distribution IN IRELAND for
+          the regional note. The IRISH version of every block is your own text_ga translation
+          of that English text (see the rules) — so you do NOT need, and must NOT fetch, an
+          Irish-language source for the content: in particular do NOT fetch Irish Wikipedia
+          (ga.wikipedia.org / Vicipéid), it is too sparse to source from. Get the rich English
+          text and translate it.
         - FOLKLORE: dúchas.ie is the FAVOURITE — clearly prefer it to Wikipedia. Search the
           Schools' Collection ONCE: fetch https://www.duchas.ie/en/cbes?Search=TERM (use the
           bird's Irish name, e.g. its name in the task, and/or English). The result ends
@@ -212,18 +209,13 @@ module Enrichment
         text_of(resp.output.message.content)
       end
 
-      # The opening task: the species (with its Irish name) and the Irish-language sources to
-      # fetch for the local angle — seeded so the model reaches Irish material instead of
-      # defaulting to English Wikipedia (see IrishSources).
+      # The opening task: the species and its Irish name — the name is given so the model's
+      # text_ga translations use the correct Irish name; the content is sourced from English
+      # Wikipedia and translated, never scraped from (sparse) Irish Wikipedia.
       def task_message(sci_name, common_name)
         irish = BirdName.lookup(sci_name).ga
-        seeds = IrishSources.for(sci_name, irish)
         named = irish.present? ? "#{common_name} / #{irish}" : common_name
-        msg = "Species: #{named} (#{sci_name})."
-        return msg if seeds.empty?
-
-        "#{msg}\nIrish-language sources to fetch for the Irish name meaning and local status: " \
-          "#{seeds.join(', ')}."
+        "Species: #{named} (#{sci_name})."
       end
 
       # Re-shape response content structs back into request-shape content hashes so the
