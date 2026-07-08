@@ -91,9 +91,9 @@ export function LiveTab({
         <>
           <TodaySpark today={data.today} windows={windows} value={windowHours} onChange={onWindow}
                       stickyTop={stack.spark} />
-          <AlmanacRow today={data.today} stickyTop={stack.almanac} />
-          <NotableBlock groups={data.notable} favourites={favourites} status={data.status} onSelect={onSelect} />
-          <LiveLists recent={data.recent} firstSeen={data.first_seen} onSelect={onSelect} />
+          <AlmanacRow today={data.today} status={data.status} stickyTop={stack.almanac} />
+          <NotableBlock groups={data.notable} favourites={favourites} onSelect={onSelect} />
+          <LiveLists recent={data.recent} onSelect={onSelect} />
         </>
       ) : (
         <p className="ed-empty">{t('Ag éisteacht… nothing heard yet.', 'Ag éisteacht… faic cloiste fós.')}</p>

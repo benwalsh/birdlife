@@ -194,8 +194,9 @@ body.ed {
 .today-spark {
   margin: 46px auto 0;
   position: sticky; z-index: 44;
+  /* Opaque paper so content scrolls cleanly under when it stacks — but no hairline: the
+     page keeps its horizontal rules to a minimum, the whitespace does the separating. */
   background: var(--paper); padding-bottom: 10px;
-  box-shadow: 0 1px 0 var(--rule);
 }
 /* Chrome: the time-window control and its total, grouped together at the top-left as
    one unit (the total used to float off at the far right and read as detached). */
@@ -230,26 +231,32 @@ body.ed {
   display: flex; flex-wrap: wrap; gap: 12px 32px; margin: 14px 0 0; padding: 12px 0; list-style: none;
   font: 12px var(--mono); letter-spacing: 0.02em; color: var(--ink-2);
   position: sticky; z-index: 43;
-  background: var(--paper); box-shadow: 0 1px 0 var(--rule);
+  background: var(--paper); /* opaque, no hairline — see .today-spark */
 }
 .today-almanac li { display: inline-flex; align-items: center; gap: 7px; }
 .today-almanac .ti { font-size: 16px; color: var(--ink-soft); line-height: 1; }
 
+/* The station's live status, leading the almanac: a pulsing green dot when the mic→BirdNET
+   loop is alive, a still red one when it's stalled. The pulse is the one motion the page
+   allows itself besides the sparkline — slow and faint, a heartbeat not a blink. */
+.alm-status { color: var(--ink); }
+.alm-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.alm-dot.is-listening { background: var(--green); animation: alm-pulse 2.4s ease-in-out infinite; }
+.alm-dot.is-offline { background: var(--red); }
+@keyframes alm-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+@media (prefers-reduced-motion: reduce) { .alm-dot.is-listening { animation: none; } }
+
+/* The one section heading used across Live's below-strip blocks (New & notable, Recently
+   heard) — a single quiet mono label, no border bars, no size variants. Parsimony. */
+.section-tag {
+  display: block; margin: 0 0 10px; font: 700 9px var(--mono); letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--accent-2);
+}
+
 /* New & notable — the day's newsworthy birds, grouped into info-only lines (rare
    visitors / returning migrants / first recordings / your favourites). No folklore —
-   that lives in the Journal. A quiet accent tag over the station's live status, then one
-   captioned line per category. No rules — the whitespace sets it off. A bird is a button. */
+   that lives in the Journal. No rules — the whitespace sets it off. A bird is a button. */
 .notable { margin: 44px auto 0; }
-.notable-tag {
-  display: block; font: 700 9px var(--mono); letter-spacing: 0.18em;
-  text-transform: uppercase; color: var(--accent-2); margin-bottom: 10px;
-}
-/* The always-present status line, so the block is never empty even on a quiet day. */
-.notable-status { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-.notable-dot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
-.notable-dot.is-listening { background: var(--green); }
-.notable-dot.is-offline { background: var(--ink-soft); }
-.notable-state { font: 11px var(--mono); letter-spacing: 0.06em; color: var(--ink-2); }
 .notable-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .notable-row { display: flex; align-items: baseline; gap: 6px 14px; flex-wrap: wrap; }
 .notable-kind {
@@ -275,7 +282,9 @@ body.ed {
 
 /* ---- Columns ---- */
 .ed-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; margin: 24px 0 8px; }
-.live-lists { margin-top: 40px; }
+/* Recently heard — Live's running log, a single ruled list. */
+.recent { margin-top: 44px; }
+.recent .ed-list { max-width: 620px; }
 .ed-grp + .ed-grp { margin-top: 30px; }
 .ed-col-head { display: flex; align-items: baseline; justify-content: space-between; }
 .ed-cols h2 { margin: 0 0 6px; font: 700 10px var(--mono); letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink); border-left: 2px solid var(--accent); padding-left: 10px; }
@@ -523,9 +532,5 @@ button.bird-card { width: 100%; background: transparent; cursor: pointer; font: 
 
   /* No sticky-stacking on a phone: the strips (esp. the column almanac) would eat the
      small screen. They just scroll normally here. */
-  .today-spark, .today-almanac { position: static; box-shadow: none; }
-
-  /* Breaking stacks too: the tag on its own line, then one news item per row. */
-  .breaking { flex-direction: column; gap: 12px; }
-  .breaking-list { flex-direction: column; gap: 12px; }
+  .today-spark, .today-almanac { position: static; }
 }

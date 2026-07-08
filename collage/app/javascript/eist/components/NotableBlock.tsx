@@ -14,35 +14,29 @@ const HEADING: Record<Category, { en: string; ga: string }> = {
 // The order the lines read in — news first, the personal line last.
 const ORDER: Category[] = ['rarity', 'seasonal', 'first_ever', 'favourites']
 
-// New & notable: an always-present station status line, then info-only category lines
-// (no folklore, no prose — that lives in the Journal). Each bird is a button to its card.
-// The status line means the block always has content, even on a quiet day with no news.
+// New & notable: info-only category lines (no folklore, no prose — that lives in the
+// Journal). Each bird is a button to its card. Renders nothing when there's no news and
+// no followed birds were heard — no empty banner on a quiet day. (The live/offline status
+// is on the almanac strip, not here.)
 export function NotableBlock({
   groups,
   favourites = [],
-  status,
   onSelect,
 }: {
   groups: NotableGroups
   favourites?: NotableItem[]
-  status: 'listening' | 'offline'
   onSelect: (sci: string) => void
 }) {
   const { t, lang } = useLang()
   const lists: Record<Category, NotableItem[]> = { ...groups, favourites }
   const rows = ORDER.filter((c) => lists[c]?.length)
+  if (!rows.length) return null
 
   const name = (it: NotableItem) => (lang === 'ga' && it.ga ? it.ga : it.en)
 
   return (
     <section className="notable" aria-label={t('New and notable', 'Nua is suntasach')}>
-      <span className="notable-tag">{t('New & notable', 'Nua is suntasach')}</span>
-      <div className="notable-status">
-        <span className={`notable-dot is-${status}`} />
-        <span className="notable-state">
-          {status === 'listening' ? t('Listening…', 'Ag éisteacht…') : t('Offline', 'As líne')}
-        </span>
-      </div>
+      <h2 className="section-tag">{t('New & notable', 'Nua is suntasach')}</h2>
       <ul className="notable-list">
         {rows.map((cat) => (
           <li key={cat} className="notable-row">

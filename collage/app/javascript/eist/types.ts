@@ -106,7 +106,6 @@ export interface Overview {
   top: Tally[]
   recent: Tally[]
   periods: Period[]
-  first_seen: LifeEntry[]
   almanac: Almanac
   today: Today
   notable: NotableGroups
