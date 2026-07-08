@@ -1,15 +1,21 @@
 import { useLang } from '../lang'
 
 // The place is the instance's own — from config/API via the bootstrap, never a
-// hard-coded location. Absent (unconfigured) → just the station line, no place.
-export function Footer({ place }: { place: { en: string; ga: string } | null }) {
+// hard-coded location. Absent (unconfigured) → just the station line, no place. The
+// lat/lon sits with the place here (the almanac row no longer shows either).
+export function Footer({ place }: { place: { en: string; ga: string; coords: string | null } | null }) {
   const { t, lang } = useLang()
   const here = place ? (lang === 'ga' ? place.ga : place.en) : null
   return (
     <footer className="ed-foot">
       <span>{t('Éist · Listening Station', 'Éist · Stáisiún Éisteachta')}</span>
       {here && <span className="dot">·</span>}
-      {here && <span>{here}</span>}
+      {here && (
+        <span>
+          {here}
+          {place?.coords && <span className="foot-coords"> · {place.coords}</span>}
+        </span>
+      )}
     </footer>
   )
 }

@@ -45,7 +45,7 @@ class TodayCard
         sparkline:  { path: spark.path, fill: spark.fill,
                       gaps: gap_labels(spark.gaps, now, start), w: spark.w, h: spark.h },
         anchors:    anchors(now, start),
-        footer:     footer_items(now)
+        footer:     footer_items(now, place: false)
       }
     end
 
@@ -197,7 +197,9 @@ class TodayCard
     end
 
     # The ambient readings - muted line-icon + short label pairs (never emoji).
-    def footer_items(now)
+    # place: the web almanac row drops it (the page footer carries place + coords instead);
+    # the e-ink panel (TodayCard.almanac) keeps it, since the panel has no separate footer.
+    def footer_items(now, place: true)
       data = Almanac.current
       moon = MoonPhase.for(now.to_date)
       items = []
@@ -209,7 +211,7 @@ class TodayCard
         items << { icon: 'ti-sunset', en: sun[:set], ga: sun[:set] }
       end
       items << { icon: 'ti-ripple', en: data[:tide][:label], ga: data[:tide][:label_ga] } if data[:tide]
-      items << place_item(data)
+      items << place_item(data) if place
       items
     end
 

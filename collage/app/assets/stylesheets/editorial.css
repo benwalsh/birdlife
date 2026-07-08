@@ -237,16 +237,19 @@ body.ed {
 
 /* New & notable — the day's newsworthy birds, grouped into info-only lines (rare
    visitors / returning migrants / first recordings / your favourites). No folklore —
-   that lives in the Journal. A quiet accent tag, then one captioned line per category,
-   ruled off top and bottom. Each bird is a button to its card. */
-.notable {
-  margin: 40px auto 0; padding: 15px 0;
-  border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
-}
+   that lives in the Journal. A quiet accent tag over the station's live status, then one
+   captioned line per category. No rules — the whitespace sets it off. A bird is a button. */
+.notable { margin: 44px auto 0; }
 .notable-tag {
   display: block; font: 700 9px var(--mono); letter-spacing: 0.18em;
-  text-transform: uppercase; color: var(--accent-2); margin-bottom: 11px;
+  text-transform: uppercase; color: var(--accent-2); margin-bottom: 10px;
 }
+/* The always-present status line, so the block is never empty even on a quiet day. */
+.notable-status { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.notable-dot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+.notable-dot.is-listening { background: var(--green); }
+.notable-dot.is-offline { background: var(--ink-soft); }
+.notable-state { font: 11px var(--mono); letter-spacing: 0.06em; color: var(--ink-2); }
 .notable-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .notable-row { display: flex; align-items: baseline; gap: 6px 14px; flex-wrap: wrap; }
 .notable-kind {
@@ -474,6 +477,7 @@ button.bird-card { width: 100%; background: transparent; cursor: pointer; font: 
   font: 10px var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft);
 }
 .ed-foot .dot { color: var(--rule); }
+.ed-foot .foot-coords { color: var(--ink-soft); letter-spacing: 0.08em; text-transform: none; }
 
 /* ---- Responsive: stack for tablet / phone ---- */
 @media (max-width: 860px) {

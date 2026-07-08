@@ -16,6 +16,14 @@ class AdminHealth
     def snapshot(now: Time.current)
       new(now).snapshot
     end
+
+    # Public liveness only — :listening / :offline — cheap enough for every page load
+    # (one heartbeat read + one detection read; no alerts/system queries). Offline only
+    # once nothing — heartbeat or detection — has happened for QUIET, so a quiet spell
+    # stays "listening", not a false alarm.
+    def status(now: Time.current)
+      new(now).status
+    end
   end
 
   def initialize(now)
@@ -26,10 +34,18 @@ class AdminHealth
     { listening: listening, alerts: alerts, system: system }
   end
 
+  def status
+    %i[stale none].include?(freshness(Heartbeat.last_at, latest_detection&.heard_at)) ? :offline : :listening
+  end
+
   private
 
+  def latest_detection
+    Detection.where.not(Date: nil).where.not(Time: nil).order(Date: :desc, Time: :desc).first
+  end
+
   def listening
-    last = Detection.where.not(Date: nil).where.not(Time: nil).order(Date: :desc, Time: :desc).first
+    last = latest_detection
     heard = last&.heard_at
     alive = Heartbeat.last_at
     {

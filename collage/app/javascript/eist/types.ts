@@ -12,7 +12,8 @@ export interface Bootstrap {
   current_user: CurrentUser | null
   ui_lang: Lang
   windows: [string, number][]
-  place: { en: string; ga: string } | null
+  // The station's own place, with a compact lat/lon label for the footer.
+  place: { en: string; ga: string; coords: string | null } | null
   // sci_names the signed-in user already follows (seeds the follow checkboxes).
   favourites: string[]
   assets: { cruach: string }
@@ -108,6 +109,9 @@ export interface Overview {
   almanac: Almanac
   today: Today
   notable: NotableGroups
+  // Whether the listening loop is alive (heartbeat / recent detection) — the New &
+  // notable status line. See AdminHealth.status.
+  status: 'listening' | 'offline'
 }
 
 export interface EnrichmentSource { host: string | null; url: string }

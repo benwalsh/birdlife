@@ -17,7 +17,7 @@ class CollageController < ApplicationController
       current_user: user_payload,
       ui_lang:      ui_lang,
       windows:      WINDOWS,
-      place:        Station.place,
+      place:        place_payload,
       favourites:   followed_sci_names,
       assets:       { cruach: helpers.asset_path('cruach.png') }
     }
@@ -102,6 +102,19 @@ class CollageController < ApplicationController
     heard = Detection.where.not(Date: nil).where.not(Time: nil).order(Date: :desc, Time: :desc).first&.heard_at
     alive = [tick, heard].compact.max
     { listening: alive.present? && alive > now - STATION_FRESH, since: alive }
+  end
+
+  # Station.place plus a compact "53.3°N 6.2°W" label for the page footer (the almanac
+  # row no longer carries place). Coords from the cached almanac, ENV as the backstop;
+  # coords is nil when neither is set, place itself nil when nothing is configured.
+  def place_payload
+    base = Station.place
+    return nil unless base
+
+    coords = Almanac.current[:coords] || {}
+    lat = (coords[:lat] || ENV.fetch('BIRD_LAT', nil))&.to_f
+    lon = (coords[:lon] || ENV.fetch('BIRD_LON', nil))&.to_f
+    base.merge(coords: (lat && lon ? helpers.format_coords(lat, lon) : nil))
   end
 
   def collage

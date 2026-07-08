@@ -19,6 +19,7 @@ RSpec.describe 'API' do
       expect(body['numbers']).to include('species_today', 'detections_today', 'detections_all_time')
       expect(body['almanac']['moon']).to include('name_ga', 'emoji')
       expect(body['window']).to eq(24)
+      expect(body['status']).to be_in(%w[listening offline]) # the New & notable status line
     end
 
     it 'includes the today card: date, capped bullets, sparkline paths, anchors and footer' do
