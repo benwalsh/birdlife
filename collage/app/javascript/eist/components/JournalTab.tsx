@@ -51,7 +51,14 @@ export function JournalTab({ onSelect }: { onSelect: (sci: string) => void }) {
             </ul>
 
             {bullets.length && data.source !== 'template' ? (
-              <ul className="today-summary">
+              // A bird name in the prose carries data-sci — delegate clicks to open its card.
+              <ul
+                className="today-summary"
+                onClick={(e) => {
+                  const el = (e.target as HTMLElement).closest<HTMLElement>('[data-sci]')
+                  if (el?.dataset.sci) onSelect(el.dataset.sci)
+                }}
+              >
                 {bullets.map((html, i) => (
                   <li key={i} dangerouslySetInnerHTML={{ __html: html }} />
                 ))}

@@ -1,4 +1,5 @@
 require 'erb'
+require 'cgi'
 
 # The whole "TODAY" card, computed in Ruby so the view only iterates and prints
 # (Ruby computes, the view renders). It assembles the daily voice (2-4 capped
@@ -90,20 +91,35 @@ class TodayCard
     # inflection the model uses: the model wraps each name in **double asterisks**, and as a
     # fallback we also match the canonical English/Irish names case-insensitively.
     def emphasised_bullets(bullets, facts, kind)
-      en_names = facts[:items].filter_map { |i| i[:common_name].presence }.uniq
-      ga_names = facts[:items].filter_map { |i| i[:irish_name].presence }.uniq
-      Array(bullets).first(4).map { |bullet| emphasise(bullet, en_names, ga_names, kind) }
+      items = Array(facts[:items])
+      en_names = items.filter_map { |i| i[:common_name].presence }.uniq
+      ga_names = items.filter_map { |i| i[:irish_name].presence }.uniq
+      sci_of = name_sci_map(items)
+      Array(bullets).first(4).map { |bullet| emphasise(bullet, en_names, ga_names, sci_of, kind) }
     end
 
     private
+
+    # Downcased common/Irish name → sci_name, so an emphasised name can carry a data-sci and
+    # link to its card.
+    def name_sci_map(items)
+      items.each_with_object({}) do |item, map|
+        map[item[:common_name].to_s.downcase] = item[:sci_name] if item[:common_name].present?
+        map[item[:irish_name].to_s.downcase] = item[:sci_name] if item[:irish_name].present?
+      end
+    end
 
     # Locate names, stamp each as a null-delimited placeholder (so one can't be wrapped
     # inside another), then swap the placeholders for tags. A **marked** name is Irish when
     # it matches a canonical Irish name or the bullet itself is Irish, else English; the
     # canonical fallback tags by which list matched. The wrapped text keeps the model's own
     # spelling/case, not the canonical form.
-    def emphasise(text, en_names, ga_names, kind)
+    def emphasise(text, en_names, ga_names, sci_of, kind)
       safe = ERB::Util.html_escape(text)
+      # Collapse a redundant "**X** (X)" — the Irish translation sometimes repeats the same
+      # name in the parenthetical (there being no distinct second name); keep it once. The
+      # parenthetical may or may not carry its own ** markers.
+      safe = safe.gsub(/\*\*([^*]+?)\*\*\s*\(\**\1\**\)/i, '**\1**')
       slots = []
       stamp = ->(str, tag_kind) {
         slots << [str, tag_kind]
@@ -119,14 +135,22 @@ class TodayCard
         safe = safe.gsub(/#{Regexp.escape(ERB::Util.html_escape(name))}/i) { |match| stamp.call(match, k) }
       end
       swapped = safe.gsub(/#{Regexp.escape(MARK)}(\d+)#{Regexp.escape(MARK)}/o) do
-        tag_for(*slots[::Regexp.last_match(1).to_i])
+        name, name_kind = slots[::Regexp.last_match(1).to_i]
+        tag_for(name, name_kind, kind, sci_of)
       end
       swapped.gsub('**', '') # drop any stray unpaired marker so it never renders literally
     end
 
-    # The text is already HTML-escaped by the time it reaches here.
-    def tag_for(name, kind)
-      kind == :ga ? %(<em class="voice">#{name}</em>) : "<strong>#{name}</strong>"
+    # The naming convention: the PRIMARY name (the one matching the bullet's own language) is
+    # bold and links to its card (data-sci); the SECONDARY name (the other language, which the
+    # narration puts in parentheses) is plain. `bullet_kind` is the bullet's language, `kind`
+    # the matched name's. Text is already HTML-escaped here.
+    def tag_for(name, kind, bullet_kind, sci_of)
+      return name unless kind == bullet_kind # secondary-language name → plain, in its parens
+
+      sci = sci_of[CGI.unescapeHTML(name).downcase]
+      attr = sci ? %( data-sci="#{ERB::Util.html_escape(sci)}") : ''
+      %(<strong class="bird"#{attr}>#{name}</strong>)
     end
 
     # Detections bucketed across the chosen span (oldest-first), the total in that

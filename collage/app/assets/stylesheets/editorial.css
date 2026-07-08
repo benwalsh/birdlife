@@ -169,8 +169,11 @@ body.ed {
   content: ""; position: absolute; left: 3px; top: 0.66em;
   width: 4px; height: 4px; border-radius: 50%; background: var(--ink-soft);
 }
-.today-summary strong { font-weight: 500; }
-.today-summary em.voice { font-style: italic; }
+/* Primary bird name: bold, and a link to its card (the secondary name stays plain in its
+   parens; the binomial, where it appears, is italic). */
+.today-summary .bird { font-weight: 600; color: var(--ink); cursor: pointer; }
+.today-summary .bird[data-sci]:hover { text-decoration: underline; text-underline-offset: 2px; }
+.today-summary em, .today-summary i { font-style: italic; }
 
 /* Citations for the day's facts & folklore — a quiet mono line, a printer's mark set
    behind the prose. The label, then each distinct source as a muted link. */
@@ -409,10 +412,13 @@ button.bird-card { width: 100%; background: transparent; cursor: pointer; font: 
 /* ---- Directory (Eolaí): the illustrated guide, broadsheet — no cards/pills ---- */
 .dir { margin: 0; }
 .dir-loading { text-align: center; padding: 60px; color: var(--ink-soft); }
-/* Controls — plain mono toggles like the window picker; active is underlined. */
+/* Controls — plain mono toggles like the window picker; active is underlined. The row
+   sticky-stacks under the (condensed) masthead as the grid scrolls, on an opaque paper
+   background. Only a hairline sets it off — the one hard black line belongs to the top bar. */
 .dir-controls {
   display: flex; flex-wrap: wrap; gap: 12px 40px; align-items: baseline;
-  padding: 22px 0 24px; border-bottom: 1px solid var(--ink);
+  padding: 22px 0 18px; border-bottom: 1px solid var(--rule);
+  position: sticky; top: 54px; z-index: 42; background: var(--paper);
 }
 .dir-group { display: inline-flex; align-items: center; gap: 6px; }
 .dir-opt {
@@ -461,9 +467,11 @@ button.bird-card { width: 100%; background: transparent; cursor: pointer; font: 
   font: 10px var(--mono); letter-spacing: 0.09em; text-transform: uppercase;
   color: var(--ink-2); cursor: help;
 }
-.dir-name { font-size: 16.5px; color: var(--ink); }
+/* The naming convention, everywhere: primary (displayed-language) name BOLD, the other
+   language plain in parentheses after it, the binomial in italics. */
+.dir-name { font-size: 16.5px; font-weight: 600; color: var(--ink); }
 .dir-item:hover .dir-name { text-decoration: underline; text-underline-offset: 3px; }
-.dir-gloss { display: block; font-style: italic; font-size: 13.5px; color: var(--ink-soft); margin-top: 2px; }
+.dir-gloss { font-style: normal; font-weight: 400; font-size: 0.88em; color: var(--ink-soft); }
 .dir-sci { display: block; font-style: italic; font-size: 12px; color: var(--ink-soft); margin-top: 3px; }
 /* All-time / today / first-heard on ONE tight line, pipe-separated:
    "1,838 all | 16 today | 7d first". Mono, tabular figures, no wrap. */

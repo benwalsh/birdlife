@@ -34,15 +34,13 @@ export function LiveTab({
   const { enabled, following } = useFollow()
   const stageRef = useRef<HTMLElement>(null)
   const [pinned, setPinned] = useState(false)
-  // The three strips lock and stack under the masthead as you scroll: the collage's
-  // hits strip first, then the sparkline sticks below it, then the almanac below that.
-  // These are the sticky `top` offsets for the sparkline and almanac — each the running
-  // height of the strips above it — measured from what's actually rendered (responsive),
-  // so the stack is always flush whatever the masthead/strip heights come out to.
+  // The three strips lock and stack under the masthead as you scroll: the collage's hits strip
+  // first, then the sparkline sticks below it, then the almanac below that. These are the sticky
+  // `top` offsets — each the running height of the strips above it, measured from what's actually
+  // rendered (responsive), so the stack is always flush whatever the heights come out to.
   const [stack, setStack] = useState({ spark: MAST_H, almanac: MAST_H })
 
-  // Pin the hits strip once the collage has scrolled up past the (condensed)
-  // masthead. Cheap: reads one bounding rect per scroll frame.
+  // Pin the hits strip once the collage has scrolled up past the (condensed) masthead.
   useEffect(() => {
     const onScroll = () => {
       const stage = stageRef.current
@@ -53,9 +51,8 @@ export function LiveTab({
     return () => window.removeEventListener('scroll', onScroll)
   }, [data])
 
-  // Measure the stack: sparkline sits below masthead + hits; almanac below both. Re-run
-  // on data (content changes) and resize (heights change). offsetHeight is unaffected by
-  // the strips' own sticky/hidden state, so the hits height reads right even before it pins.
+  // Measure the stack: sparkline below masthead + hits; almanac below both. Re-run on data and
+  // resize. offsetHeight is unaffected by the strips' own sticky state, so it reads right.
   useLayoutEffect(() => {
     const measure = () => {
       const h = (sel: string) => (document.querySelector(sel) as HTMLElement | null)?.offsetHeight ?? 0

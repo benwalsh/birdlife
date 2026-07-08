@@ -110,8 +110,10 @@ export function DirectoryTab({ onSelect }: { onSelect: (sci: string) => void }) 
                       <span className={`dir-dot ${e.conservation}`} />{c.name}
                     </span>
                   )}
-                  <span className="dir-name">{primary(e.en, e.ga)}</span>
-                  {gloss(e.en, e.ga) && <em className="dir-gloss">{gloss(e.en, e.ga)}</em>}
+                  <span className="dir-name">
+                    {primary(e.en, e.ga)}
+                    {gloss(e.en, e.ga) && <span className="dir-gloss"> ({gloss(e.en, e.ga)})</span>}
+                  </span>
                   <span className="dir-sci">{e.sci}</span>
                   {seen ? (
                     <span className="dir-stats">
