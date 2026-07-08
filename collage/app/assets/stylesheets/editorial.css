@@ -235,28 +235,31 @@ body.ed {
 .today-almanac li { display: inline-flex; align-items: center; gap: 7px; }
 .today-almanac .ti { font-size: 16px; color: var(--ink-soft); line-height: 1; }
 
-/* Breaking — recent rarities / first-evers / seasonal returns, above the TODAY
-   summary. The one place the calm page raises its voice: a small accent tag and the
-   news, ruled off top and bottom. Each bird is a button to its card. */
-.breaking {
-  margin: 40px auto 0; padding: 13px 0;
+/* New & notable — the day's newsworthy birds, grouped into info-only lines (rare
+   visitors / returning migrants / first recordings / your favourites). No folklore —
+   that lives in the Journal. A quiet accent tag, then one captioned line per category,
+   ruled off top and bottom. Each bird is a button to its card. */
+.notable {
+  margin: 40px auto 0; padding: 15px 0;
   border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
-  display: flex; align-items: baseline; gap: 8px 18px; flex-wrap: wrap;
 }
-.breaking-tag {
-  flex: none; font: 700 9px var(--mono); letter-spacing: 0.18em;
-  text-transform: uppercase; color: var(--accent-2);
+.notable-tag {
+  display: block; font: 700 9px var(--mono); letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--accent-2); margin-bottom: 11px;
 }
-.breaking-list { display: flex; flex-wrap: wrap; gap: 10px 24px; margin: 0; padding: 0; list-style: none; }
-.breaking-item {
+.notable-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.notable-row { display: flex; align-items: baseline; gap: 6px 14px; flex-wrap: wrap; }
+.notable-kind {
+  flex: none; font: 8.5px var(--mono); letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--ink-soft);
+}
+.notable-names { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 9px; }
+.notable-name {
   background: none; border: 0; padding: 0; cursor: pointer;
-  display: inline-flex; align-items: baseline; gap: 8px;
+  font: 15px ui-serif, "Iowan Old Style", Georgia, serif; color: var(--ink);
 }
-.breaking-kind {
-  font: 8.5px var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft);
-}
-.breaking-name { font: 15px ui-serif, "Iowan Old Style", Georgia, serif; color: var(--ink); }
-.breaking-item:hover .breaking-name { text-decoration: underline; text-underline-offset: 3px; }
+.notable-name:hover { text-decoration: underline; text-underline-offset: 3px; }
+.notable-sep { color: var(--ink-soft); }
 
 /* ---- Numbers band ---- */
 .ed-band { display: grid; grid-template-columns: repeat(2, 1fr); gap: 34px; margin: 30px 0; }
@@ -375,6 +378,17 @@ button.bird-card { width: 100%; background: transparent; cursor: pointer; font: 
 }
 .dir-opt:hover { color: var(--ink-2); }
 .dir-opt.is-on { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
+/* Name filter — a quiet mono field, a hairline underline not a box; sits to the right
+   of the toggles and narrows the grid as you type. */
+.dir-filter {
+  margin-left: auto; min-width: 140px;
+  background: transparent; border: 0; border-bottom: 1px solid var(--rule);
+  padding: 3px 2px; color: var(--ink);
+  font: 12px var(--mono); letter-spacing: 0.02em;
+}
+.dir-filter::placeholder { color: var(--ink-soft); }
+.dir-filter:focus { outline: none; border-bottom-color: var(--ink); }
+.dir-filter::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
 
 /* The grid — illustrations on paper, no boxes. */
 .dir-grid {

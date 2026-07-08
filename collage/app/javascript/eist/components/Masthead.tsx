@@ -5,7 +5,7 @@ import { AccountMenu } from './AccountMenu'
 
 // icon = the phone fallback (the word is hidden below 560px; see editorial.css).
 const TABS: { id: Tab; en: string; ga: string; icon: string }[] = [
-  { id: 'birds', en: 'Birds', ga: 'Éin', icon: 'ti-feather' },
+  { id: 'live', en: 'Live', ga: 'Beo', icon: 'ti-feather' },
   { id: 'stats', en: 'Stats', ga: 'Sonraí', icon: 'ti-chart-bar' },
   { id: 'directory', en: 'Directory', ga: 'Eolaí', icon: 'ti-book-2' },
 ]
@@ -34,7 +34,7 @@ export function Masthead({ bootstrap, tab, onTab }: MastheadProps) {
   return (
     <header className={`ed-topbar${scrolled ? ' is-scrolled' : ''}`}>
       <div className="ed-top">
-        <button className="ed-brand" onClick={() => onTab('birds')}>
+        <button className="ed-brand" onClick={() => onTab('live')}>
           <img className="ed-mark" src={bootstrap.assets.cruach} alt="Cruach, the Éist cuckoo" width={52} height={46} />
           <span className="ed-word">Éist</span>
         </button>

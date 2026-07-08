@@ -58,14 +58,21 @@ module Api
       Rails.logger.warn("today_json: summary refresh skipped (#{e.class}: #{e.message})")
     end
 
-    # The breaking strip: the last couple of days' newsworthy events (rarity /
-    # first-ever / seasonal), bilingual, freshest first — the same fire-once Events
-    # the immediate email alerts fire on, so panel, site and email agree on "news".
-    def breaking_json
-      Event.breaking.limit(6).map do |event|
-        name = BirdName.lookup(event.sci_name)
-        { kind: event.event_type, sci: event.sci_name, en: name.en, ga: name.ga, on: event.occurred_on.iso8601 }
+    # New & notable, grouped by kind: the newsworthy Events (rarity / first-ever /
+    # seasonal) for the given window, each a distinct bird — the same fire-once Events
+    # the email alerts fire on, so panel, site and email agree on "news". A fixed
+    # three-key shape (empty lists where there's nothing), freshest first within each.
+    # Live passes the default 2-day window; the Journal passes a single completed date.
+    def notable_json(as_of: Date.current, days: 2)
+      grouped = Event.breaking(on: as_of, days: days).group_by(&:event_type)
+      Event::NEWS_TYPES.index_with do |type|
+        Array(grouped[type]).map { |e| notable_item(e.sci_name) }.uniq { |i| i[:sci] }
       end
+    end
+
+    def notable_item(sci)
+      name = BirdName.lookup(sci)
+      { sci: sci, en: name.en, ga: name.ga }
     end
 
     def moon_json

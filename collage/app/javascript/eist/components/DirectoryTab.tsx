@@ -27,9 +27,14 @@ const SCOPES: { id: Scope; en: string; ga: string }[] = [
   { id: 'all', en: 'all species', ga: 'gach speiceas' },
 ]
 
+// Fold away fadas/case so "cag" finds "Cág" and "eabha" finds "Éabha" — a forgiving
+// substring match, not a full search engine.
+const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+
 export function DirectoryTab({ onSelect }: { onSelect: (sci: string) => void }) {
   const [sort, setSort] = useState<Sort>('count')
   const [scope, setScope] = useState<Scope>('heard')
+  const [query, setQuery] = useState('')
   const { data, isLoading } = useDirectory(sort, scope)
   const { lang, t } = useLang()
 
@@ -40,13 +45,21 @@ export function DirectoryTab({ onSelect }: { onSelect: (sci: string) => void }) 
   // reader sees — English names in English, Irish (with fadas collated correctly) in
   // Irish. Done here rather than server-side so it re-sorts live on the language toggle
   // without another round-trip (and without splitting the cache by language).
-  const species = useMemo(() => {
+  const sorted = useMemo(() => {
     if (!data) return []
     if (sort !== 'alpha') return data.species
     const collator = new Intl.Collator(lang === 'ga' ? 'ga' : 'en', { sensitivity: 'base' })
     return [...data.species].sort((a, b) => collator.compare(primary(a.en, a.ga), primary(b.en, b.ga)))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, sort, lang])
+
+  // Narrow by name as you type — a quiet filter over the already-fetched list (EN, GA,
+  // and the binomial), fada- and case-insensitive. No endpoint, no round-trip.
+  const species = useMemo(() => {
+    const q = fold(query.trim())
+    if (!q) return sorted
+    return sorted.filter((e) => fold(e.en).includes(q) || (e.ga && fold(e.ga).includes(q)) || fold(e.sci).includes(q))
+  }, [sorted, query])
 
   return (
     <section className="dir">
@@ -67,10 +80,21 @@ export function DirectoryTab({ onSelect }: { onSelect: (sci: string) => void }) 
             </button>
           ))}
         </div>
+        <input
+          className="dir-filter"
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === 'Escape' && setQuery('')}
+          placeholder={t('filter by name', 'scag de réir ainm')}
+          aria-label={t('Filter by name', 'Scag de réir ainm')}
+        />
       </div>
 
       {isLoading || !data ? (
         <p className="dir-loading">…</p>
+      ) : species.length === 0 ? (
+        <p className="dir-loading">{t('No birds match', 'Níl aon éan ann')}</p>
       ) : (
         <div className="dir-grid">
           {species.map((e) => {

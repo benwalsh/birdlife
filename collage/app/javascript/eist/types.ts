@@ -90,8 +90,11 @@ export interface Today {
   anchors: Anchor[]
   footer: FooterItem[]
 }
-export type BreakingKind = 'rarity' | 'first_ever' | 'seasonal'
-export interface BreakingItem { kind: BreakingKind; sci: string; en: string; ga: string | null; on: string }
+// New & notable — the day's newsworthy birds, grouped by kind. A follow ('species') is
+// personal, not news, so it never appears here; "your favourites" is added client-side.
+export type NotableKind = 'rarity' | 'first_ever' | 'seasonal'
+export interface NotableItem { sci: string; en: string; ga: string | null }
+export interface NotableGroups { rarity: NotableItem[]; first_ever: NotableItem[]; seasonal: NotableItem[] }
 
 export interface Overview {
   window: number
@@ -104,7 +107,7 @@ export interface Overview {
   first_seen: LifeEntry[]
   almanac: Almanac
   today: Today
-  breaking: BreakingItem[]
+  notable: NotableGroups
 }
 
 export interface EnrichmentSource { host: string | null; url: string }
@@ -126,4 +129,4 @@ export interface SpeciesDetail {
   enrichment: Enrichment | null
 }
 
-export type Tab = 'birds' | 'stats' | 'directory'
+export type Tab = 'live' | 'journal' | 'stats' | 'directory'

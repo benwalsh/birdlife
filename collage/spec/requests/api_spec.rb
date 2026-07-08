@@ -44,13 +44,16 @@ RSpec.describe 'API' do
       expect(response.parsed_body['window']).to eq(1)
     end
 
-    it 'surfaces recent newsworthy events as the breaking strip (a follow is not news)' do
+    it 'groups recent newsworthy events into new & notable (a follow is not news)' do
       Event.create!(event_type: 'rarity', sci_name: 'Pyrrhocorax pyrrhocorax', occurred_on: Date.current)
       Event.create!(event_type: 'species', sci_name: 'Passer domesticus', occurred_on: Date.current)
       get '/api/overview'
-      breaking = response.parsed_body['breaking']
-      expect(breaking.pluck('kind', 'sci')).to eq([['rarity', 'Pyrrhocorax pyrrhocorax']])
-      expect(breaking.first).to include('en' => 'Red-billed Chough', 'ga' => 'Cág cosdearg')
+      notable = response.parsed_body['notable']
+      expect(notable.keys).to contain_exactly('rarity', 'first_ever', 'seasonal') # fixed shape
+      expect(notable['rarity']).to eq([{ 'sci' => 'Pyrrhocorax pyrrhocorax', 'en' => 'Red-billed Chough',
+                                         'ga' => 'Cág cosdearg' }])
+      expect(notable['first_ever']).to eq([]) # the 'species' follow is not news
+      expect(notable['seasonal']).to eq([])
     end
   end
 

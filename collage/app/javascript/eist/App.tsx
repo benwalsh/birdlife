@@ -5,7 +5,7 @@ import { LangProvider } from './lang'
 import { FollowProvider } from './favourites'
 import { Masthead } from './components/Masthead'
 import { Footer } from './components/Footer'
-import { BirdsTab } from './components/BirdsTab'
+import { LiveTab } from './components/LiveTab'
 import { StatsTab } from './components/StatsTab'
 import { DirectoryTab } from './components/DirectoryTab'
 import { SpeciesModal } from './components/SpeciesModal'
@@ -14,21 +14,22 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false, retry: 1 } },
 })
 
-const TABS: Tab[] = ['birds', 'stats', 'directory']
+const TABS: Tab[] = ['live', 'stats', 'directory']
 
 function initialTab(): Tab {
-  const t = new URLSearchParams(window.location.search).get('tab') as Tab
-  return TABS.includes(t) ? t : 'birds'
+  const t = new URLSearchParams(window.location.search).get('tab')
+  if (t === 'birds') return 'live' // legacy ?tab=birds link → Live
+  return TABS.includes(t as Tab) ? (t as Tab) : 'live'
 }
 
 export function App({ bootstrap }: { bootstrap: Bootstrap }) {
   const [tab, setTabState] = useState<Tab>(initialTab)
-  const [win, setWin] = useState<number>(24) // time window in hours (Birds/Stats)
+  const [win, setWin] = useState<number>(24) // time window in hours (Live/Stats)
   const [selected, setSelected] = useState<string | null>(null)
 
   const setTab = (t: Tab) => {
     setTabState(t)
-    const url = t === 'birds' ? window.location.pathname : `${window.location.pathname}?tab=${t}`
+    const url = t === 'live' ? window.location.pathname : `${window.location.pathname}?tab=${t}`
     window.history.replaceState(null, '', url)
   }
 
@@ -38,8 +39,8 @@ export function App({ bootstrap }: { bootstrap: Bootstrap }) {
         <FollowProvider enabled={!!bootstrap.current_user} initial={bootstrap.favourites ?? []}>
           <Masthead bootstrap={bootstrap} tab={tab} onTab={setTab} />
           <main className="ed-main">
-            {tab === 'birds' && (
-              <BirdsTab onSelect={setSelected} windowHours={win} onWindow={setWin} windows={bootstrap.windows} />
+            {tab === 'live' && (
+              <LiveTab onSelect={setSelected} windowHours={win} onWindow={setWin} windows={bootstrap.windows} />
             )}
             {tab === 'stats' && (
               <StatsTab onSelect={setSelected} windowHours={win} onWindow={setWin} windows={bootstrap.windows} />
