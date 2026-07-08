@@ -54,8 +54,15 @@ module Enrichment
       knowledge of your own that you are allowed to state.
 
       Choosing sources by block type:
-        - FACT and REGIONAL_NOTE: Wikipedia (en.wikipedia.org) and BirdWatch Ireland are
-          reliable and deep — use them freely.
+        - FACT: Wikipedia (en.wikipedia.org) is reliable and deep — use it freely for the
+          general behaviour/voice/habit facts.
+        - REGIONAL_NOTE: prefer the IRISH birding sources — BirdWatch Ireland
+          (birdwatchireland.ie and its county branches), irishbirding.com, the Irish Rare
+          Birds Committee (irbc.ie), the Irish Wildlife Trust (iwt.ie), the National
+          Biodiversity Data Centre (biodiversityireland.ie). This is the LOCAL angle (its
+          status in Ireland, where near here it turns up, an Irish-name meaning); an Irish
+          source is worth far more than a generic Wikipedia line. For a scarce bird or a
+          vagrant especially, irishbirding.com / irbc.ie carry the Irish records.
         - FOLKLORE: dúchas.ie is the FAVOURITE — clearly prefer it to Wikipedia. Search the
           Schools' Collection ONCE: fetch https://www.duchas.ie/en/cbes?Search=TERM (use the
           bird's Irish name, e.g. its name in the task, and/or English). The result ends

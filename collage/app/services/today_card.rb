@@ -40,6 +40,7 @@ class TodayCard
         summary:    { en: emphasised_bullets(summary[:bullets][:en], facts, :en),
                       ga: emphasised_bullets(summary[:bullets][:ga], facts, :ga) },
         source:     summary[:source],
+        sources:    Array(summary[:sources]).map { |s| { host: s[:host], url: s[:url] } },
         total:      total,
         sparkline:  { path: spark.path, fill: spark.fill,
                       gaps: gap_labels(spark.gaps, now, start), w: spark.w, h: spark.h },

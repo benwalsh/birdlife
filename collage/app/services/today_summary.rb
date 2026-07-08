@@ -39,6 +39,11 @@ class TodaySummary
     USING THE "About the birds" MATERIAL:
     - It is the ONLY source of characterising detail you may state about a species. Never
       add a fact from your own knowledge — it may be wrong.
+    - If a bird has NO entry in that material — including a brand-new arrival — name it and
+      report the plain event (that it was logged, its count), and say NOTHING characterising
+      about it. Do NOT reach into your own knowledge for its behaviour, folklore, symbolism,
+      or status, not even hedged ("often said to…", "has carried symbolic weight"). Better a
+      bare, true line than an invented one.
     - Reach for the one surprising, repeatable thing (a remarkable habit, a voice, an
       extreme). Put it in your own plain words; do not copy a source sentence. Skip the
       dull — taxonomy, size, what it resembles.
@@ -88,6 +93,9 @@ class TodaySummary
   # their striking blocks in. A pure DB read (EnrichmentBundle) — no dúchas/Wikipedia
   # lookup at summary time; the sourcing already happened in the enrichment pass.
   LORE_SPECIES = 5
+  # How many un-enriched NOTABLE birds a single refresh will source on the spot. Arrivals
+  # and rarities are rare, so this is a small cap — a backstop against a flood, not a budget.
+  ENRICH_ON_REFRESH = 3
   ACTIVITY_PHRASES = {
     'quieter_than_typical' => 'quieter than typical',
     'typical'              => 'typical',
@@ -146,37 +154,41 @@ class TodaySummary
       cached = read_cache
       return cached if cached && cached[:facts_date].to_s == facts[:date].to_s
 
-      bullets, source = fallback(facts, enrichment_for(facts))
-      { bullets: bullets, source: source, facts_date: facts[:date], generated_at: nil }
+      lore = enrichment_for(facts)
+      bullets, source = fallback(facts, lore)
+      { bullets: bullets, source: source, sources: sources_from(lore), facts_date: facts[:date], generated_at: nil }
     end
 
-    # Regenerate and cache. Best-effort: on model failure keep the last-good cache,
-    # and only synthesise a template when there is nothing cached at all. The facts are
-    # a pure DB read (no spotlight_blurb → no Wikipedia hop); the bird-character material
-    # comes from the stored enrichment bundles, so a refresh does no live sourcing —
-    # just one model call to stitch already-gathered facts & folklore into the day.
-    def refresh(now: Time.current)
+    # Regenerate and cache. Best-effort: on model failure keep the last-good cache, and only
+    # synthesise a template when there is nothing cached at all. First it makes sure the day's
+    # NOTABLE birds (arrivals, rarities) are enriched — they're the whole point of the note, so
+    # they're sourced before it's written, not left for tomorrow. Then the bird-character
+    # material comes from the stored bundles, so the note itself is one model call over already
+    # gathered facts & folklore. `enrich: false` skips the (slower) sourcing step for the
+    # page-load path, leaving it to the timer/ingest.
+    def refresh(now: Time.current, enrich: true)
       facts = DailyFacts.for(now: now)
+      ensure_notable_enriched(facts) if enrich
       lore = enrichment_for(facts)
-      return store(*fallback(facts, lore), facts) if Bedrock.disabled?
+      return store(*fallback(facts, lore), facts, sources_from(lore)) if Bedrock.disabled?
 
       bullets = generate(facts, lore)
-      return store(bullets, 'llm', facts) if bullets
+      return store(bullets, 'llm', facts, sources_from(lore)) if bullets
       return current(facts: facts) if valid_cache_for?(facts)
 
-      store(*fallback(facts, lore), facts)
+      store(*fallback(facts, lore), facts, sources_from(lore))
     end
 
     # Regenerate when the cache is missing, older than max_age, OR for a previous day
     # (a new day is always stale). Cheap to call on every ingest. Half an hour keeps the
     # note fresh without re-stitching on every load — the stored facts change slowly.
-    def refresh_if_stale(max_age: 30.minutes, now: Time.current)
+    def refresh_if_stale(max_age: 30.minutes, now: Time.current, enrich: true)
       cached = read_cache
       fresh = cached && cached[:generated_at] && cached[:generated_at] > max_age.ago &&
               cached[:facts_date].to_s == now.to_date.to_s
       return cached if fresh
 
-      refresh(now: now)
+      refresh(now: now, enrich: enrich)
     end
 
     # Serialise the facts object + stored bird-lore into the user message. Public so a
@@ -209,6 +221,33 @@ class TodaySummary
       ga = attempt(TRANSLATE, en.map { |b| "- #{b}" }.join("\n"))
       ga = DailyFacts.template_bullets(facts)[:ga] unless ga && ga.size == en.size
       { en: en, ga: ga }
+    end
+
+    # Source the day's NOTABLE birds NOW if they lack a bundle — an arrival or a rarity is the
+    # highest-priority thing to have real, cited lore for, so it's enriched before the note is
+    # written rather than left for tomorrow's sweep (which is what let the model improvise vague
+    # folklore for a brand-new chough). Cached + durable → a one-time cost per new bird. Capped
+    # and best-effort: a build failure just leaves that bird un-enriched, to be named plainly.
+    def ensure_notable_enriched(facts)
+      return if Bedrock.disabled?
+
+      due = Array(facts[:notable_today]).
+            reject { |i| EnrichmentBundle.current(i[:sci_name])&.block_objects&.any? }.
+            first(ENRICH_ON_REFRESH)
+      due.each do |item|
+        Enrichment::Builder.build_one(date: Date.current, sci_name: item[:sci_name],
+                                      common_name: item[:common_name], irish_name: item[:irish_name])
+      rescue StandardError => e
+        Rails.logger.warn("TodaySummary: enrich #{item[:sci_name]} failed (#{e.class}: #{e.message})")
+      end
+    end
+
+    # The distinct citations behind the material fed to the note — { host:, url: } pairs from
+    # the enrichment blocks — so the page can show WHERE the folklore and facts came from.
+    def sources_from(lore)
+      Array(lore).flat_map { |bird| Array(bird[:blocks]) }.
+        flat_map { |block| Array(block[:sources]) }.
+        filter_map { |s| { host: s[:host], url: s[:url] } if s[:url].present? }.uniq
     end
 
     # The stored facts & folklore for the day's most prominent species — the material the
@@ -387,19 +426,20 @@ class TodaySummary
       return nil if en.empty?
 
       ga = Array(bullets[:ga]).compact_blank.presence || en
-      { bullets: { en: en, ga: ga }, source: data[:source],
+      { bullets: { en: en, ga: ga }, source: data[:source], sources: Array(data[:sources]),
         facts_date: data[:facts_date], generated_at: safe_time(data[:generated_at]) }
     rescue JSON::ParserError, SystemCallError
       nil
     end
 
-    def store(bullets, source, facts)
-      data = { bullets: bullets, source: source, facts_date: facts[:date],
+    def store(bullets, source, facts, sources = [])
+      data = { bullets: bullets, source: source, sources: sources, facts_date: facts[:date],
                generated_at: Time.current.iso8601 }
       tmp = STORE.sub_ext('.tmp')
       tmp.write(JSON.pretty_generate(data))
       tmp.rename(STORE.to_s) # atomic replace so a reader never sees a half-written file
-      { bullets: bullets, source: source, facts_date: facts[:date], generated_at: safe_time(data[:generated_at]) }
+      { bullets: bullets, source: source, sources: sources, facts_date: facts[:date],
+        generated_at: safe_time(data[:generated_at]) }
     end
 
     def safe_time(value)

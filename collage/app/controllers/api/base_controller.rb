@@ -51,7 +51,9 @@ module Api
     # returns at once and never blocks; the stitch is a single model call over already
     # stored facts, so even a cold refresh is cheap.
     def warm_today_summary
-      TodaySummary.refresh_if_stale(max_age: 30.minutes)
+      # enrich: false — a page load re-stitches the note from EXISTING bundles but never blocks
+      # on live sourcing; building bundles for new arrivals is the timer's / ingest's job.
+      TodaySummary.refresh_if_stale(max_age: 30.minutes, enrich: false)
     rescue StandardError => e
       Rails.logger.warn("today_json: summary refresh skipped (#{e.class}: #{e.message})")
     end

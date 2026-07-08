@@ -83,6 +83,8 @@ export interface Today {
   // 'llm' = model prose; 'facts' = a rich no-model fallback (stored facts/folklore + the
   // day's shape) — both shown; 'template' = the bare deterministic bones, hidden by the card.
   source: 'llm' | 'facts' | 'template'
+  // The citations behind the day's bird facts & folklore (dúchas, BirdWatch Ireland, …).
+  sources: { host: string; url: string }[]
   total: number
   sparkline: SparkPaths
   anchors: Anchor[]

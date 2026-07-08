@@ -172,6 +172,20 @@ body.ed {
 .today-summary strong { font-weight: 500; }
 .today-summary em.voice { font-style: italic; }
 
+/* Citations for the day's facts & folklore — a quiet mono line, a printer's mark set
+   behind the prose. The label, then each distinct source as a muted link. */
+.today-sources {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px;
+  margin: 20px 0 0; max-width: 760px;
+  font: 11px var(--mono); letter-spacing: 0.04em; color: var(--ink-soft);
+}
+.today-sources-label { text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-2); }
+.today-sources a {
+  color: var(--ink-soft); text-decoration: none;
+  border-bottom: 1px solid var(--rule); padding-bottom: 1px;
+}
+.today-sources a:hover { color: var(--ink); border-bottom-color: var(--ink-soft); }
+
 /* The sparkline: its own quiet band between the collage and the TODAY text —
    full content width, with room above (off the collage) and the TODAY section's
    own top margin providing the gap below. */
