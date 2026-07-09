@@ -29,12 +29,14 @@ class StationProfile
     # Raw UTF-8 file contents from the active profile, else the example, else nil. `relpath`
     # is relative (e.g. 'content/feilire.yml'). Read as UTF-8 explicitly: profiles carry
     # accented text (fadas) and a headless Pi's default locale can be non-UTF-8. Never raises.
+    # Cached per path (including a nil miss), so Prompts can read on every request; reset! clears it.
     def read(relpath)
-      [dir, example_dir].uniq.each do |base|
+      return raw_cache[relpath] if raw_cache.key?(relpath)
+
+      raw_cache[relpath] = [dir, example_dir].uniq.filter_map do |base|
         path = base.join(relpath)
-        return path.read(encoding: Encoding::UTF_8) if path.file?
-      end
-      nil
+        path.read(encoding: Encoding::UTF_8) if path.file?
+      end.first
     end
 
     # Parsed YAML for relpath (profile → example), or {} when absent or unreadable — the
@@ -55,12 +57,17 @@ class StationProfile
     def reset!
       @dir = nil
       @cache = nil
+      @raw_cache = nil
     end
 
     private
 
     def cache
       @cache ||= {}
+    end
+
+    def raw_cache
+      @raw_cache ||= {}
     end
 
     def parse_yaml(relpath)
