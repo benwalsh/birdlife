@@ -140,7 +140,9 @@ body.modal-open { overflow: hidden; }
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px; min-height: 26px; margin: -8px 0 16px;
 }
-.modal-head-right { display: inline-flex; align-items: center; gap: 16px; }
+/* margin-left:auto keeps this pinned right even when FollowButton renders nothing
+   (signed out) — otherwise space-between parks the lone child on the left. */
+.modal-head-right { display: inline-flex; align-items: center; gap: 16px; margin-left: auto; }
 /* EN | GA: parted by a hairline bar, the live one underlined. */
 .modal-head .ed-lang { gap: 0; }
 .modal-head .ed-lang-opt { padding: 0 9px; }

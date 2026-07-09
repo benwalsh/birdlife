@@ -84,11 +84,14 @@ export function LiveTab({
         <Collage data={data.collage} onSelect={onSelect} />
       </section>
 
+      {/* Sparkline (listening status) + almanac (weather/tide/sun/moon) are NOT about
+          heard birds — they must show even in an empty window. Only the heard-birds
+          lists collapse to the quiet-window message. */}
+      <TodaySpark today={data.today} windows={windows} value={windowHours} onChange={onWindow}
+                  stickyTop={stack.spark} />
+      <AlmanacRow today={data.today} status={data.status} stickyTop={stack.almanac} />
       {data.collage.nodes.length ? (
         <>
-          <TodaySpark today={data.today} windows={windows} value={windowHours} onChange={onWindow}
-                      stickyTop={stack.spark} />
-          <AlmanacRow today={data.today} status={data.status} stickyTop={stack.almanac} />
           <NotableBlock groups={data.notable} favourites={favourites} onSelect={onSelect} />
           <LiveLists recent={data.recent} onSelect={onSelect} />
         </>
