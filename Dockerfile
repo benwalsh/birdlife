@@ -1,13 +1,18 @@
-# The cloud image for culfinbirds.net — the SAME app the Pi runs, built for App
-# Runner (RAILS_ENV=cloud, RDS MySQL via the pure-Ruby trilogy adapter). The Pi
+# The cloud image — the SAME app the Pi runs, built for a container host
+# (RAILS_ENV=cloud, an RDS/managed DB via the pure-Ruby trilogy adapter). The Pi
 # never uses this; it runs bare-metal from the repo (see deploy/).
+#
+# It boots on stations/example (baked in). To deploy as a specific station, get that
+# station's profile into the image — stage it into the build context, or FROM this image
+# and COPY it — and set STATION_PROFILE to its path (see the culfinbirds overlay's deploy
+# workflow + infrastructure/ecs.tf for one way).
 #
 # Multi-stage: the build stage compiles gems + runs the Vite build (React SPA +
 # Stimulus bundle) + precompiles assets; the runtime stage is a slim Puma server.
 #
 # Build from the REPO ROOT — the app needs dashboard/, the bird illustrations under
 # pipeline/assets/illustrations (public/birds is a symlink to them), and model/:
-#     docker build -t culfinbirds .
+#     docker build -t birdlife .
 ARG RUBY_VERSION=4.0.5
 
 FROM ruby:${RUBY_VERSION}-slim-bookworm AS build
