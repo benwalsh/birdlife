@@ -75,3 +75,22 @@
       %li.acct-rule
         %span.acct-rule-label LLM region
         %span= s[:llm_region] || "—"
+      %li.acct-rule
+        %span.acct-rule-label Offsite backup
+        %span= s[:backup][:configured] ? "Litestream · #{s[:backup][:bucket]}" : "not configured"
+
+  %section.acct-sec
+    %h2.acct-h2 Maintenance
+    %p.adm-lead Restart the detection listener if it wedges. Off the Pi this does nothing.
+    = button_to "Restart listener", admin_restart_listener_path, method: :post, class: "acct-seg", data: { turbo: false }
+
+    %p.adm-lead.adm-mt Relabel a mis-identified detection to the correct species.
+    = form_with url: admin_correct_detection_path, method: :patch, class: "acct-cadence", data: { turbo: false } do
+      = text_field_tag "detection[id]", nil, placeholder: "detection id", "aria-label": "detection id"
+      = text_field_tag "detection[sci_name]", nil, placeholder: "scientific name", "aria-label": "scientific name"
+      = submit_tag "Relabel", class: "acct-seg"
+
+    %p.adm-lead.adm-mt Clear the detection history (keeps enrichment caches). Type DELETE to confirm.
+    = form_with url: admin_clear_data_path, method: :delete, class: "acct-cadence", data: { turbo: false } do
+      = text_field_tag :confirm, nil, placeholder: "DELETE", "aria-label": "type DELETE to confirm"
+      = submit_tag "Clear data", class: "acct-seg adm-danger"

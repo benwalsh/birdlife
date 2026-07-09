@@ -95,7 +95,10 @@ class AdminHealth
       env:        Rails.env,
       adapter:    ActiveRecord::Base.connection.adapter_name,
       site_url:   ENV.fetch('SITE_URL', nil),
-      llm_region: ENV.fetch('BEDROCK_REGION', nil)
+      llm_region: ENV.fetch('BEDROCK_REGION', nil),
+      # Offsite backup is Litestream (continuous → S3/B2); "configured" means the bucket is set.
+      # There's no "backup now" button — replication is always-on when configured.
+      backup:     { configured: ENV['LITESTREAM_BUCKET'].present?, bucket: ENV['LITESTREAM_BUCKET'].presence }
     }
   end
 end

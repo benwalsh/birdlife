@@ -40,6 +40,10 @@ Rails.application.routes.draw do
   get 'admin' => 'admin#index', as: :admin
   # Change the station's runtime settings (its display language).
   patch 'admin/station' => 'admin#update_station', as: :admin_station
+  # Mutating maintenance actions (each admin-gated) — the ones that used to be shell/PHP.
+  post 'admin/listener/restart' => 'admin#restart_listener', as: :admin_restart_listener
+  patch 'admin/detection' => 'admin#correct_detection', as: :admin_correct_detection
+  delete 'admin/data' => 'admin#clear_data', as: :admin_clear_data
 
   # The background-jobs dashboard (Solid Queue via Mission Control). Admin-gated by
   # JobsBaseController; cloud-only, so guarded — the gem isn't installed on the Pi.

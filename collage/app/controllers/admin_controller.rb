@@ -19,7 +19,33 @@ class AdminController < ApplicationController
     redirect_to admin_path
   end
 
+  # Restart the detection listener (the thing you'd otherwise SSH in for). No-op off the Pi.
+  def restart_listener
+    flash_result(ListenerControl.restart)
+    redirect_to admin_path
+  end
+
+  # Relabel a mis-identified detection to the correct species.
+  def correct_detection
+    detection = params.require(:detection)
+    flash_result(DetectionCorrection.apply(detection.fetch(:id), sci_name: detection.fetch(:sci_name)))
+    redirect_to admin_path
+  rescue ActionController::ParameterMissing, KeyError
+    redirect_to admin_path
+  end
+
+  # Wipe the detection history — guarded by a typed confirmation (params[:confirm] == 'DELETE').
+  def clear_data
+    flash_result(DataReset.clear!(confirm: params[:confirm]))
+    redirect_to admin_path
+  end
+
   private
+
+  # A service object's { ok:, message: } result → a flash notice or alert.
+  def flash_result(result)
+    flash[result[:ok] ? :notice : :alert] = result[:message]
+  end
 
   # Non-admins (signed in or not) are bounced home — the page isn't advertised.
   def require_admin

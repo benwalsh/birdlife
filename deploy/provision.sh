@@ -104,6 +104,16 @@ $SUDO systemctl daemon-reload
 # death comes back with its history, not an empty database.
 $SUDO systemctl enable --now birdlife-restore birdlife-listener birdlife-web birdlife-frame.timer
 
+# Let the web app restart JUST the listener unit (the admin "restart listener" button) without a
+# password — a single, tightly-scoped sudoers rule, nothing else. validated with visudo -cf.
+if [ "$IN_CONTAINER" != "1" ]; then
+  RULE="$USER ALL=(root) NOPASSWD: /usr/bin/systemctl restart birdlife-listener.service"
+  echo "$RULE" | $SUDO tee /etc/sudoers.d/birdlife-listener >/dev/null
+  $SUDO chmod 0440 /etc/sudoers.d/birdlife-listener
+  $SUDO visudo -cf /etc/sudoers.d/birdlife-listener >/dev/null || \
+    { echo "  (sudoers rule failed validation — removing)"; $SUDO rm -f /etc/sudoers.d/birdlife-listener; }
+fi
+
 # Cloud mirror push (Pi -> culfinbirds.net) — only if the ingest keys are set.
 if [ -n "${CLOUD_INGEST_URL:-}" ]; then
   say "cloud mirror push (every 15 min)"
