@@ -54,6 +54,13 @@ class Station
       Setting.set(LANGUAGE_SETTING, value)
     end
 
+    # A polite User-Agent for the station's own outbound fetches (weather, tide) — identifies
+    # the app and, when a site is configured, this instance's URL as a contact. Never hard-coded.
+    def user_agent
+      host = url.to_s.sub(%r{\Ahttps?://}, '').presence
+      host ? "birdlife/1.0 (+https://#{host})" : 'birdlife/1.0'
+    end
+
     # Where a guest goes to see more — this instance's public site, shown as calm
     # wayfinding on the panel. Config (station.yml url), then the STATION_URL env, else nil.
     # Never hard-coded to a particular site.

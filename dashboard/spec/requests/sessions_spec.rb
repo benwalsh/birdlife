@@ -4,7 +4,7 @@ RSpec.describe 'Sessions' do
   let(:auth) do
     OmniAuth::AuthHash.new(
       provider: 'google_oauth2', uid: '123',
-      info: { email: 'ben@dalymount.com', name: 'Ben Walsh', image: 'https://example.com/a.png' }
+      info: { email: 'boss@example.com', name: 'Boss', image: 'https://example.com/a.png' }
     )
   end
 
@@ -25,7 +25,7 @@ RSpec.describe 'Sessions' do
   it 'creates a user and signs in on the callback' do
     expect { get '/auth/google_oauth2/callback' }.to change(User, :count).by(1)
     follow_redirect!
-    expect(response.body).to include('ben@dalymount.com')
+    expect(response.body).to include('boss@example.com')
   end
 
   it 'is idempotent for the same Google account' do
@@ -37,11 +37,11 @@ RSpec.describe 'Sessions' do
     get '/auth/google_oauth2/callback'
     delete '/logout'
     follow_redirect!
-    expect(response.body).not_to include('ben@dalymount.com')
+    expect(response.body).not_to include('boss@example.com')
   end
 
   it 'bootstraps no user when logged out' do
     get '/'
-    expect(response.body).not_to include('ben@dalymount.com')
+    expect(response.body).not_to include('boss@example.com')
   end
 end

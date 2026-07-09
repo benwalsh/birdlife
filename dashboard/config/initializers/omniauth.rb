@@ -26,6 +26,6 @@ if Rails.env.development? && ENV['FAKE_LOGIN'].present?
   OmniAuth.config.mock_auth[:google_oauth2] = OmniAuth::AuthHash.new(
     provider: 'google_oauth2',
     uid:      'dev-001',
-    info:     { email: 'ben@dalymount.com', name: 'Ben Walsh', image: nil }
+    info:     { email: 'dev@example.com', name: 'Dev Admin', image: nil }
   )
 end

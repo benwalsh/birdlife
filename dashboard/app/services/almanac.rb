@@ -313,7 +313,7 @@ class Almanac
       uri = URI(url)
       res = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == 'https',
                             open_timeout: timeout, read_timeout: timeout) do |http|
-        http.get(uri.request_uri, 'User-Agent' => 'Eist/1.0 (+https://culfinbirds.net)')
+        http.get(uri.request_uri, 'User-Agent' => Station.user_agent)
       end
       res.is_a?(Net::HTTPSuccess) ? JSON.parse(res.body) : nil
     rescue StandardError
