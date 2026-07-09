@@ -44,10 +44,10 @@ touches no layout code.
 
 - **Irish names** are a curated *seed* in `names.json` (common Connemara
   species). No `labels_ga.json` exists upstream — expand and verify this.
-- **Illustrations**: the bundled set under `avian/assets/illustrations/` is
+- **Illustrations**: the bundled set under `pipeline/assets/illustrations/` is
   North American, so most Connemara species have no artwork yet and render
   text-only. A European/Irish set can be generated via the Gemini pipeline in
-  `avian/scripts/`.
+  `pipeline/scripts/`.
 - **Fonts**: desktop uses macOS Baskerville. The Pi needs a serif bundled or
   apt-installed — `theme.py` already falls back to DejaVu Serif, then Pillow's
   default. Pick a final display serif before the on-glass pass.

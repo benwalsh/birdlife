@@ -15,4 +15,4 @@ User=pi
 WorkingDirectory=/home/pi/birdlife
 EnvironmentFile=/home/pi/birdlife/.env
 Environment=LANG=C.UTF-8 LC_ALL=C.UTF-8
-ExecStart=/usr/bin/env bash -lc 'cd /home/pi/birdlife && uv run python listener/push.py'
+ExecStart=/usr/bin/env bash -lc 'cd /home/pi/birdlife && uv run python birdnet/push.py'

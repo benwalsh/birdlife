@@ -22,7 +22,7 @@ from PIL import Image
 
 REPO = Path(__file__).resolve().parents[1]
 PANEL_W, PANEL_H = 800, 480
-DEFAULT_BIRD = REPO / "avian" / "assets" / "illustrations" / "erithacus-rubecula.png"
+DEFAULT_BIRD = REPO / "pipeline" / "assets" / "illustrations" / "erithacus-rubecula.png"
 
 
 def matted(path: Path) -> Image.Image:

@@ -53,7 +53,7 @@ def font(role: str, size: int) -> ImageFont.FreeTypeFont:
 
 # --- assets -----------------------------------------------------------------
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-ILLUSTRATIONS_DIR = os.path.join(_REPO_ROOT, "avian", "assets", "illustrations")
+ILLUSTRATIONS_DIR = os.path.join(_REPO_ROOT, "pipeline", "assets", "illustrations")
 
 
 def slug(sci: str) -> str:

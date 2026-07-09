@@ -20,7 +20,7 @@ import urllib.request
 BIRDWEATHER = "https://app.birdweather.com/graphql"
 GEOCODER = "https://api.zippopotam.us"
 EBIRD = "https://api.ebird.org/v2/data/obs/geo/recent"
-APT_JS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "avian", "frontend", "apt.js")
+APT_JS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "pipeline", "frontend", "apt.js")
 
 _drawable = None
 

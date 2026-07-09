@@ -47,7 +47,7 @@ command -v bun >/dev/null || curl -fsSL https://bun.sh/install | bash
 command -v mise >/dev/null || curl -fsSL https://mise.run | MISE_INSTALL_MUSL=1 sh
 # Ruby from .ruby-version (mise compiles it via ruby-build — slow the first time
 # on ARM; subsequent runs are cached).
-( cd "$REPO/collage" && mise use "ruby@$(cat .ruby-version)" )
+( cd "$REPO/dashboard" && mise use "ruby@$(cat .ruby-version)" )
 
 # ---------------------------------------------------------- app: deps + db --
 if [ ! -f "$REPO/.env" ]; then
@@ -62,7 +62,7 @@ say "python deps (uv sync)"
 ( cd "$REPO" && uv sync )
 
 say "ruby/js deps + production assets"
-cd "$REPO/collage"
+cd "$REPO/dashboard"
 # The `cloud` group (trilogy/MySQL) is for the public cloud mirror only — the Pi
 # runs on SQLite and never needs it, so don't compile it here.
 bundle config set --local without cloud

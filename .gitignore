@@ -54,15 +54,15 @@ whitelist_species_list.txt
 # Claude Code session data
 .claude/
 # Large source / reference imagery kept on disk for working
-avian/assets/references/
+pipeline/assets/references/
 # Superseded assets retained locally
-avian/assets/_legacy/
+pipeline/assets/_legacy/
 
 # Local desktop dev virtualenv (CLAUDE.md: develop on desktop, deploy to Pi)
 .venv/
 
 # Local secrets for the illustration pipeline (Gemini / eBird API keys).
-# Used by avian/scripts on the desktop only — never committed, never on the Pi.
+# Used by pipeline/scripts on the desktop only — never committed, never on the Pi.
 .env
 .env.*
 !.env.example

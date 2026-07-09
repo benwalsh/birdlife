@@ -39,10 +39,10 @@ Full bill of materials and rationale in [`CLAUDE.md`](CLAUDE.md).
 ## Repo layout
 
 ```
-listener/      BirdNET listener — analyse a recording or the live mic into birds.db
-collage/       Rails collage web app — the display
-avian/scripts/ illustration pipeline: pregen → cutout_flood → build_masks
-avian/assets/  generated illustrations + masks.json (collage silhouettes)
+birdnet/      BirdNET listener — analyse a recording or the live mic into birds.db
+dashboard/       Rails collage web app — the display
+pipeline/scripts/ illustration pipeline: pregen → cutout_flood → build_masks
+pipeline/assets/  generated illustrations + masks.json (collage silhouettes)
 shooter/       Playwright screenshot of /panel → dither → push to the Inky
 deploy/        systemd units + DEPLOY.md runbook
 model/l18n/    bilingual labels: labels_en.json, labels_ga.json
@@ -89,13 +89,13 @@ detail modal. Highlights:
   display gate (see `Detection.credible_species`).
 
 House conventions mirror the sibling work repo: RSpec + FactoryBot, HAML, bun
-(not yarn), RuboCop. See [`collage/README.md`](collage/README.md).
+(not yarn), RuboCop. See [`dashboard/README.md`](dashboard/README.md).
 
 ## Illustrations
 
 The collage art is generated, not hand-drawn — kachō-e–style birds on a flat
 cream ground, cut to transparency and reduced to packing masks. The pipeline and
-the prompt live in [`avian/scripts/README.md`](avian/scripts/README.md). Common
+the prompt live in [`pipeline/scripts/README.md`](pipeline/scripts/README.md). Common
 tasks:
 
 ```bash

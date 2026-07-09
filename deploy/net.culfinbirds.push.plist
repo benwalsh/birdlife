@@ -14,7 +14,7 @@
   <array>
     <string>/bin/bash</string>
     <string>-lc</string>
-    <string>cd /Users/benwalsh/code/birdlife &amp;&amp; set -a &amp;&amp; source .env &amp;&amp; set +a &amp;&amp; /opt/homebrew/bin/uv run python listener/push.py</string>
+    <string>cd /Users/benwalsh/code/birdlife &amp;&amp; set -a &amp;&amp; source .env &amp;&amp; set +a &amp;&amp; /opt/homebrew/bin/uv run python birdnet/push.py</string>
   </array>
   <key>StartInterval</key>
   <integer>300</integer>

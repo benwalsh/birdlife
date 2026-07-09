@@ -2,7 +2,7 @@ name: Deploy to ECS Express
 
 # Build the image on a native x86 runner (no local QEMU, no shell-var mis-tagging)
 # and roll the ECS Express service onto it. Auth is OIDC — no stored AWS keys.
-# The role + permissions are defined in infra/github_oidc.tf.
+# The role + permissions are defined in infrastructure/github_oidc.tf.
 
 on:
   push:
@@ -44,7 +44,7 @@ jobs:
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:
-          context: . # repo root — the Dockerfile needs collage/, avian/, model/
+          context: . # repo root — the Dockerfile needs dashboard/, pipeline/, model/
           platforms: linux/amd64 # ECS Express runs x86_64
           push: true
           tags: |
@@ -54,7 +54,7 @@ jobs:
       # Roll the ECS Express service onto the freshly-pushed :latest.
       #
       # We force a new deployment rather than re-declaring the service. Terraform
-      # (infra/ecs.tf) stays the single owner of the service SHAPE — image tag (:latest),
+      # (infrastructure/ecs.tf) stays the single owner of the service SHAPE — image tag (:latest),
       # env, SSM secrets, roles, SG, autoscaling; CI only triggers a re-pull of that
       # same tag. This is why we do NOT use aws-actions/amazon-ecs-deploy-express-service:
       # that action is create-OR-update and RE-DECLARES the whole service from its
@@ -67,7 +67,7 @@ jobs:
       # running tasks keep the old layers. Forcing the deployment here is what makes
       # push-to-main genuinely ship.
       #
-      # The service name is stable — it's the Terraform module name (infra/ecs.tf),
+      # The service name is stable — it's the Terraform module name (infrastructure/ecs.tf),
       # verified live as service/culfinbirds/culfinbirds with the standard ECS
       # deployment controller. If it's ever renamed in Terraform, update ECS_SERVICE
       # here to match.

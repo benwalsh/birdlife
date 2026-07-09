@@ -52,7 +52,7 @@ make setup              # uv sync, bundle, bun install, bin/vite build, db:prepa
 # assets:precompile runs the Vite build (the `/` React SPA + the /kiosk,/station
 # Stimulus bundle → public/vite) AND digests the Propshaft CSS + bird PNGs into
 # public/assets & public/birds:
-cd collage && RAILS_ENV=production bin/rails assets:precompile && cd ..
+cd dashboard && RAILS_ENV=production bin/rails assets:precompile && cd ..
 
 # Pi-only extras (kept out of the cross-platform lock):
 uv pip install inky                       # the Spectra-6 panel driver (SPI/GPIO)
@@ -67,8 +67,8 @@ BIRD_LAT=53.49      # Connemara coords (his house)
 BIRD_LON=-9.88
 BIRD_MIN_CONF=0.6
 BIRD_MIC=<usb mic name, see: uv run python -c "import sounddevice;print(sounddevice.query_devices())">
-BIRD_DB=/home/pi/birdlife/collage/storage/production.sqlite3   # ABSOLUTE; shared by listener + Rails
-SECRET_KEY_BASE=<cd collage && RAILS_ENV=production bin/rails secret>
+BIRD_DB=/home/pi/birdlife/dashboard/storage/production.sqlite3   # ABSOLUTE; shared by listener + Rails
+SECRET_KEY_BASE=<cd dashboard && RAILS_ENV=production bin/rails secret>
 ```
 
 There is **one shared SQLite** (`BIRD_DB`): the listener writes the `detections`
@@ -81,7 +81,7 @@ read-only split — `BIRD_DB` is the single source of truth both runtimes point 
 datastore/locale end to end — should print `all seams good ✓`):
 
 ```bash
-cd collage && RAILS_ENV=production bin/rails db:prepare && RAILS_ENV=production bin/rails birdlife:doctor && cd ..
+cd dashboard && RAILS_ENV=production bin/rails db:prepare && RAILS_ENV=production bin/rails birdlife:doctor && cd ..
 ```
 
 ## 4. Services

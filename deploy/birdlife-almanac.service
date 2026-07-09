@@ -9,8 +9,8 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 User=pi
-WorkingDirectory=/home/pi/birdlife/collage
+WorkingDirectory=/home/pi/birdlife/dashboard
 EnvironmentFile=/home/pi/birdlife/.env
 Environment=RAILS_ENV=production
 Environment=LANG=C.UTF-8 LC_ALL=C.UTF-8
-ExecStart=/usr/bin/env bash -lc 'cd /home/pi/birdlife/collage && bin/rails birdlife:almanac_refresh'
+ExecStart=/usr/bin/env bash -lc 'cd /home/pi/birdlife/dashboard && bin/rails birdlife:almanac_refresh'

@@ -34,7 +34,7 @@ from playwright.sync_api import sync_playwright
 # --bird-weather pulls cutouts straight from the repo's raw GitHub URLs, so the
 # Pi never bundles the illustration set and picks up new birds with no redeploy.
 RAW_ILLUSTRATIONS = ("https://raw.githubusercontent.com/Twarner491/AvianVisitors/"
-                     "avian-visitors/avian/assets/illustrations/")
+                     "avian-visitors/pipeline/assets/illustrations/")
 
 # Hide the controls and the other views, freeze animations. Titles + collage
 # stay. Injected before first paint.
@@ -259,7 +259,7 @@ def main():
         if not species:
             print(f"no drawable birds near {a.zip}; nothing to render", file=sys.stderr)
             sys.exit(3)
-        front = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "avian", "frontend")
+        front = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "pipeline", "frontend")
         _httpd, port = _serve_frontend(front)
         url = f"http://127.0.0.1:{port}/"
         cutout_base = RAW_ILLUSTRATIONS

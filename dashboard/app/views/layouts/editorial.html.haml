@@ -1,0 +1,23 @@
+!!!
+%html{ lang: ui_lang, "data-lang": ui_lang }
+  %head
+    %title= ['Éist', Station.place&.dig(:en)].compact.join(' — ')
+    %meta{ name: "viewport", content: "width=device-width,initial-scale=1,viewport-fit=cover" }
+    %meta{ name: "application-name", content: "Éist" }
+    = csrf_meta_tags
+    = csp_meta_tag
+    -# type must be image/png (favicon_link_tag defaults to image/x-icon, which
+    -# makes Chrome silently drop a PNG favicon).
+    = favicon_link_tag "cruach-icon.png", rel: "icon", type: "image/png"
+    = favicon_link_tag "cruach-icon.png", rel: "apple-touch-icon", type: "image/png"
+    -# colors/pipeline/application/editorial carry the design system + the classnames
+    -# the React components reuse; served by Propshaft. The React SPA is the `app`
+    -# Vite entrypoint; it renders the chrome + Birds/Stats/Directory tabs.
+    = stylesheet_link_tag "colors", "avian", "application", "editorial"
+    = vite_client_tag
+    = vite_react_refresh_tag
+    -# The app entry also bundles the Tabler icon-font CSS; link it in production.
+    = vite_stylesheet_tag "app.tsx"
+    = vite_javascript_tag "app.tsx"
+  %body.ed
+    = yield

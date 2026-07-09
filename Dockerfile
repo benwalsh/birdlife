@@ -5,8 +5,8 @@
 # Multi-stage: the build stage compiles gems + runs the Vite build (React SPA +
 # Stimulus bundle) + precompiles assets; the runtime stage is a slim Puma server.
 #
-# Build from the REPO ROOT — the app needs collage/, the bird illustrations under
-# avian/assets/illustrations (public/birds is a symlink to them), and model/:
+# Build from the REPO ROOT — the app needs dashboard/, the bird illustrations under
+# pipeline/assets/illustrations (public/birds is a symlink to them), and model/:
 #     docker build -t culfinbirds .
 ARG RUBY_VERSION=4.0.5
 
@@ -23,14 +23,14 @@ ENV PATH="/root/.bun/bin:${PATH}" \
     BUNDLE_WITHOUT="development test" \
     BUNDLE_WITH="cloud"
 
-WORKDIR /app/collage
+WORKDIR /app/dashboard
 
 # Gems first — cached until the lockfile changes.
-COPY collage/Gemfile collage/Gemfile.lock collage/.ruby-version ./
+COPY dashboard/Gemfile dashboard/Gemfile.lock dashboard/.ruby-version ./
 RUN bundle install --jobs 4 --retry 3 && rm -rf ~/.bundle
 
 # JS deps next — cached until package.json / bun.lock change.
-COPY collage/package.json collage/bun.lock ./
+COPY dashboard/package.json dashboard/bun.lock ./
 RUN bun install --frozen-lockfile
 
 # The rest of the repo (app + illustrations + model data), then build assets.
@@ -38,7 +38,7 @@ RUN bun install --frozen-lockfile
 # identical to cloud, and it avoids any DB connection during the image build.
 WORKDIR /app
 COPY . .
-WORKDIR /app/collage
+WORKDIR /app/dashboard
 RUN SECRET_KEY_BASE_DUMMY=1 RAILS_ENV=production bin/rails assets:precompile
 
 # --- Runtime -----------------------------------------------------------------
@@ -59,7 +59,7 @@ COPY --from=build /usr/local/bundle /usr/local/bundle
 COPY --from=build --chown=app:app /app /app
 
 USER app
-WORKDIR /app/collage
+WORKDIR /app/dashboard
 EXPOSE 3000
 # App Runner health check hits /up; keep one here too for local `docker run`.
 HEALTHCHECK --interval=30s --timeout=4s --start-period=25s \

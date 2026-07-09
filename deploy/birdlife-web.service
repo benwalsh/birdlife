@@ -15,7 +15,7 @@ StartLimitIntervalSec=0
 [Service]
 Type=simple
 User=pi
-WorkingDirectory=/home/pi/birdlife/collage
+WorkingDirectory=/home/pi/birdlife/dashboard
 # .env carries SECRET_KEY_BASE and BIRD_DB (the absolute path to the shared DB,
 # the single source of truth the listener and Rails both point at).
 EnvironmentFile=/home/pi/birdlife/.env
@@ -24,9 +24,9 @@ Environment=LANG=C.UTF-8 LC_ALL=C.UTF-8
 # Idempotent: creates the shared SQLite + the detections/species_infos tables and
 # sets WAL on the first connection. Assets are built at deploy time (DEPLOY.md),
 # not here, so a crash-restart doesn't re-precompile. bash -lc picks up rbenv.
-ExecStartPre=/usr/bin/env bash -lc 'cd /home/pi/birdlife/collage && bin/rails db:prepare'
+ExecStartPre=/usr/bin/env bash -lc 'cd /home/pi/birdlife/dashboard && bin/rails db:prepare'
 # Bind 0.0.0.0 so the collage is browsable on the home LAN, not just localhost.
-ExecStart=/usr/bin/env bash -lc 'cd /home/pi/birdlife/collage && exec bin/rails server -p 4030 -b 0.0.0.0'
+ExecStart=/usr/bin/env bash -lc 'cd /home/pi/birdlife/dashboard && exec bin/rails server -p 4030 -b 0.0.0.0'
 # always: keep the dashboard up through any exit except a deliberate stop.
 Restart=always
 RestartSec=5

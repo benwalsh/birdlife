@@ -12,7 +12,7 @@ User=pi
 WorkingDirectory=/home/pi/birdlife
 EnvironmentFile=/home/pi/birdlife/.env
 Environment=LANG=C.UTF-8 LC_ALL=C.UTF-8
-ExecStart=/usr/bin/env bash -lc 'cd /home/pi/birdlife && exec uv run python listener/listen.py listen'
+ExecStart=/usr/bin/env bash -lc 'cd /home/pi/birdlife && exec uv run python birdnet/listen.py listen'
 # always (not on-failure): an unattended cottage box should come back from any
 # exit except a deliberate `systemctl stop` (systemd never fights that). The 10s
 # spacing keeps a genuine crash-loop from tripping systemd's start-limit.

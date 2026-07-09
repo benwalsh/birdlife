@@ -80,7 +80,7 @@ def _bucket(n):
 
 
 def fetch_recent(base, hours, timeout, auth=None):
-    url = f"{base.rstrip('/')}/avian/api/birdnet-api.php?action=recent&hours={hours}"
+    url = f"{base.rstrip('/')}/pipeline/api/birdnet-api.php?action=recent&hours={hours}"
     req = urllib.request.Request(url, headers={"User-Agent": "AvianVisitors-frame/1.0"})
     if auth:
         req.add_header("Authorization", auth)
