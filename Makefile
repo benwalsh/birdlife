@@ -6,7 +6,7 @@ SHELL := /bin/bash
 PORT ?= 4030
 POSES ?= 1
 
-.PHONY: help setup serve listen analyze regen restyle cutout declutter masks build doctor armcheck test lint
+.PHONY: help setup new-station serve listen analyze regen restyle cutout declutter masks build doctor armcheck test lint
 
 help:  ## list the available tasks
 	@grep -hE '^[a-z][a-zA-Z-]*:.*##' $(MAKEFILE_LIST) | sed -E 's/:.*## / — /' | sort
@@ -14,6 +14,12 @@ help:  ## list the available tasks
 setup:  ## install all deps (Python, Ruby, JS) and prepare the database
 	uv sync
 	cd dashboard && bundle install && bun install && bin/rails stimulus:manifest:update && bin/vite build && bin/rails db:prepare
+
+new-station:  ## scaffold your own station profile:  make new-station NAME=yourplace
+	@test -n "$(NAME)" || { echo "usage: make new-station NAME=yourplace"; exit 1; }
+	@test ! -e stations/$(NAME) || { echo "stations/$(NAME) already exists"; exit 1; }
+	cp -r stations/example stations/$(NAME)
+	@echo "created stations/$(NAME) — edit its station.yml, then set STATION_PROFILE=$(CURDIR)/stations/$(NAME) in .env"
 
 serve:  ## run the collage web app  (override with: make serve PORT=4030)
 	set -a; source .env; set +a; \
