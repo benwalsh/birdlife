@@ -1,59 +1,49 @@
 require 'net/http'
-require 'json'
-require 'cgi'
-require 'erb'
+require 'uri'
 
 module Enrichment
-  # The fetch tool Stage 1 (Claude, via Bedrock tool-use) calls to source from trusted
-  # hosts — the ONLY path the enrichment pass takes to the network. It:
-  #   - refuses any host off the trusted allowlist (returns an error, makes no request);
-  #   - logs every real outbound hit to source_fetch_log (the politeness ledger);
-  #   - returns readable plain text (Nokogiri-stripped) for the model to cite.
-  # A URL the model wants but can't be trusted is refused, not fetched — the block that
-  # would have needed it is simply dropped upstream. Never raises out; returns an error
-  # hash the model can react to.
+  # The fetch tool Stage 1 (Claude, via Bedrock tool-use) calls to source from trusted hosts —
+  # the ONLY path the enrichment pass takes to the network. It:
+  #   - refuses any host off the station's trusted allowlist (sources/allowlist.yml) — returns
+  #     an error, makes no request;
+  #   - routes a trusted URL a bespoke adapter claims (e.g. dúchas) to that adapter, else
+  #     fetches and Nokogiri-strips the page itself;
+  #   - logs every real outbound hit to source_fetch_log (the politeness ledger).
+  # A URL the model wants but can't be trusted is refused, not fetched — the block that would
+  # have needed it is simply dropped upstream. Never raises out; returns an error hash.
   class SourceFetcher
-    # Exact trusted hosts. BirdWatch Ireland county branches are matched by pattern
-    # (discovered dynamically — e.g. birdwatchgalway.org — not hardcoded one by one).
-    TRUSTED_HOSTS = %w[
-      birdwatchireland.ie www.birdwatchireland.ie
-      biodiversityireland.ie maps.biodiversityireland.ie
-      irbc.ie iwt.ie
-      duchas.ie www.duchas.ie celt.ucc.ie irishheritagenews.ie
-      en.wikipedia.org
-    ].freeze
-    AFFILIATE = /\Abirdwatch[a-z]+\.(?:ie|org)\z/
     MAX_CHARS = 4000
     MAX_LINKS = 30 # on-site links appended so the model can navigate a search/index page
-    # dúchas's on-site Schools'-Collection search is a client-side JS app that returns nothing
-    # to a server fetch (the /en/cbes?Search= route just redirects to the schools list). Its
-    # REAL full-text search is this JSON API — hit it directly. We call it from this hardcoded
-    # constant (never a model-supplied URL), so beta.duchas.ie stays off the trusted allowlist.
-    DUCHAS_SEARCH_API = 'https://beta.duchas.ie/api/en/cbes/transcripts'.freeze
-    DUCHAS_RESULTS = 10 # transcripts to return per search (the model picks the on-topic ones)
     USER_AGENT = 'birdlife/1.0 (Eist bird detector; enrichment)'.freeze
-    # The Irish heritage sources (dúchas.ie, CELT) answer with a 301 before serving the
-    # page, so we MUST follow redirects or they always read as "fetch failed" and the model
-    # falls back to Wikipedia. Bounded, and every hop is re-checked against the allowlist so
-    # a redirect can't smuggle the fetch off to an untrusted host.
+    # Some trusted hosts answer a 301 before serving a page, so we MUST follow redirects or
+    # they always read as "fetch failed". Bounded, and every hop is re-checked against the
+    # allowlist so a redirect can't smuggle the fetch off to an untrusted host.
     MAX_REDIRECTS = 4
+
+    # Host straight off the string — robust to un-encoded query chars (e.g. a fada in a search
+    # term), where URI.parse would choke and wrongly read as untrusted. A pure function so
+    # adapters can share it without an allowlist-less connection of their own.
+    def self.host_of(url)
+      url.to_s[%r{\Ahttps?://([^/?#]+)}i, 1]&.downcase
+    end
 
     def initialize(sci_name:, run_id:)
       @sci_name = sci_name
       @run_id = run_id
+      @sources = SourceList.current
+      @adapters = AdapterRegistry.enabled(@sources.adapters, self)
     end
 
-    # { host:, url:, text: } on success, or { error: } — never raises. For a dúchas story
-    # page we GET the clean open-data XML transcript, but keep the human-readable /en/ URL
-    # as the citation (and log) — so the block's source matches what the model cited.
+    # { host:, url:, text: } on success, or { error: } — never raises. A trusted URL an enabled
+    # adapter claims is handled by that adapter; anything else is fetched and stripped here.
     def fetch(url)
-      host = host_of(url)
+      host = SourceFetcher.host_of(url)
       return { error: "untrusted host: #{host}" } unless trusted?(host)
 
-      term = duchas_search_term(url)
-      return duchas_results(url, host, term) if term
+      adapter = @adapters.find { |a| a.matches?(url) }
+      return adapter.fetch(url, host) if adapter
 
-      body = http_get(duchas_xml_url(url))
+      body = http_get(url)
       return { error: "fetch failed: #{url}" } unless body
 
       log!(host, url)
@@ -63,28 +53,11 @@ module Enrichment
     end
 
     def trusted?(host)
-      return false if host.blank?
-
-      TRUSTED_HOSTS.include?(host) || AFFILIATE.match?(host)
+      @sources.trusted?(host)
     end
 
-    private
-
-    # Host straight off the string — robust to un-encoded query chars (e.g. a fada in a
-    # dúchas search term), where URI.parse would choke and wrongly read as untrusted.
-    def host_of(url)
-      url.to_s[%r{\Ahttps?://([^/?#]+)}i, 1]&.downcase
-    end
-
-    # A URI to fetch, even when the URL carries non-ASCII (a fada in a Vicipéid title, e.g.
-    # ga.wikipedia.org/wiki/Cág_cosdearg) — try it raw, then percent-encode just the
-    # non-ASCII bytes and retry. Only those bytes are touched, so an already-encoded URL is
-    # never double-encoded. (Distinct from safe_uri, which is parse-or-nil for link scraping.)
-    def request_uri(url)
-      URI(url)
-    rescue URI::InvalidURIError
-      URI(url.to_s.gsub(/[^\x00-\x7F]/) { |c| c.bytes.map { |b| format('%%%02X', b) }.join })
-    end
+    # --- Public for enabled adapters: the allowlist-checked HTTP and the shared helpers an
+    # adapter needs, so a source adapter never opens its own uncontrolled connection. ---
 
     def http_get(url, redirects_left: MAX_REDIRECTS)
       uri = request_uri(url)
@@ -94,15 +67,47 @@ module Enrichment
       end
 
       case res
-      # Net::HTTP hands back ASCII-8BIT; the trusted hosts serve UTF-8 (Irish fadas on
-      # Vicipéid/dúchas), so tag it UTF-8 or the text breaks on the way into the DB.
+      # Net::HTTP hands back ASCII-8BIT; the trusted hosts serve UTF-8 (fadas on Vicipéid/
+      # dúchas), so tag it UTF-8 or the text breaks on the way into the DB.
       when Net::HTTPSuccess then res.body&.dup&.force_encoding(Encoding::UTF_8)
       when Net::HTTPRedirection then follow(res['location'], uri, redirects_left)
       end
     end
 
-    # Follow a redirect only to another TRUSTED host (a redirect must never be a way off
-    # the allowlist), resolving relative Location headers against the current URL.
+    # Generic readable text from an HTML page: scripts/chrome stripped, trusted on-site links
+    # appended so the model can navigate a search or index page through to the actual entry.
+    def extract_text(body, base_url)
+      doc = Nokogiri::HTML(body)
+      doc.search('script, style, nav, header, footer').remove
+      text = doc.text.gsub(/\s+/, ' ').strip.first(MAX_CHARS)
+      links = onsite_links(doc, base_url)
+      links.empty? ? text : "#{text}\n\nLINKS (fetch one to read the full entry):\n#{links.join("\n")}"
+    end
+
+    def log!(host, url)
+      # A seeded Vicipéid URL can arrive tagged ASCII-8BIT (its fada bytes); normalise to UTF-8
+      # so the insert doesn't blow up on the citation string.
+      SourceFetchLog.create!(host: host, url: utf8(url), sci_name: @sci_name,
+                             fetched_at: Time.current, run_id: @run_id)
+    end
+
+    def utf8(str)
+      str.to_s.dup.force_encoding(Encoding::UTF_8)
+    end
+
+    private
+
+    # A URI to fetch, even when the URL carries non-ASCII (a fada in a Vicipéid title) — try it
+    # raw, then percent-encode just the non-ASCII bytes and retry. Only those bytes are touched,
+    # so an already-encoded URL is never double-encoded.
+    def request_uri(url)
+      URI(url)
+    rescue URI::InvalidURIError
+      URI(url.to_s.gsub(/[^\x00-\x7F]/) { |c| c.bytes.map { |b| format('%%%02X', b) }.join })
+    end
+
+    # Follow a redirect only to another TRUSTED host (a redirect must never be a way off the
+    # allowlist), resolving relative Location headers against the current URL.
     def follow(location, base, redirects_left)
       return nil if location.blank? || redirects_left <= 0
 
@@ -114,79 +119,8 @@ module Enrichment
       nil
     end
 
-    # The search term if this is a dúchas Schools'-Collection search (…/cbes?Search=… or
-    # ?SearchText=…), else nil — the trigger to go via the JSON API instead of the dead HTML.
-    def duchas_search_term(url)
-      return nil unless host_of(url).to_s.include?('duchas.ie') && url.match?(/[?&]search(?:text)?=/i)
-
-      CGI.unescape(url[/[?&]search(?:text)?=([^&]+)/i, 1].to_s).strip.presence
-    end
-
-    # Run the dúchas full-text search through the JSON API and return each matching story's
-    # text with a citable dúchas URL. Every story URL is logged, so the model may cite the
-    # one it retells (many matches are false — "chough" also hits "whooping cough" — so the
-    # model must pick the story genuinely about the bird). Errors leave folklore to fall back.
-    def duchas_results(search_url, host, term)
-      body = http_get("#{DUCHAS_SEARCH_API}?SearchText=#{ERB::Util.url_encode(term)}&Page=1&PerPage=#{DUCHAS_RESULTS}")
-      entries = body ? Array(JSON.parse(body)['entries']) : []
-      log!(host, search_url)
-      return { error: "no dúchas stories for '#{term}'" } if entries.empty?
-
-      text = entries.map { |entry| duchas_entry(entry) }.join("\n\n").first(MAX_CHARS * 2)
-      { host: host, url: utf8(search_url), text: text }
-    rescue JSON::ParserError
-      { error: 'dúchas search API returned unreadable JSON' }
-    end
-
-    # One search hit → its title, citable dúchas story URL, and transcript text (match
-    # highlighting stripped). The URL — /en/cbes/<chapter>/<page>/<transcript> — is logged so
-    # the model can cite it after quoting the story.
-    def duchas_entry(entry)
-      story_url = "https://www.duchas.ie/en/cbes/#{entry['chapterID']}/#{entry['pageID']}/#{entry['id']}"
-      log!('duchas.ie', story_url)
-      snippet = entry['text'].to_s.gsub(%r{</?span[^>]*>}i, '').gsub(/\s+/, ' ').strip.first(700)
-      "#{entry['title']} — #{story_url}\n#{snippet}"
-    end
-
-    # A dúchas story page → its clean XML transcript endpoint (open data): the /en/ HTML
-    # story is chrome-heavy, the /xml/ one is just the transcribed text. Only story pages
-    # (a numeric id after /cbes/), never the search page (…/cbes?Search=…).
-    def duchas_xml_url(url)
-      return url unless url.match?(%r{\Ahttps?://(?:www\.)?duchas\.ie/en/cbes/\d})
-
-      url.sub('/en/cbes/', '/xml/cbes/')
-    end
-
-    def extract_text(body, base_url)
-      return extract_duchas_xml(body) if body.include?('<transcript')
-
-      doc = Nokogiri::HTML(body)
-      doc.search('script, style, nav, header, footer').remove
-      text = doc.text.gsub(/\s+/, ' ').strip.first(MAX_CHARS)
-      links = onsite_links(doc, base_url)
-      links.empty? ? text : "#{text}\n\nLINKS (fetch one to read the full entry):\n#{links.join("\n")}"
-    end
-
-    # The dúchas XML holds one or more <transcript> elements (a page can carry several
-    # stories); return them all, so the model can quote the one about the bird in full.
-    # A single ENTRY can also run across pages, so surface each <story> URL (the entry
-    # endpoint, which returns the whole story) as human /en/ links — the model should
-    # fetch the entry, not just the page, when a story spans.
-    def extract_duchas_xml(xml)
-      doc = Nokogiri::XML(xml)
-      transcripts = doc.css('transcript').filter_map do |t|
-        text = t.text.gsub(/\s+/, ' ').strip
-        text unless text.empty?
-      end.join("\n\n").first(MAX_CHARS)
-
-      entries = doc.css('story[url]').filter_map { |s| s['url']&.sub('/xml/cbes/', '/en/cbes/') }.uniq
-      entries.empty? ? transcripts : "#{transcripts}\n\nENTRIES (fetch one for the whole story):\n#{entries.join("\n")}"
-    end
-
-    # Trusted, on-host links found in the content, absolutised and de-duped — so the model
-    # can navigate a search or index page (e.g. a dúchas result list) through to the actual
-    # entry. Capped so they never crowd out the text. Stripping the hrefs was why dúchas/CELT
-    # searches were dead ends: the model saw result titles but no URL to follow.
+    # Trusted, on-host links found in the content, absolutised and de-duped — so the model can
+    # navigate a search or index page to the actual entry. Capped so they never crowd the text.
     def onsite_links(doc, base_url)
       base = safe_uri(base_url)
       return [] unless base
@@ -195,7 +129,7 @@ module Enrichment
         next if a.text.strip.empty?
 
         target = safe_join(base, a['href'])
-        host = host_of(target)
+        host = SourceFetcher.host_of(target)
         next if target.nil? || host.nil? || !trusted?(host) || target == base_url
 
         target
@@ -212,17 +146,6 @@ module Enrichment
       URI.join(base, href).to_s
     rescue URI::InvalidURIError, ArgumentError
       nil
-    end
-
-    def log!(host, url)
-      # A seeded Vicipéid URL can arrive tagged ASCII-8BIT (its fada bytes); normalise to
-      # UTF-8 so the insert doesn't blow up on the citation string.
-      SourceFetchLog.create!(host: host, url: utf8(url), sci_name: @sci_name,
-                             fetched_at: Time.current, run_id: @run_id)
-    end
-
-    def utf8(str)
-      str.to_s.dup.force_encoding(Encoding::UTF_8)
     end
   end
 end
