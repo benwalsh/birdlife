@@ -43,7 +43,7 @@ RSpec.describe 'API journal' do
       lore = response.parsed_body['lore']
       expect(lore).to include('kind' => 'tale', 'sci' => 'Streptopelia decaocto')
       expect(lore['text']).to include('deca octo')
-      expect(lore['attribution']).to include('Stephanides')
+      expect(lore['attribution']).to include('Greek folk etymology')
     end
 
     it 'clamps a future/out-of-range date back into the available window' do
