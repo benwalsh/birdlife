@@ -91,18 +91,27 @@ class DayNarrator
 
     private
 
-    # Bilingual bullets { en:, ga: } or nil. English is generated from the facts + the
-    # stored bird-lore; Irish is a translation of that English, falling back to the
-    # deterministic Irish template if the translation is unavailable or malformed.
+    # Bilingual bullets { en:, ga: } or nil. English is generated from the facts + the stored
+    # bird-lore; the second language (ga) is a translation of that English — but only when the
+    # station offers a second language. A single-language station never translates and just
+    # mirrors English into the ga slot, so no consumer has to special-case it.
     def generate(facts, lore = [])
       message = user_message(facts, lore)
       message = "#{message}\n\n#{COMPLETED_DAY_NOTE}" if completed_day?(facts)
       en = attempt(format(Prompts.get('day_note.system'), where: station_context), message)
       return nil unless en && supported?(en, facts)
 
+      { en: en, ga: second_language_bullets(en, facts) }
+    end
+
+    # The second-language rendering of the approved English bullets — a translation (not a
+    # second free write) so the two can't disagree on the facts — falling back to the
+    # deterministic template. Only engaged for a multilingual station; else it mirrors English.
+    def second_language_bullets(en, facts)
+      return en unless Station.multilingual?
+
       ga = attempt(Prompts.get('day_note.translate'), en.map { |b| "- #{b}" }.join("\n"))
-      ga = DailyFacts.template_bullets(facts)[:ga] unless ga && ga.size == en.size
-      { en: en, ga: ga }
+      ga && ga.size == en.size ? ga : DailyFacts.template_bullets(facts)[:ga]
     end
 
     # Source the day's NOTABLE birds NOW if they lack a bundle — an arrival or a rarity is the

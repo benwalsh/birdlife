@@ -37,12 +37,19 @@ namespace :birdlife do
     end
     check.call('chronological query (when_sql) runs', when_ok, Detection.when_sql)
 
-    puts "\nIRISH / UTF-8 (the locale seam)"
+    puts "\nNAMES / UTF-8 (the locale seam)"
     robin = BirdName.lookup('Erithacus rubecula')
-    chough = BirdName.lookup('Pyrrhocorax pyrrhocorax')
-    check.call('labels load + Irish lookup', robin.ga == 'Spideog', "robin -> #{robin.ga.inspect}")
-    check.call('UTF-8 string encoding', robin.ga.to_s.encoding.name == 'UTF-8', robin.ga.to_s.encoding.name)
-    check.call('accented chars intact', chough.ga.to_s.include?('á'), "chough -> #{chough.ga.inspect}")
+    lang = BirdName.secondary_language
+    check.call('English labels load', robin.en == 'European Robin', "robin -> #{robin.en.inspect}")
+    if lang
+      chough = BirdName.lookup('Pyrrhocorax pyrrhocorax')
+      check.call("second-language labels load (#{lang})", robin.ga.present?, "robin -> #{robin.ga.inspect}")
+      check.call('UTF-8 string encoding', robin.ga.to_s.encoding.name == 'UTF-8', robin.ga.to_s.encoding.name)
+      # Irish specifically ships fadas — confirm one survives when Irish is the second language.
+      check.call('accented chars intact', chough.ga.to_s.include?('á'), "chough -> #{chough.ga.inspect}") if lang == 'ga'
+    else
+      check.call('single-language station (no second-language labels needed)', true)
+    end
 
     puts "\nlocale: external=#{Encoding.default_external}  LANG=#{ENV['LANG'].inspect}  RAILS_ENV=#{Rails.env}"
     abort("\nbirdlife:doctor — FAILURES above") unless ok

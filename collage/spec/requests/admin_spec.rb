@@ -1,6 +1,10 @@
 require 'rails_helper'
 
 RSpec.describe 'Admin' do
+  # The sample profile is bilingual (ga, en) with an Irish default — so the language picker
+  # and the language-change assertions have two languages to work with.
+  around { |example| with_station_profile(StationProfileHelpers::SAMPLE_PROFILE) { example.run } }
+
   let(:auth) do
     OmniAuth::AuthHash.new(
       provider: 'google_oauth2', uid: 'admin-1',

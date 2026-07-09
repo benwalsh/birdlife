@@ -9,8 +9,8 @@
     %h2.acct-h2 Station
     %p.adm-lead The wall speaks one language, consistently — pick which. Guests are pointed to #{Station.url}.
     = form_with url: admin_station_path, method: :patch, class: "acct-cadence", data: { turbo: false } do
-      - Station::LANGUAGES.each do |code|
-        = button_tag Station::LANGUAGE_NAMES[code], type: :submit, name: "station[language]", value: code,
+      - Station.languages.each do |code|
+        = button_tag Station.language_name(code), type: :submit, name: "station[language]", value: code,
           class: "acct-seg#{' is-on' if @station_language == code}", "aria-pressed": (@station_language == code)
 
   - l = @health[:listening]
