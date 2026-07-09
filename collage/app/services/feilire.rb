@@ -1,7 +1,8 @@
-# The day's Irish character: a curated feast/quarter-day if the date carries one (config/
-# feilire.yml — facts only, never the model), else the Celtic season it falls in, so every day
-# has an honest line. `for` returns a bilingual { title:, gloss:, kind: } hash. (dúchas-sourced
-# seasonal customs are a later enhancement; this is the reference-supplies-the-fact floor.)
+# The day's local character: a curated feast/quarter-day if the date carries one (the station's
+# own content/feilire.yml — facts only, never the model), else the Celtic season it falls in, so
+# every day has an honest line. `for` returns a bilingual { title:, gloss:, kind: } hash.
+# (dúchas-sourced seasonal customs are a later enhancement; this is the reference-supplies-the-
+# fact floor.)
 class Feilire
   # Celtic seasons begin at the cross-quarter days (Feb/May/Aug/Nov), not the solstices.
   SEASONS = {
@@ -25,15 +26,7 @@ class Feilire
     private
 
     def entries
-      @entries ||= load_entries
-    end
-
-    def load_entries
-      path = Rails.root.join('config/feilire.yml')
-      path.exist? ? (YAML.safe_load_file(path) || {}) : {}
-    rescue Psych::SyntaxError => e
-      Rails.logger.warn("Feilire: bad feilire.yml (#{e.message})")
-      {}
+      StationProfile.yaml('content/feilire.yml')
     end
 
     def season_entry(date)

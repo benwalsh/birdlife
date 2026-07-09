@@ -1,0 +1,9 @@
+# One lore entry for the suite — the (public-domain, non-Irish) collared-dove tale, so lore
+# rendering can be exercised without depending on any station's real curation.
+"Streptopelia decaocto":
+  kind: tale
+  text: >
+    A maid was unhappy, as she was paid only eighteen pieces a year, and begged the gods to
+    let the world know how little she was rewarded by her mistress. Thereupon Zeus turned her
+    into a dove, which has called out "deca octo" — eighteen — ever since.
+  attribution: A Greek tale told by Theo Stephanides in Gerald Durrell's "My Family and Other Animals"

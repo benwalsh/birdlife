@@ -66,6 +66,12 @@ avian/assets/_legacy/
 .env
 .env.*
 !.env.example
+
+# Station profiles: only the shipped reference profile is public. A private overlay
+# (culfinbirds) lives in its own repo and is pointed at via STATION_PROFILE; a scratch
+# profile dropped in the tree here must never be committed to the open-source repo.
+/stations/*
+!/stations/example/
 /.venv-birdnet
 .sync_cursor*
 

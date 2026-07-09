@@ -1,6 +1,10 @@
 require 'rails_helper'
 
 RSpec.describe 'API journal' do
+  # Run against the neutral sample profile so the féilire/lore assertions test the mechanism,
+  # not any station's real curation (07-07 carries a curated day; Streptopelia carries a tale).
+  around { |example| with_station_profile(StationProfileHelpers::SAMPLE_PROFILE) { example.run } }
+
   before do
     travel_to Time.zone.local(2026, 7, 8, 9, 0) # yesterday is 2026-07-07
     create_list(:detection, 6, Sci_Name: 'Erithacus rubecula', Com_Name: 'European Robin',
@@ -27,8 +31,8 @@ RSpec.describe 'API journal' do
       expect(body['summary']['en'].first).to include('data-sci="Erithacus rubecula"').and include('>European Robin</strong>')
       expect(body['notable'].keys).to contain_exactly('rarity', 'first_ever', 'seasonal')
       expect(body['available']).to eq('first' => '2026-07-07', 'last' => '2026-07-07')
-      # 7 July carries a curated féilire feast; the robin has no curated poem/tale.
-      expect(body['day_lore']['title']['en']).to eq('Feast of St Máel Ruain')
+      # 7 July carries a curated féilire day in the sample profile; the robin has no poem/tale.
+      expect(body['day_lore']['title']['en']).to eq("Founders' Day")
       expect(body['lore']).to be_nil
     end
 
